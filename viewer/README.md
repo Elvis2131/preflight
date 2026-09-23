@@ -1,4 +1,4 @@
-# Viewer (PC-90 / PC-92)
+# Viewer (PC-90 / PC-91 / PC-92)
 
 PRD §6's "secondary" web UI — a thin, read-only viewer. Reads the API only, authors
 nothing. Not the canvas (PC-84): no drawing, no editing, no IR production. If this
@@ -22,6 +22,21 @@ ever grows a write/edit affordance, that's the canvas's territory, not this one'
   own real `DeltaKind` classification, color-coded. No composite score, trend line,
   or aggregate number anywhere.
 
+## What exists (PC-91: graph/diff viewer)
+
+- **`src/GraphView.tsx`** — renders one version's `graph` field (PC-81's real,
+  deterministic SVG) verbatim via `dangerouslySetInnerHTML` — no `<img>`/data-URI
+  round trip, no client-side transformation of any kind, this ticket's own first
+  acceptance criterion ("renders PC-81's SVG output for a given version without
+  modification"). This is trusted content: the SVG comes from `assessd`, a server
+  this viewer is explicitly pointed at, not arbitrary third-party input. Below it, a
+  plain list of that version's own `assurance_delta` entries (PC-19) — read directly,
+  no new diff computation in the UI layer (this ticket's own second criterion). No
+  write/edit action exists anywhere in this view (the third).
+- **`App.tsx`**'s version selector defaults to the latest version and lets you step
+  through V1..Vn; the diff section correctly reads "no prior version to diff
+  against" for V1 rather than fabricating an empty diff.
+
 ## Verified, not just typechecked
 
 Per this project's "run it, don't just typecheck it" discipline: launched against a
@@ -30,14 +45,15 @@ session (a real 2-version, 5-finding transition), and confirmed live in a real
 browser (Playwright) that the table renders the exact real data — `unsatisfied ->
 satisfied` classified `improvement`, `not_assessable -> satisfied` classified
 `resolved_risk` (PC-83's own distinction, visibly preserved), the two structural
-zone-kill findings staying `not_assessable`/`unchanged`. Screenshot taken and
-inspected. Driver script scratch-only, not committed.
+zone-kill findings staying `not_assessable`/`unchanged`. For PC-91: confirmed a real
+`<svg>` element renders on the page showing the actual golden AWS architecture (real
+resource addresses as node labels — `aws_db_instance.payments`, `aws_lb.payments`,
+...), and that switching the version selector to V1 correctly shows "no prior version
+to diff against" instead of an empty-but-implied-real diff. Screenshots taken and
+inspected. Driver scripts scratch-only, not committed.
 
-## Explicitly out of scope for this ticket
+## Explicitly out of scope
 
-- **No graph/diff view.** That's PC-91 — PC-81 has since landed real SVG rendering
-  (`assess_response.graph`), so PC-91 is now unblocked, just not built in this
-  ticket.
 - **No session history/browsing UI.** The session_id is typed in by hand; there is
   no "list my sessions" affordance (no such endpoint exists server-side either).
 

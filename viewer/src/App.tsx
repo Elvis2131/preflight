@@ -1,6 +1,7 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import { listVersions, type AssessResponse } from "./api";
 import { buildTimeline } from "./timeline";
+import { GraphView } from "./GraphView";
 
 // This is PC-90's own read-only viewer (PRD §6) — it authors nothing. There is no
 // write/edit action anywhere in this file, deliberately: no rename, no re-run, no
@@ -37,6 +38,7 @@ export default function App() {
   const [versions, setVersions] = useState<AssessResponse[] | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [selectedVersion, setSelectedVersion] = useState<number | null>(null);
 
   const load = useCallback(async () => {
     if (!sessionID.trim()) return;
@@ -52,6 +54,16 @@ export default function App() {
       setBusy(false);
     }
   }, [sessionID, baseURL]);
+
+  // Default the graph view to the latest version once versions load — PC-91's own
+  // acceptance criterion is "for a given version", not "for every version at once".
+  useEffect(() => {
+    if (versions && versions.length > 0) {
+      setSelectedVersion(versions[versions.length - 1].version_number);
+    } else {
+      setSelectedVersion(null);
+    }
+  }, [versions]);
 
   const rows = versions ? buildTimeline(versions) : null;
 
@@ -135,6 +147,31 @@ export default function App() {
           </span>
         ))}
       </div>
+
+      {versions && versions.length > 0 && (
+        <div style={{ marginTop: 32, borderTop: "1px solid #e2e8f0", paddingTop: 16 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 12 }}>
+            <label>
+              graph version:{" "}
+              <select
+                value={selectedVersion ?? ""}
+                onChange={(e) => setSelectedVersion(Number(e.target.value))}
+                style={{ fontSize: 12 }}
+              >
+                {versions.map((v) => (
+                  <option key={v.version_number} value={v.version_number}>
+                    V{v.version_number}
+                  </option>
+                ))}
+              </select>
+            </label>
+          </div>
+          {(() => {
+            const v = versions.find((x) => x.version_number === selectedVersion);
+            return v ? <GraphView version={v} /> : null;
+          })()}
+        </div>
+      )}
     </div>
   );
 }
