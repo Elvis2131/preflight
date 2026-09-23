@@ -35,8 +35,9 @@ inspected. Driver script scratch-only, not committed.
 
 ## Explicitly out of scope for this ticket
 
-- **No graph/diff view.** That's PC-91, blocked on PC-81 (server-rendered SVG, not
-  yet built) — this app has nothing to render for that yet.
+- **No graph/diff view.** That's PC-91 — PC-81 has since landed real SVG rendering
+  (`assess_response.graph`), so PC-91 is now unblocked, just not built in this
+  ticket.
 - **No session history/browsing UI.** The session_id is typed in by hand; there is
   no "list my sessions" affordance (no such endpoint exists server-side either).
 

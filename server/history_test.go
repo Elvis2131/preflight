@@ -54,6 +54,19 @@ func TestGetStoredVersion_FirstVersion_MatchesWhatAssessReturned(t *testing.T) {
 	if len(readBack.AssuranceDelta) != 0 {
 		t.Errorf("AssuranceDelta = %+v, want empty for version 1", readBack.AssuranceDelta)
 	}
+
+	// PC-81's Graph field is regenerated on read, not persisted separately — proving
+	// this round-trips byte-identically is what actually justifies that design
+	// decision (render/render_golden_test.go proves core.RenderDOT+render.SVG are
+	// deterministic in isolation; this proves it holds across the real write-then-read
+	// path too, the same class of check PC-94's own assurance_delta round-trip test
+	// already established).
+	if assessed.Graph == nil || readBack.Graph == nil {
+		t.Fatal("Graph must never be nil on either path")
+	}
+	if *assessed.Graph != *readBack.Graph {
+		t.Error("Graph field differs between the original Assess response and the later GetStoredVersion read-back — rendering is not actually deterministic across the write/read boundary")
+	}
 }
 
 func TestGetStoredVersion_SecondVersion_DeltaMatchesAssessTimeDelta(t *testing.T) {

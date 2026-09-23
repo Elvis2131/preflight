@@ -13,6 +13,7 @@ import (
 	"preflight/providers"
 	awsprovider "preflight/providers/aws"
 	azureprovider "preflight/providers/azure"
+	"preflight/render"
 )
 
 // AssessRequest is what a caller (an HTTP body or an MCP tool call — see http.go/
@@ -153,16 +154,35 @@ func assessFromResult(store *Store, sessionID string, versionNumber int, hadPrev
 		return AssessResponse{}, err
 	}
 
-	graphStub := "graph rendering not yet implemented — see PC-81"
+	// Graph (PC-81): core.RenderDOT (pure, deterministic) -> render.SVG (the one place
+	// this codebase shells out to Graphviz). A render failure — Graphviz not
+	// installed being the realistic case — never fails the whole assessment
+	// (findings/scorecard are the load-bearing result); it produces an honest,
+	// specific message instead, the same "never omitted, never silently guessed"
+	// contract this field has always had, now describing a real attempted-and-failed
+	// state rather than "not built yet".
+	graph := graphOrFailureMessage(result.IR)
+
 	return AssessResponse{
 		SessionID:         sessionID,
 		VersionNumber:     versionNumber,
 		Findings:          findings,
 		Scorecard:         scorecard,
 		AssuranceDelta:    delta,
-		Graph:             &graphStub,
+		Graph:             &graph,
 		Degraded:          true,
 		DegradedReason:    "reason/ has no LLM client wired up yet (ADR-005/PC-77) — every response is narrative-degraded until it does",
 		ComputeDurationMS: time.Since(start).Milliseconds(),
 	}, nil
+}
+
+// graphOrFailureMessage renders result.IR to SVG (PC-81) or, if that fails, returns a
+// specific message naming why — never a blank string, never a silently swallowed
+// error.
+func graphOrFailureMessage(ir *core.IR) string {
+	svg, err := render.SVG(core.RenderDOT(ir))
+	if err != nil {
+		return "graph rendering failed: " + err.Error()
+	}
+	return svg
 }

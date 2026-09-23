@@ -57,14 +57,19 @@ func GetStoredVersion(store *Store, sessionID string, versionNumber int) (Assess
 		}
 	}
 
-	graphStub := "graph rendering not yet implemented — see PC-81"
+	// Graph (PC-81): regenerated from the stored IR, not persisted separately — since
+	// core.RenderDOT + render.SVG are proven deterministic (render/render_golden_test.go),
+	// re-rendering here is guaranteed to reproduce byte-identical output to what the
+	// original /assess call returned, at the cost of one cheap Graphviz invocation
+	// per read-back rather than a second stored copy to keep in sync.
+	graph := graphOrFailureMessage(stored.IR)
 	return AssessResponse{
 		SessionID:      sessionID,
 		VersionNumber:  versionNumber,
 		Findings:       stored.Findings,
 		Scorecard:      stored.Scorecard,
 		AssuranceDelta: delta,
-		Graph:          &graphStub,
+		Graph:          &graph,
 		Degraded:       true,
 		DegradedReason: "read back from a previously-stored version — reason/ was never re-run for a GET (ADR-005/PC-77's own gap, unchanged by this read-back)",
 		// ComputeDurationMS measures the actual store read (real, if tiny — a SQLite

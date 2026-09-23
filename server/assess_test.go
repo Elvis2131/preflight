@@ -1,6 +1,7 @@
 package server
 
 import (
+	"strings"
 	"testing"
 	"time"
 )
@@ -118,20 +119,21 @@ func TestAssess_AlwaysDegraded_NoLLMClientExists(t *testing.T) {
 	}
 }
 
-// TestAssess_GraphIsStubNeverOmitted is PC-21's own named scope exclusion, tested:
-// Graph must always be present with the documented stub value — never nil, never an
-// error, never silently absent from the response.
-func TestAssess_GraphIsStubNeverOmitted(t *testing.T) {
+// TestAssess_GraphIsRealSVGNeverOmitted was PC-21's own named scope exclusion (a
+// stub); PC-81 landed real rendering (core.RenderDOT + render.SVG), so this now
+// asserts the field is always present with REAL SVG content — never nil, never an
+// error, never silently absent — not merely a non-empty stub string.
+func TestAssess_GraphIsRealSVGNeverOmitted(t *testing.T) {
 	store := testStore(t)
 	resp, err := Assess(store, AssessRequest{SessionID: "sess-graph", BundleDir: "../golden/aws", WorkloadPath: "../golden/workload.yaml"})
 	if err != nil {
 		t.Fatalf("Assess: %v", err)
 	}
 	if resp.Graph == nil {
-		t.Fatal("Graph must never be nil — a stub value, not an omitted field")
+		t.Fatal("Graph must never be nil — always a real value, never an omitted field")
 	}
-	if *resp.Graph == "" {
-		t.Error("Graph stub value must be non-empty")
+	if !strings.Contains(*resp.Graph, "<svg") {
+		t.Errorf("Graph = %.100s..., want real SVG content (an <svg> tag)", *resp.Graph)
 	}
 }
 
