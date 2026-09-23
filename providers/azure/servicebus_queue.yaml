@@ -1,0 +1,29 @@
+# Service Bus Queue -> queue/stream. PC-22, golden node type 7/8 (mirrors AWS's SQS
+# slot).
+#
+# Structural difference, stated rather than silently matched: AWS's dead-letter queue
+# is a SEPARATE aws_sqs_queue resource wired via redrive_policy (golden/aws-broken's
+# defect 4 is that resource simply missing entirely). Azure Service Bus's
+# dead-lettering is a single boolean flag on this SAME queue resource — no second
+# resource to omit. This is a real, not a forced, structural asymmetry between the two
+# clouds' own designs for the same capability.
+#
+# Encryption is not modeled here: verified against
+# raw.githubusercontent.com/hashicorp/terraform-provider-azurerm (2026-09-21) that
+# customer-managed-key encryption for Service Bus is a NAMESPACE-level property
+# (azurerm_servicebus_namespace), not a queue-level one — a granularity mismatch with
+# AWS's own kms_master_key_id (set per-queue), left unmodeled rather than checked at
+# the wrong resource.
+resource_type: azurerm_servicebus_queue
+node_type: queue/stream
+capabilities:
+  - field: dead_lettering_on_message_expiration
+    source_attribute: dead_lettering_on_message_expiration
+    on_absent: assumed
+    assumed_default: "false"
+    assumed_citation: >-
+      Terraform azurerm provider docs, azurerm_servicebus_queue:
+      "dead_lettering_on_message_expiration - Boolean flag which controls whether the
+      Queue has dead letter support when a message expires. Defaults to false."
+      Verified against raw.githubusercontent.com/hashicorp/terraform-provider-azurerm
+      (2026-09-21).

@@ -1,0 +1,32 @@
+# ALB -> load_balancer. PRD §10 / CLAUDE.md §14 golden node type 3/8.
+resource_type: aws_lb
+node_type: load_balancer
+capabilities:
+  - field: internal
+    source_attribute: internal
+    on_absent: assumed
+    assumed_default: "false"
+    assumed_citation: >-
+      Terraform AWS provider docs, aws_lb: "internal - (Optional) If true, the LB will
+      be internal." Absent means false (internet-facing) — the provider's own documented
+      default, not this project's assumption. Verified against
+      raw.githubusercontent.com/hashicorp/terraform-provider-aws (2026-09-20).
+
+  - field: idle_timeout_seconds
+    source_attribute: idle_timeout
+    on_absent: assumed
+    assumed_default: "60"
+    assumed_citation: >-
+      Terraform AWS provider docs, aws_lb: "idle_timeout - ... Default: 60." Verified
+      against raw.githubusercontent.com/hashicorp/terraform-provider-aws (2026-09-20).
+
+  - field: deletion_protection
+    source_attribute: enable_deletion_protection
+    on_absent: assumed
+    assumed_default: "false"
+    assumed_citation: >-
+      Terraform AWS provider docs, aws_lb: "enable_deletion_protection - ... Defaults to
+      false." A load balancer with this field simply omitted is deletable by default —
+      a real, load-bearing fact for a tier-1 workload's resilience posture, not a detail
+      to leave silently unassumed. Verified against
+      raw.githubusercontent.com/hashicorp/terraform-provider-aws (2026-09-20).

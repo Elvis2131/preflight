@@ -1,0 +1,22 @@
+# Route 53 -> dns. PRD §10 / CLAUDE.md §14 golden node type 1/8.
+resource_type: aws_route53_record
+node_type: dns
+capabilities:
+  - field: evaluate_target_health
+    source_attribute: alias.evaluate_target_health
+    on_absent: not_assessable
+    # No AWS-documented default was found for this field when the alias block itself is
+    # present but evaluate_target_health is omitted from it — left unassumed rather than
+    # guessed (CLAUDE.md §5).
+
+  - field: routing_policy
+    source_attribute: __derived_from_presence_of_routing_policy_blocks__
+    on_absent: not_assessable
+    # Checked: no AWS or Terraform provider documentation was found stating what
+    # routing policy applies when no policy block (failover/weighted/latency/
+    # geolocation/multivalue) is set. "Simple routing is the default" is a widely
+    # repeated claim, but it was not found stated as fact in either the AWS Route 53
+    # Developer Guide's routing-policy page or the Terraform aws_route53_record
+    # documentation — both were checked directly, not assumed from memory. Per
+    # CLAUDE.md §5, an unconfirmed claim stays not_assessable rather than being
+    # asserted as if it were.

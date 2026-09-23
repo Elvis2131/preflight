@@ -1,0 +1,47 @@
+{
+  "id": "finding.spof-nat-gateway",
+  "title": "Single NAT gateway is a tier-1 SPOF for private-subnet egress",
+  "evidence": [
+    { "node_id": "aws_nat_gateway.nat_a", "description": "golden/aws-broken/network.tf's defect 1: one NAT gateway serves all three private subnets" }
+  ],
+  "dimensions": {
+    "trigger": "AZ eu-west-1a loss or the NAT gateway itself failing",
+    "affected_components": ["aws_nat_gateway.nat_a"],
+    "blast_radius": ["aws_nat_gateway.nat_a", "aws_eks_cluster.payments"],
+    "detection": "modeled",
+    "existing_mitigation": "none",
+    "gap": "no second NAT gateway in another AZ",
+    "impact": {
+      "state": "assessed",
+      "value": "2 component(s) in blast radius; workload criticality tier1",
+      "provenance": { "kind": "derived", "source": "core/analyse:impact" }
+    },
+    "likelihood": {
+      "state": "not_assessable",
+      "reason": "likelihood is not assessable from structural analysis alone - no frequency/probability data exists to assume from; an assumed guess here would be exactly the fabrication CLAUDE.md §10 warns against",
+      "provenance": { "kind": "derived", "source": "core/analyse:likelihood" }
+    },
+    "detectability": {
+      "state": "assessed",
+      "value": "high - this simulator models the failure directly",
+      "provenance": { "kind": "derived", "source": "core/analyse:detectability" }
+    },
+    "recoverability": {
+      "failover_path_exists": {
+        "state": "assessed",
+        "value": false,
+        "provenance": { "kind": "derived", "source": "core/analyse:rto-feasibility" }
+      },
+      "rpo_feasible": {
+        "state": "not_assessable",
+        "reason": "replication mode is unknown for this resource - cannot assess RPO feasibility",
+        "provenance": { "kind": "derived", "source": "core/analyse:rpo-feasibility" }
+      }
+    }
+  },
+  "outcome": {
+    "state": "assessed",
+    "value": "single point of failure confirmed",
+    "provenance": { "kind": "derived", "source": "core/analyse:spof-detector" }
+  }
+}

@@ -1,0 +1,34 @@
+{
+  "description": "Simulate region loss for workload \"payments-api\" (derived from a core.Simulate region_loss fault, PC-82): stop every EC2 instance tagged Service=payments-api, restart after 2 minutes.",
+  "targets": {
+    "AllWorkloadInstances": {
+      "resourceType": "aws:ec2:instance",
+      "resourceTags": {
+        "Service": "payments-api"
+      },
+      "selectionMode": "ALL"
+    }
+  },
+  "actions": {
+    "StopInstances": {
+      "actionId": "aws:ec2:stop-instances",
+      "description": "stop every instance belonging to this workload, region-wide",
+      "parameters": {
+        "startInstancesAfterDuration": "PT2M"
+      },
+      "targets": {
+        "Instances": "AllWorkloadInstances"
+      }
+    }
+  },
+  "stopConditions": [
+    {
+      "source": "none"
+    }
+  ],
+  "roleArn": "arn:aws:iam::111122223333:role/FISExperimentRole",
+  "tags": {
+    "Name": "Preflight-region-loss-payments-api",
+    "source": "core.Simulate:region_loss"
+  }
+}

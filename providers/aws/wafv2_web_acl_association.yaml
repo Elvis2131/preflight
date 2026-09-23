@@ -1,0 +1,15 @@
+# aws_wafv2_web_acl_association -> an edge, not a node. It exists solely to connect an
+# already-modeled load_balancer (or API Gateway/CloudFront, not yet modeled) to an
+# already-modeled WAF web ACL. Per docs/IR_DESIGN_NOTE.md's WAF discussion (PC-11):
+# golden/aws-broken/waf.tf's defect 6 is a correctly-configured, unassociated web ACL —
+# detectable only if this association is itself a real edge in the IR, not merely
+# implied by both resources existing.
+resource_type: aws_wafv2_web_acl_association
+edge:
+  type: depends_on
+  # The protected resource "depends on" the WAF association holding, matching the
+  # direction docs/IR_DESIGN_NOTE.md already chose (load_balancer depends_on waf) —
+  # not the reverse, since a WAF being unprotected-from is the load balancer's problem,
+  # not the WAF's.
+  from_attribute: resource_arn
+  to_attribute: web_acl_arn

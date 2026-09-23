@@ -1,0 +1,20 @@
+# WAF -> network_boundary, per docs/IR_DESIGN_NOTE.md's WAF decision (PC-11): WAF does
+# not fit the canonical/capability split as a mere load_balancer capability, because its
+# association is an independently-failable structural fact (golden/aws-broken/waf.tf
+# defect #6) — modeled as its own node with a depends_on edge from the load_balancer it
+# protects, not as an attribute here.
+resource_type: aws_wafv2_web_acl
+node_type: network_boundary
+capabilities:
+  - field: scope
+    source_attribute: scope
+    on_absent: not_assessable
+    # No default: `scope` is a required Terraform argument for aws_wafv2_web_acl (no
+    # provider-side default exists to assume), so absence here means a configuration
+    # error the validator (not this mapping) should catch — not this mapping's job to
+    # paper over with an invented value.
+
+  - field: default_action
+    source_attribute: default_action
+    on_absent: not_assessable
+    # Same reasoning as scope: required argument, no default to assume.

@@ -1,0 +1,20 @@
+# AKS -> container_workload. PC-22, golden node type 4/8 (mirrors AWS's EKS slot).
+resource_type: azurerm_kubernetes_cluster
+node_type: container_workload
+capabilities:
+  - field: control_plane_private_access
+    source_attribute: private_cluster_enabled
+    on_absent: assumed
+    assumed_default: "false"
+    assumed_citation: >-
+      Terraform azurerm provider docs, azurerm_kubernetes_cluster: "private_cluster_enabled
+      - ... Defaults to false." Left unset, the API server is publicly accessible —
+      the same real-world default direction as EKS's own endpoint_public_access
+      (defaults true, i.e. NOT private). Deliberately NOT named
+      control_plane_public_access here: this field's raw stored value is
+      private_cluster_enabled's own value, not its inverse — naming it
+      "...public_access" while storing the un-inverted private_cluster_enabled value
+      would silently mean the opposite of what the name claims, exactly the kind of
+      producer/consumer polarity mismatch core.FailoverMechanismNone's own history
+      already taught this project to check for explicitly. Verified against
+      raw.githubusercontent.com/hashicorp/terraform-provider-azurerm (2026-09-21).

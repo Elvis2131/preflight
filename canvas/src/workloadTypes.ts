@@ -1,0 +1,50 @@
+// workloadTypes.ts mirrors core.Workload (preflight/core/workload.go) exactly — the
+// same "one source of truth, mirrored deliberately, not independently redefined"
+// relationship goldenVocabulary.ts already has with core.NodeType/EdgeType (PC-85),
+// now extended to workload.schema.json (PC-87). Field names copied verbatim from the
+// real Go struct's json tags, not retyped from memory.
+export type RequirementPriority = "hard" | "preference";
+
+export interface Requirement {
+  id: string;
+  // Value mirrors core.Requirement.Value (Go `any`) — PRD §4 gives no single type
+  // (an RTO is a duration, an availability target a percentage, a profile membership
+  // a string). The form only ever captures free text here; a plain string is a valid
+  // value against workload.schema.json's own `value: true` (literally any JSON value).
+  value: string;
+  priority: RequirementPriority;
+  // rank is required when priority is "preference", must be absent when "hard" —
+  // core.Requirement's own validate tag (required_if/excluded_if), enforced here in
+  // the form too (see WorkloadForm) rather than only being caught server-side.
+  rank?: number;
+}
+
+export interface Workload {
+  schema_version: string;
+  name: string;
+  criticality: string;
+  data_classification: string;
+  regions: string[];
+  compliance_profiles: string[];
+  requirements: Requirement[];
+  // capacity is deliberately OPTIONAL and sparse: a node-type-scoped key absent from
+  // this map means capacity_unknown for that key (core/workload.go's own doc
+  // comment) — never a zero, never inferred. WorkloadForm must preserve this: a
+  // blank capacity field in the form omits the key entirely, it never becomes 0.
+  capacity?: Record<string, number>;
+}
+
+export const WORKLOAD_SCHEMA_VERSION = "1.0.0";
+
+export function emptyWorkload(): Workload {
+  return {
+    schema_version: WORKLOAD_SCHEMA_VERSION,
+    name: "",
+    criticality: "",
+    data_classification: "",
+    regions: [],
+    compliance_profiles: [],
+    requirements: [],
+    capacity: {},
+  };
+}

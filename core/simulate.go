@@ -1,0 +1,218 @@
+package core
+
+import (
+	"sort"
+
+	"preflight/core/internal/analyse"
+)
+
+// Fault is one declared failure condition for /simulate (PC-82). Only "region_loss"
+// is hand-verified in this version — see Simulate's own doc comment for the full
+// scope statement.
+type Fault struct {
+	Type   string `json:"type" validate:"required" jsonschema:"required"`
+	Target string `json:"target" validate:"required" jsonschema:"required"`
+}
+
+// Journey is one entry-point-to-stateful-node path's fate under the declared faults —
+// PC-82's own response shape names "journeys[]" without further detail (the source
+// PRD/Design text was unavailable when this was built), so the cross product of every
+// surviving entry point against every stateful node is the design decision made here:
+// it is the most informative shape ("which specific paths survive") without inventing
+// a narrower concept the ticket never named.
+type Journey struct {
+	EntryPoint string `json:"entry_point"`
+	Target     string `json:"target"`
+	Survives   bool   `json:"survives"`
+}
+
+// SimulateResponse is /simulate's full response shape (PC-82: "{journeys[], capacity,
+// severed_paths[], cascade[], verdict}", PRD §6 — verbatim from the ticket's own
+// Confirmation criterion, since the referenced PRD/Design doc pages were unavailable).
+type SimulateResponse struct {
+	Journeys     []Journey          `json:"journeys"`
+	Capacity     AssessmentEnvelope `json:"capacity"`
+	SeveredPaths []string           `json:"severed_paths"`
+	Cascade      []string           `json:"cascade"`
+	Verdict      AssessmentEnvelope `json:"verdict"`
+}
+
+// Simulate applies a declared fault set against an IR + Workload, reusing PC-14's
+// existing fault-injection engines (SimulateLoss for forward reachability from entry
+// points, SurvivingCapacity for the declared-capacity check) rather than duplicating
+// them — PC-82's own acceptance criterion, verbatim: "reuses PC-14's existing
+// fault-injection logic ... rather than duplicating it — this is the same engine, a
+// different entry point."
+//
+// SCOPE, stated explicitly per PC-82's own Confirmation criterion ("declaring a
+// region_loss fault against the golden architecture produces a real, hand-verified
+// verdict" — not every conceivable fault type): two fault types are implemented and
+// hand-verified here, "region_loss" and "node_loss".
+//
+// "region_loss": region is not a modeled containment level in the IR — no node
+// carries a "region" attribute; AWS subnets carry availability_zone, one level below
+// region, and Azure has no per-node AZ attribute at all (see golden/azure/README.md).
+// So this answers the only version of "region loss" the IR can honestly support
+// today: if the declared workload names EXACTLY the target region and has no OTHER
+// declared region, the entire graph is treated as killed — there is no secondary
+// region for anything to fail over into, which is a real, correct answer for a
+// single-region workload (golden/workload.yaml declares exactly one region), not an
+// approximation of a partial regional kill this IR cannot actually compute.
+//
+// "node_loss" (PC-88): kills exactly the named node ID, nothing else — added when the
+// canvas's "click a node and kill it" interaction needed a fault type /simulate could
+// honestly answer at that granularity, one that region_loss's whole-graph semantics
+// can't provide. Reuses the identical SimulateLoss/SurvivingCapacity engine below —
+// killedNodesForFaults only decides WHICH node IDs are in the killed set, never how
+// reachability or capacity is computed from that set, so this is genuinely "the same
+// engine, a different entry point," not new simulation logic layered on top of it.
+//
+// Any other fault type, a region_loss target that doesn't match the workload's own
+// declared region(s), or a node_loss target that doesn't exist in the IR, returns
+// not_assessable with a stated reason rather than guessing — never a fabricated
+// partial result.
+func Simulate(ir *IR, workload Workload, faults []Fault, prov Provenance) SimulateResponse {
+	killed, ok, reason := killedNodesForFaults(ir, workload, faults)
+	if !ok {
+		na := NotAssessable[any](reason, prov).ToEnvelope()
+		return SimulateResponse{Capacity: na, Verdict: na}
+	}
+
+	var allEdges []DirectedEdge
+	for _, e := range ir.Edges {
+		allEdges = append(allEdges, DirectedEdge{From: e.From, To: e.To})
+	}
+
+	var entryPoints, statefulNodes []string
+	for _, n := range ir.Nodes {
+		switch n.Type {
+		case NodeTypeDNS, NodeTypeLoadBalancer:
+			if !killed[n.ID] {
+				entryPoints = append(entryPoints, n.ID)
+			}
+		case NodeTypeManagedDatabase, NodeTypeCache, NodeTypeQueueStream, NodeTypeObjectStore:
+			statefulNodes = append(statefulNodes, n.ID)
+		}
+	}
+	sort.Strings(entryPoints)
+	sort.Strings(statefulNodes)
+
+	unreachable := map[string]bool{}
+	if len(entryPoints) > 0 {
+		for _, id := range SimulateLoss(allEdges, entryPoints, killed) {
+			unreachable[id] = true
+		}
+	}
+
+	// journeys/severedPaths are initialized non-nil, deliberately, like cascade below
+	// — a Go nil slice marshals to JSON `null`, not `[]`, and every consumer of this
+	// wire response reasonably expects an array it can iterate/range over
+	// unconditionally. Guarding against `null` only in one TS consumer (as this
+	// codebase briefly did) is exactly the symptomatic fix PC-83 already rejected
+	// elsewhere — the real fix is here, at the one place that produces the response,
+	// so it's fixed for every current and future caller (a CLI script, PC-93's
+	// eventual MCP tool, anything else that calls /simulate directly).
+	journeys := make([]Journey, 0)
+	severedSet := map[string]bool{}
+	for _, target := range statefulNodes {
+		survives := len(entryPoints) > 0 && !killed[target] && !unreachable[target]
+		if !survives {
+			severedSet[target] = true
+		}
+		for _, ep := range entryPoints {
+			journeys = append(journeys, Journey{EntryPoint: ep, Target: target, Survives: survives})
+		}
+	}
+
+	cascadeSet := map[string]bool{}
+	for id := range killed {
+		cascadeSet[id] = true
+	}
+	for id := range unreachable {
+		cascadeSet[id] = true
+	}
+
+	// Ordered by hop distance from the point of failure (PC-89), not alphabetically —
+	// see analyse.CascadeOrder's own doc comment for why this is a structural fact, not
+	// a timing claim. severedPaths is ordered the same way since it's always a subset
+	// of cascade: the same "how far from the failure" story applies to both.
+	cascade := analyse.CascadeOrder(allEdges, killed, cascadeSet)
+	severedPaths := analyse.CascadeOrder(allEdges, killed, severedSet)
+
+	survivingWorkloadInstances := 0
+	for _, n := range ir.Nodes {
+		if n.Type == NodeTypeContainerWorkload && !killed[n.ID] {
+			survivingWorkloadInstances++
+		}
+	}
+	capValue, capOK, capReason := analyse.SurvivingCapacity(workload.Capacity, "app_node_rps", survivingWorkloadInstances)
+	var capacity AssessmentEnvelope
+	if !capOK {
+		capacity = NotAssessable[any](capReason, prov).ToEnvelope()
+	} else {
+		capacity = Assessed[any](capValue, prov).ToEnvelope()
+	}
+
+	verdict := deriveVerdict(len(entryPoints), len(statefulNodes), len(severedPaths), prov)
+
+	return SimulateResponse{
+		Journeys:     journeys,
+		Capacity:     capacity,
+		SeveredPaths: severedPaths,
+		Cascade:      cascade,
+		Verdict:      verdict,
+	}
+}
+
+// killedNodesForFaults resolves a fault list into the concrete set of killed node
+// IDs. See Simulate's own doc comment for the full scope statement on why only
+// region_loss is implemented.
+func killedNodesForFaults(ir *IR, workload Workload, faults []Fault) (killed map[string]bool, ok bool, reason string) {
+	killed = map[string]bool{}
+	for _, f := range faults {
+		switch f.Type {
+		case "region_loss":
+			if len(workload.Regions) != 1 || workload.Regions[0] != f.Target {
+				return nil, false, "region_loss target \"" + f.Target + "\" does not match the workload's own single declared region — multi-region topologies are not modeled in the IR (no per-node region attribute exists), so a partial regional kill cannot be honestly computed"
+			}
+			for _, n := range ir.Nodes {
+				killed[n.ID] = true
+			}
+		case "node_loss":
+			if !nodeExists(ir, f.Target) {
+				return nil, false, "node_loss target \"" + f.Target + "\" does not exist in this IR — refusing to guess which node was meant"
+			}
+			killed[f.Target] = true
+		default:
+			return nil, false, "fault type \"" + f.Type + "\" is not implemented — only region_loss and node_loss are hand-verified in this version (PC-82, PC-88)"
+		}
+	}
+	return killed, true, ""
+}
+
+func nodeExists(ir *IR, id string) bool {
+	for _, n := range ir.Nodes {
+		if n.ID == id {
+			return true
+		}
+	}
+	return false
+}
+
+// deriveVerdict classifies the outcome from what Simulate already computed — a real
+// derived conclusion (CLAUDE.md §5 forbids FABRICATION, not derivation from a fact
+// this function already has in hand). Three values, mirroring this codebase's
+// established discipline of small, named, non-numeric outcome vocabularies rather
+// than an invented score: "total_outage" (no entry point survives, or every stateful
+// target is severed), "degraded" (some but not all severed), "unaffected" (none
+// severed — including the vacuous case of no stateful targets in the graph at all).
+func deriveVerdict(survivingEntryPoints, totalStatefulTargets, severedCount int, prov Provenance) AssessmentEnvelope {
+	switch {
+	case survivingEntryPoints == 0 || (totalStatefulTargets > 0 && severedCount == totalStatefulTargets):
+		return Assessed[any]("total_outage", prov).ToEnvelope()
+	case severedCount > 0:
+		return Assessed[any]("degraded", prov).ToEnvelope()
+	default:
+		return Assessed[any]("unaffected", prov).ToEnvelope()
+	}
+}

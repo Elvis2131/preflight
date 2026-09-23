@@ -1,0 +1,345 @@
+[
+  {
+    "id": "finding.zone-kill.public-a",
+    "title": "AZ loss: eu-west-1a public subnet",
+    "dimensions": {
+      "trigger": "availability zone loss",
+      "affected_components": [
+        "aws_subnet.public_a"
+      ],
+      "blast_radius": [
+        "aws_lb.payments",
+        "aws_nat_gateway.nat_a"
+      ],
+      "detection": "modeled",
+      "existing_mitigation": "none stated",
+      "impact": {
+        "state": "assessed",
+        "value": "2 component(s) in blast radius; workload criticality \"tier1\"",
+        "provenance": {
+          "kind": "derived",
+          "source": "core/analyse:zone-kill:aws_subnet.public_a"
+        }
+      },
+      "likelihood": {
+        "state": "not_assessable",
+        "reason": "likelihood is not assessable from structural analysis alone — no frequency/probability data exists to assume from; an assumed guess here would be exactly the fabrication CLAUDE.md §10 warns against",
+        "provenance": {
+          "kind": "derived",
+          "source": "core/analyse:zone-kill:aws_subnet.public_a"
+        }
+      },
+      "detectability": {
+        "state": "assessed",
+        "value": "high — this simulator models the failure directly",
+        "provenance": {
+          "kind": "derived",
+          "source": "core/analyse:zone-kill:aws_subnet.public_a"
+        }
+      },
+      "recoverability": {
+        "failover_path_exists": {
+          "state": "not_assessable",
+          "reason": "recoverability is evaluated per affected resource, not at the zone-kill level — see per-resource RTO/RPO findings",
+          "provenance": {
+            "kind": "derived",
+            "source": "core/analyse:zone-kill:aws_subnet.public_a"
+          }
+        },
+        "rpo_feasible": {
+          "state": "not_assessable",
+          "reason": "recoverability is evaluated per affected resource, not at the zone-kill level",
+          "provenance": {
+            "kind": "derived",
+            "source": "core/analyse:zone-kill:aws_subnet.public_a"
+          }
+        }
+      }
+    },
+    "evidence": [
+      {
+        "node_id": "aws_subnet.public_a",
+        "description": "core.ContainmentBlastRadius over this bundle's real contained_in edges"
+      }
+    ],
+    "outcome": {
+      "state": "assessed",
+      "value": "2 component(s) affected",
+      "provenance": {
+        "kind": "derived",
+        "source": "core/analyse:zone-kill:aws_subnet.public_a"
+      }
+    }
+  },
+  {
+    "id": "finding.zone-kill.data-a",
+    "title": "AZ loss: eu-west-1a data subnet",
+    "dimensions": {
+      "trigger": "availability zone loss",
+      "affected_components": [
+        "aws_subnet.data_a"
+      ],
+      "detection": "modeled",
+      "existing_mitigation": "none stated",
+      "impact": {
+        "state": "not_assessable",
+        "reason": "blast radius is empty — either the failure is fully contained/redundant, or blast radius could not be computed",
+        "provenance": {
+          "kind": "derived",
+          "source": "core/analyse:zone-kill:aws_subnet.data_a"
+        }
+      },
+      "likelihood": {
+        "state": "not_assessable",
+        "reason": "likelihood is not assessable from structural analysis alone — no frequency/probability data exists to assume from; an assumed guess here would be exactly the fabrication CLAUDE.md §10 warns against",
+        "provenance": {
+          "kind": "derived",
+          "source": "core/analyse:zone-kill:aws_subnet.data_a"
+        }
+      },
+      "detectability": {
+        "state": "assessed",
+        "value": "high — this simulator models the failure directly",
+        "provenance": {
+          "kind": "derived",
+          "source": "core/analyse:zone-kill:aws_subnet.data_a"
+        }
+      },
+      "recoverability": {
+        "failover_path_exists": {
+          "state": "not_assessable",
+          "reason": "recoverability is evaluated per affected resource, not at the zone-kill level — see per-resource RTO/RPO findings",
+          "provenance": {
+            "kind": "derived",
+            "source": "core/analyse:zone-kill:aws_subnet.data_a"
+          }
+        },
+        "rpo_feasible": {
+          "state": "not_assessable",
+          "reason": "recoverability is evaluated per affected resource, not at the zone-kill level",
+          "provenance": {
+            "kind": "derived",
+            "source": "core/analyse:zone-kill:aws_subnet.data_a"
+          }
+        }
+      }
+    },
+    "evidence": [
+      {
+        "node_id": "aws_subnet.data_a",
+        "description": "core.ContainmentBlastRadius over this bundle's real contained_in edges"
+      }
+    ],
+    "outcome": {
+      "state": "not_assessable",
+      "reason": "zone-kill impact could not be determined — either the failure is fully contained/redundant, or the affected substrate is not yet mapped (see golden/fixtures/README.md)",
+      "provenance": {
+        "kind": "derived",
+        "source": "core/analyse:zone-kill:aws_subnet.data_a"
+      }
+    }
+  },
+  {
+    "id": "finding.compliance.nat-gateway-redundancy",
+    "title": "NAT gateway redundancy across public subnets",
+    "dimensions": {
+      "trigger": "a single NAT gateway's AZ is lost, or the gateway itself fails",
+      "affected_components": [
+        "aws_subnet.public_a",
+        "aws_subnet.public_b",
+        "aws_subnet.public_c"
+      ],
+      "detection": "modeled",
+      "impact": {
+        "state": "not_assessable",
+        "reason": "impact dimension not evaluated by this compliance check",
+        "provenance": {
+          "kind": "derived",
+          "source": "core/analyse:nat-gateway-redundancy"
+        }
+      },
+      "likelihood": {
+        "state": "not_assessable",
+        "reason": "likelihood is not assessable from structural analysis alone — no frequency/probability data exists to assume from; an assumed guess here would be exactly the fabrication CLAUDE.md §10 warns against",
+        "provenance": {
+          "kind": "derived",
+          "source": "core/analyse:nat-gateway-redundancy"
+        }
+      },
+      "detectability": {
+        "state": "assessed",
+        "value": "high — this simulator models the failure directly",
+        "provenance": {
+          "kind": "derived",
+          "source": "core/analyse:nat-gateway-redundancy"
+        }
+      },
+      "recoverability": {
+        "failover_path_exists": {
+          "state": "not_assessable",
+          "reason": "recoverability not evaluated by this compliance check",
+          "provenance": {
+            "kind": "derived",
+            "source": "core/analyse:nat-gateway-redundancy"
+          }
+        },
+        "rpo_feasible": {
+          "state": "not_assessable",
+          "reason": "recoverability not evaluated by this compliance check",
+          "provenance": {
+            "kind": "derived",
+            "source": "core/analyse:nat-gateway-redundancy"
+          }
+        }
+      }
+    },
+    "evidence": [
+      {
+        "description": "all 3 public subnet(s) have independent NAT gateway coverage"
+      }
+    ],
+    "outcome": {
+      "state": "assessed",
+      "value": "satisfied",
+      "provenance": {
+        "kind": "derived",
+        "source": "core/analyse:nat-gateway-redundancy"
+      }
+    }
+  },
+  {
+    "id": "finding.compliance.rds-storage-encryption.aws_db_instance.payments",
+    "title": "RDS storage encryption at rest",
+    "dimensions": {
+      "trigger": "unencrypted storage exposed via snapshot, backup, or storage compromise",
+      "affected_components": [
+        "aws_db_instance.payments"
+      ],
+      "detection": "modeled",
+      "impact": {
+        "state": "not_assessable",
+        "reason": "impact dimension not evaluated by this compliance check",
+        "provenance": {
+          "kind": "derived",
+          "source": "core/analyse:storage-encryption-check:aws_db_instance.payments"
+        }
+      },
+      "likelihood": {
+        "state": "not_assessable",
+        "reason": "likelihood is not assessable from structural analysis alone — no frequency/probability data exists to assume from; an assumed guess here would be exactly the fabrication CLAUDE.md §10 warns against",
+        "provenance": {
+          "kind": "derived",
+          "source": "core/analyse:storage-encryption-check:aws_db_instance.payments"
+        }
+      },
+      "detectability": {
+        "state": "assessed",
+        "value": "high — this simulator models the failure directly",
+        "provenance": {
+          "kind": "derived",
+          "source": "core/analyse:storage-encryption-check:aws_db_instance.payments"
+        }
+      },
+      "recoverability": {
+        "failover_path_exists": {
+          "state": "not_assessable",
+          "reason": "recoverability not evaluated by this compliance check",
+          "provenance": {
+            "kind": "derived",
+            "source": "core/analyse:storage-encryption-check:aws_db_instance.payments"
+          }
+        },
+        "rpo_feasible": {
+          "state": "not_assessable",
+          "reason": "recoverability not evaluated by this compliance check",
+          "provenance": {
+            "kind": "derived",
+            "source": "core/analyse:storage-encryption-check:aws_db_instance.payments"
+          }
+        }
+      }
+    },
+    "evidence": [
+      {
+        "node_id": "aws_db_instance.payments",
+        "description": "storage encryption is enabled — data at rest, snapshots, and automated backups are protected",
+        "attribute": "storage_encrypted"
+      }
+    ],
+    "outcome": {
+      "state": "assessed",
+      "value": "satisfied",
+      "provenance": {
+        "kind": "derived",
+        "source": "core/analyse:storage-encryption-check:aws_db_instance.payments"
+      }
+    }
+  },
+  {
+    "id": "finding.compliance.rds-rpo-feasibility.aws_db_instance.payments",
+    "title": "RDS RPO feasibility against the declared workload requirement",
+    "dimensions": {
+      "trigger": "primary database failure with an infeasible replication mode for the declared RPO",
+      "affected_components": [
+        "aws_db_instance.payments"
+      ],
+      "detection": "modeled",
+      "impact": {
+        "state": "not_assessable",
+        "reason": "impact dimension not evaluated by this compliance check",
+        "provenance": {
+          "kind": "derived",
+          "source": "core/analyse:rpo-feasibility:aws_db_instance.payments"
+        }
+      },
+      "likelihood": {
+        "state": "not_assessable",
+        "reason": "likelihood is not assessable from structural analysis alone — no frequency/probability data exists to assume from; an assumed guess here would be exactly the fabrication CLAUDE.md §10 warns against",
+        "provenance": {
+          "kind": "derived",
+          "source": "core/analyse:rpo-feasibility:aws_db_instance.payments"
+        }
+      },
+      "detectability": {
+        "state": "assessed",
+        "value": "high — this simulator models the failure directly",
+        "provenance": {
+          "kind": "derived",
+          "source": "core/analyse:rpo-feasibility:aws_db_instance.payments"
+        }
+      },
+      "recoverability": {
+        "failover_path_exists": {
+          "state": "not_assessable",
+          "reason": "see this finding's own Outcome for this same underlying check",
+          "provenance": {
+            "kind": "derived",
+            "source": "core/analyse:rpo-feasibility:aws_db_instance.payments"
+          }
+        },
+        "rpo_feasible": {
+          "state": "assessed",
+          "value": true,
+          "provenance": {
+            "kind": "derived",
+            "source": "core/analyse:rpo-feasibility:aws_db_instance.payments"
+          }
+        }
+      }
+    },
+    "evidence": [
+      {
+        "node_id": "aws_db_instance.payments",
+        "description": "declared rpo_seconds requirement is feasible given this resource's replication mode"
+      }
+    ],
+    "outcome": {
+      "state": "assessed",
+      "value": "satisfied",
+      "provenance": {
+        "kind": "derived",
+        "source": "core/analyse:rpo-feasibility:aws_db_instance.payments"
+      }
+    }
+  }
+]

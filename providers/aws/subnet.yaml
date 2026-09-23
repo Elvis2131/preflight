@@ -1,0 +1,17 @@
+# Subnet -> network_boundary. This is THE mapping PC-78 exists for: without a subnet's
+# availability_zone captured, AZ-loss and region-loss have no real placement fact to
+# act on — PC-14's zone-loss engine proved correct against synthetic graphs but
+# reported vacuous "no path" against the real golden IR for exactly this reason.
+#
+# No capabilities declared, deliberately: availability_zone has no CapabilityModel
+# field (replication mode, failover mechanism, etc. don't apply to a subnet), so there
+# is no per-field provenance rule to write. This does NOT mean the AZ is lost — every
+# literal attribute on a MAPPED resource is captured verbatim in raw_attributes
+# regardless of whether a capability entry exists for it (see ingest/build.go's
+# buildNode: RawAttributes is populated unconditionally). Callers needing AZ placement
+# (PC-14's zone-loss engine) read raw_attributes["availability_zone"] directly. This IS
+# a real gap worth naming: CapabilityModel has no canonical "placement" slot at all —
+# noted, not worked around with a misleading field substitution.
+resource_type: aws_subnet
+node_type: network_boundary
+reference_edge_type: contained_in

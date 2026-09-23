@@ -1,0 +1,148 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$defs": {
+    "ADR": {
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "decision": {
+          "type": "string",
+          "minLength": 1
+        },
+        "reason": {
+          "type": "string",
+          "minLength": 1
+        },
+        "trade_offs": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "controls_satisfied": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "failure_modes_addressed": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "provenance": {
+          "$ref": "#/$defs/Provenance"
+        }
+      },
+      "additionalProperties": false,
+      "type": "object",
+      "required": [
+        "id",
+        "decision",
+        "reason",
+        "provenance"
+      ]
+    },
+    "Provenance": {
+      "properties": {
+        "kind": {
+          "type": "string",
+          "enum": [
+            "stated",
+            "derived",
+            "assumed",
+            "llm_reasoned",
+            "observed"
+          ]
+        },
+        "source": {
+          "type": "string",
+          "minLength": 1
+        },
+        "reason": {
+          "type": "string",
+          "description": "Required for assumed and llm_reasoned; the IR evidence citation or the overridable default's justification."
+        },
+        "evidence_tier": {
+          "type": "string",
+          "enum": [
+            "functional",
+            "performance",
+            "resilience"
+          ]
+        },
+        "rung": {
+          "type": "integer",
+          "enum": [
+            1,
+            2,
+            3
+          ]
+        }
+      },
+      "additionalProperties": false,
+      "type": "object",
+      "required": [
+        "kind",
+        "source"
+      ]
+    },
+    "Waiver": {
+      "properties": {
+        "accepted_by": {
+          "type": "string",
+          "minLength": 1
+        },
+        "finding_id": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Linked by ID"
+        },
+        "accepted_at": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "reason": {
+          "type": "string",
+          "minLength": 1
+        },
+        "against_version": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "expires_at": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "additionalProperties": false,
+      "type": "object",
+      "required": [
+        "accepted_by",
+        "finding_id",
+        "accepted_at",
+        "reason",
+        "against_version"
+      ]
+    }
+  },
+  "properties": {
+    "adr": {
+      "$ref": "#/$defs/ADR"
+    },
+    "waiver": {
+      "$ref": "#/$defs/Waiver"
+    }
+  },
+  "additionalProperties": false,
+  "type": "object",
+  "required": [
+    "adr",
+    "waiver"
+  ],
+  "x-changelog": "contracts/CHANGELOG.md",
+  "x-schema-version": "1.0.0"
+}

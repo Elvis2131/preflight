@@ -1,0 +1,38 @@
+# Azure Cache for Redis -> cache. PC-22, golden node type 6/8 (mirrors AWS's
+# ElastiCache slot).
+#
+# No `failover:` mapping declared here — a genuine, doc-verified finding, not a
+# workaround around it. Verified against
+# raw.githubusercontent.com/hashicorp/terraform-provider-azurerm (2026-09-21):
+# ElastiCache's automatic_failover_enabled is a single BOOLEAN flag (fits
+# FailoverMapping's schema exactly). Azure Cache for Redis has no equivalent boolean —
+# high availability instead comes from replicas_per_master (an integer replica COUNT)
+# and/or zones (an availability-zone list), with failover to a replica described as
+# platform-managed whenever replicas exist, not a separately toggleable attribute. This
+# genuinely does not fit FailoverMapping's boolean-attribute shape, and forcing it in
+# (e.g. treating "replicas_per_master present and > 0" as the boolean) would be
+# inventing a threshold this project has not verified against a documented platform
+# guarantee — left unmodeled rather than guessed, per this ticket's own instruction to
+# treat a forced mapping as a signal to reconsider, not force through.
+#
+# Encryption below is named non_ssl_port_enabled, NOT transit_encryption_enabled,
+# deliberately: assignCapabilityField recognizes "transit_encryption_enabled" as a name
+# and stores whatever raw value it's given verbatim into
+# CapabilityModel.EncryptionMechanism, with no inversion. Since non_ssl_port_enabled=
+# false is what actually means TLS-only (encrypted), storing that raw value under a
+# field literally named "transit_encryption_enabled" would silently invert the polarity
+# there — a real, consequential version of the exact bug aks.yaml's own comment already
+# names precedent for, caught here before it shipped rather than after.
+resource_type: azurerm_redis_cache
+node_type: cache
+capabilities:
+  - field: non_ssl_port_enabled
+    source_attribute: non_ssl_port_enabled
+    on_absent: assumed
+    assumed_default: "false"
+    assumed_citation: >-
+      Terraform azurerm provider docs, azurerm_redis_cache: "non_ssl_port_enabled -
+      Enable the non-SSL port (6379) - disabled by default." Absent means false (the
+      non-SSL port is disabled, i.e. TLS-only, transit encryption enforced). Verified
+      against raw.githubusercontent.com/hashicorp/terraform-provider-azurerm
+      (2026-09-21).

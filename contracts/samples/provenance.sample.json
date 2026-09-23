@@ -1,0 +1,7 @@
+{
+  "value": 60,
+  "provenance": {
+    "kind": "stated",
+    "source": "workload.yaml:availability.rto_seconds"
+  }
+}

@@ -1,0 +1,8 @@
+# NAT Gateway -> network_boundary. Placed in one subnet (subnet_id) — that reference
+# becomes a contained_in edge once subnet.yaml exists, giving PC-14's zone-loss engine
+# a real node to lose when its subnet's AZ is killed. This is exactly
+# golden/aws-broken/network.tf's defect 1 (single NAT serving three subnets) — the
+# flagship SPOF scenario PC-14's synthetic tests already proved the algorithm handles
+# correctly; this mapping is what lets that proof run against the real bundle.
+resource_type: aws_nat_gateway
+node_type: network_boundary

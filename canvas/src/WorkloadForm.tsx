@@ -1,0 +1,294 @@
+import { useState } from "react";
+import type { Requirement, RequirementPriority, Workload } from "./workloadTypes";
+import { WORKLOAD_SCHEMA_VERSION } from "./workloadTypes";
+
+// WorkloadForm is PC-87's own scope: "a UI over the existing workload.yaml schema —
+// not a new or looser schema." Every field below maps 1:1 onto core.Workload; there is
+// no field here that doesn't exist in workload.schema.json, and no relaxation of what
+// that schema requires.
+
+interface CapacityRow {
+  key: string;
+  // Stored as text, deliberately: an EMPTY string here means "not declared" (the
+  // form's own version of core/workload.go's "no declared capacity ->
+  // capacity_unknown" rule). Coercing this to 0 at any point before submit would
+  // silently turn "left blank" into a fabricated zero value — exactly what PC-87's own
+  // Conversation warns against ("must not make it easier to accidentally skip this
+  // than a YAML file already makes it").
+  valueText: string;
+}
+
+interface RequirementRow {
+  id: string;
+  value: string;
+  priority: RequirementPriority;
+  rankText: string; // only meaningful/required when priority === "preference"
+}
+
+function emptyRequirementRow(): RequirementRow {
+  return { id: "", value: "", priority: "hard", rankText: "" };
+}
+
+export interface WorkloadFormValue {
+  name: string;
+  criticality: string;
+  dataClassification: string;
+  regionsText: string; // comma-separated
+  complianceProfilesText: string; // comma-separated
+  capacityRows: CapacityRow[];
+  requirementRows: RequirementRow[];
+}
+
+export function emptyWorkloadFormValue(): WorkloadFormValue {
+  return {
+    name: "",
+    criticality: "",
+    dataClassification: "",
+    regionsText: "",
+    complianceProfilesText: "",
+    capacityRows: [{ key: "app_node_rps", valueText: "" }],
+    requirementRows: [],
+  };
+}
+
+function splitCommaList(text: string): string[] {
+  return text
+    .split(",")
+    .map((s) => s.trim())
+    .filter((s) => s.length > 0);
+}
+
+// buildWorkload turns the form's own free-text working state into a real
+// core.Workload-shaped object — the ONE function permitted to do this, same
+// discipline serialize.ts already established for CanvasDocument. A capacity row with
+// a blank valueText is DROPPED from the output map entirely, never sent as 0; a
+// requirement row with priority "hard" never carries a rank key at all, matching
+// core.Requirement's own excluded_if tag rather than relying on the server to reject
+// a value this form could simply not send.
+export function buildWorkload(v: WorkloadFormValue): Workload {
+  const capacity: Record<string, number> = {};
+  for (const row of v.capacityRows) {
+    const key = row.key.trim();
+    if (!key || row.valueText.trim() === "") continue;
+    const num = Number(row.valueText);
+    if (Number.isFinite(num)) capacity[key] = num;
+  }
+
+  const requirements: Requirement[] = v.requirementRows
+    .filter((r) => r.id.trim() !== "")
+    .map((r) => {
+      const req: Requirement = { id: r.id.trim(), value: r.value, priority: r.priority };
+      if (r.priority === "preference") {
+        const rank = Number(r.rankText);
+        if (Number.isFinite(rank)) req.rank = rank;
+      }
+      return req;
+    });
+
+  return {
+    schema_version: WORKLOAD_SCHEMA_VERSION,
+    name: v.name.trim(),
+    criticality: v.criticality.trim(),
+    data_classification: v.dataClassification.trim(),
+    regions: splitCommaList(v.regionsText),
+    compliance_profiles: splitCommaList(v.complianceProfilesText),
+    requirements,
+    capacity: Object.keys(capacity).length > 0 ? capacity : undefined,
+  };
+}
+
+const inputStyle: React.CSSProperties = { fontSize: 12, width: "100%", boxSizing: "border-box" };
+const rowStyle: React.CSSProperties = { display: "flex", gap: 6, alignItems: "center", marginBottom: 4 };
+const labelStyle: React.CSSProperties = { fontSize: 11, color: "#475569", display: "block", marginBottom: 2 };
+
+export function WorkloadForm({
+  value,
+  onChange,
+}: {
+  value: WorkloadFormValue;
+  onChange: (v: WorkloadFormValue) => void;
+}) {
+  const [showRequirementHelp, setShowRequirementHelp] = useState(false);
+
+  const update = (patch: Partial<WorkloadFormValue>) => onChange({ ...value, ...patch });
+
+  const hardReqs = value.requirementRows
+    .map((r, i) => ({ r, i }))
+    .filter(({ r }) => r.priority === "hard");
+  const preferenceReqs = value.requirementRows
+    .map((r, i) => ({ r, i }))
+    .filter(({ r }) => r.priority === "preference");
+
+  function updateRow(i: number, patch: Partial<RequirementRow>) {
+    const rows = value.requirementRows.slice();
+    rows[i] = { ...rows[i], ...patch };
+    update({ requirementRows: rows });
+  }
+  function removeRow(i: number) {
+    update({ requirementRows: value.requirementRows.filter((_, idx) => idx !== i) });
+  }
+
+  return (
+    <div style={{ padding: 12, fontSize: 12 }}>
+      <h3 style={{ fontSize: 13, margin: "0 0 8px" }}>Workload (NFR form)</h3>
+      <p style={{ fontSize: 11, color: "#64748b", margin: "0 0 10px" }}>
+        Same schema as workload.yaml (PRD §4) — no separate or looser shape. A capacity
+        field left blank is <code>capacity_unknown</code>, exactly as an omitted key in
+        a hand-written YAML file would be.
+      </p>
+
+      <label style={labelStyle}>name</label>
+      <input style={inputStyle} value={value.name} onChange={(e) => update({ name: e.target.value })} />
+
+      <label style={{ ...labelStyle, marginTop: 8 }}>criticality (e.g. tier1)</label>
+      <input
+        style={inputStyle}
+        value={value.criticality}
+        onChange={(e) => update({ criticality: e.target.value })}
+      />
+
+      <label style={{ ...labelStyle, marginTop: 8 }}>data_classification</label>
+      <input
+        style={inputStyle}
+        value={value.dataClassification}
+        onChange={(e) => update({ dataClassification: e.target.value })}
+      />
+
+      <label style={{ ...labelStyle, marginTop: 8 }}>regions (comma-separated)</label>
+      <input
+        style={inputStyle}
+        value={value.regionsText}
+        onChange={(e) => update({ regionsText: e.target.value })}
+        placeholder="eu-west-1"
+      />
+
+      <label style={{ ...labelStyle, marginTop: 8 }}>compliance_profiles (comma-separated)</label>
+      <input
+        style={inputStyle}
+        value={value.complianceProfilesText}
+        onChange={(e) => update({ complianceProfilesText: e.target.value })}
+        placeholder="PCI"
+      />
+
+      <h4 style={{ fontSize: 12, margin: "14px 0 4px" }}>Capacity</h4>
+      <p style={{ fontSize: 10, color: "#94a3b8", margin: "0 0 6px" }}>
+        Leave the value blank to leave this capacity <strong>undeclared</strong> — it
+        will NOT be sent as zero.
+      </p>
+      {value.capacityRows.map((row, i) => (
+        <div key={i} style={rowStyle}>
+          <input
+            style={{ ...inputStyle, flex: 1 }}
+            value={row.key}
+            placeholder="app_node_rps"
+            onChange={(e) => {
+              const rows = value.capacityRows.slice();
+              rows[i] = { ...rows[i], key: e.target.value };
+              update({ capacityRows: rows });
+            }}
+          />
+          <input
+            style={{ ...inputStyle, width: 80 }}
+            value={row.valueText}
+            placeholder="(blank = unknown)"
+            onChange={(e) => {
+              const rows = value.capacityRows.slice();
+              rows[i] = { ...rows[i], valueText: e.target.value };
+              update({ capacityRows: rows });
+            }}
+          />
+          <button
+            onClick={() => update({ capacityRows: value.capacityRows.filter((_, idx) => idx !== i) })}
+          >
+            ×
+          </button>
+        </div>
+      ))}
+      <button onClick={() => update({ capacityRows: [...value.capacityRows, { key: "", valueText: "" }] })}>
+        + capacity field
+      </button>
+
+      <h4 style={{ fontSize: 12, margin: "14px 0 4px" }}>
+        Requirements{" "}
+        <button style={{ fontSize: 10 }} onClick={() => setShowRequirementHelp((v) => !v)}>
+          ?
+        </button>
+      </h4>
+      {showRequirementHelp && (
+        <p style={{ fontSize: 10, color: "#64748b", margin: "0 0 6px" }}>
+          hard = a constraint whose violation is a FAILING finding. preference = a
+          ranked goal that trades against other preferences rather than failing
+          outright — it needs a rank so preferences can be ordered against each other.
+        </p>
+      )}
+
+      <div style={{ display: "flex", gap: 10 }}>
+        <div style={{ flex: 1, border: "1px solid #fca5a5", borderRadius: 4, padding: 6, background: "#fef2f2" }}>
+          <div style={{ fontSize: 11, fontWeight: 700, color: "#b91c1c", marginBottom: 4 }}>
+            HARD (constraint)
+          </div>
+          {hardReqs.map(({ r, i }) => (
+            <RequirementRowEditor key={i} row={r} onChange={(patch) => updateRow(i, patch)} onRemove={() => removeRow(i)} />
+          ))}
+          <button onClick={() => update({ requirementRows: [...value.requirementRows, { ...emptyRequirementRow(), priority: "hard" }] })}>
+            + hard requirement
+          </button>
+        </div>
+        <div style={{ flex: 1, border: "1px solid #93c5fd", borderRadius: 4, padding: 6, background: "#eff6ff" }}>
+          <div style={{ fontSize: 11, fontWeight: 700, color: "#1d4ed8", marginBottom: 4 }}>
+            PREFERENCE (ranked goal)
+          </div>
+          {preferenceReqs.map(({ r, i }) => (
+            <RequirementRowEditor key={i} row={r} onChange={(patch) => updateRow(i, patch)} onRemove={() => removeRow(i)} />
+          ))}
+          <button
+            onClick={() =>
+              update({ requirementRows: [...value.requirementRows, { ...emptyRequirementRow(), priority: "preference" }] })
+            }
+          >
+            + preference requirement
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function RequirementRowEditor({
+  row,
+  onChange,
+  onRemove,
+}: {
+  row: RequirementRow;
+  onChange: (patch: Partial<RequirementRow>) => void;
+  onRemove: () => void;
+}) {
+  return (
+    <div style={{ marginBottom: 6, paddingBottom: 6, borderBottom: "1px dashed #cbd5e1" }}>
+      <div style={rowStyle}>
+        <input
+          style={{ ...inputStyle, flex: 1 }}
+          placeholder="id"
+          value={row.id}
+          onChange={(e) => onChange({ id: e.target.value })}
+        />
+        <button onClick={onRemove}>×</button>
+      </div>
+      <input
+        style={{ ...inputStyle, marginBottom: 4 }}
+        placeholder="value"
+        value={row.value}
+        onChange={(e) => onChange({ value: e.target.value })}
+      />
+      {row.priority === "preference" && (
+        <input
+          style={inputStyle}
+          type="number"
+          placeholder="rank (required for preference)"
+          value={row.rankText}
+          onChange={(e) => onChange({ rankText: e.target.value })}
+        />
+      )}
+    </div>
+  );
+}

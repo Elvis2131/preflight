@@ -1,0 +1,33 @@
+# EKS -> container_workload. PRD §10 / CLAUDE.md §14 golden node type 4/8.
+resource_type: aws_eks_cluster
+node_type: container_workload
+capabilities:
+  - field: control_plane_public_access
+    source_attribute: vpc_config.endpoint_public_access
+    on_absent: assumed
+    assumed_default: "true"
+    assumed_citation: >-
+      Terraform AWS provider docs, aws_eks_cluster: "endpoint_public_access - ...
+      Defaults to true." Left unset, the control plane's public endpoint is reachable —
+      the opposite of golden/aws/eks.tf's explicit false, and exactly the PCI finding
+      golden/aws-broken/eks.tf's defect 5 demonstrates when this is left to default.
+      Verified against raw.githubusercontent.com/hashicorp/terraform-provider-aws
+      (2026-09-20).
+
+  - field: control_plane_private_access
+    source_attribute: vpc_config.endpoint_private_access
+    on_absent: assumed
+    assumed_default: "false"
+    assumed_citation: >-
+      Terraform AWS provider docs, aws_eks_cluster: "endpoint_private_access - ...
+      Defaults to false." Verified against
+      raw.githubusercontent.com/hashicorp/terraform-provider-aws (2026-09-20).
+
+  - field: secrets_envelope_encryption
+    source_attribute: encryption_config
+    on_absent: not_assessable
+    # Whether omitting the encryption_config BLOCK entirely (not a scalar attribute)
+    # deterministically means secrets envelope encryption is off was not independently
+    # re-confirmed by direct doc fetch for this pass — left not_assessable rather than
+    # asserted from recollection, per CLAUDE.md §5. Revisit with a direct source check
+    # before promoting this to an assumed default.

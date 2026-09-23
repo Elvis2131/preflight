@@ -1,0 +1,1 @@
+Infra gets generated faster than anyone can review it. Preflight checks it before you deploy — and publishes the one time its own answer was wrong.

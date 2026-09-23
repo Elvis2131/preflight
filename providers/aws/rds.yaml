@@ -1,0 +1,42 @@
+# RDS -> managed_database. PRD §10 / CLAUDE.md §14 golden node type 5/8.
+resource_type: aws_db_instance
+node_type: managed_database
+capabilities:
+  - field: multi_az
+    source_attribute: multi_az
+    on_absent: not_assessable
+    # golden/aws-broken/rds.tf's defect 2 sets this explicitly to false rather than
+    # omitting it, so this project has not needed and has not independently confirmed
+    # aws_db_instance's true provider-side default for multi_az — left not_assessable
+    # rather than assumed from memory.
+
+  - field: storage_encrypted
+    source_attribute: storage_encrypted
+    on_absent: not_assessable
+    # Same reasoning as multi_az: not independently confirmed this pass.
+
+  - field: deletion_protection
+    source_attribute: deletion_protection
+    on_absent: assumed
+    assumed_default: "false"
+    assumed_citation: >-
+      Terraform AWS provider docs, aws_db_instance: "The default is false." Verified
+      against raw.githubusercontent.com/hashicorp/terraform-provider-aws (2026-09-20).
+
+  - field: backup_retention_period_days
+    source_attribute: backup_retention_period
+    on_absent: not_assessable
+    # Not independently confirmed this pass.
+
+failover:
+  source_attribute: multi_az
+  when_enabled:
+    replication_mode: sync
+    failover_mechanism: "Multi-AZ automatic failover to a synchronous standby replica"
+    citation: >-
+      AWS RDS User Guide, "Multi-AZ DB instance deployments for Amazon RDS": "Amazon RDS
+      automatically provisions and maintains a synchronous standby replica in a
+      different Availability Zone. The primary DB instance is synchronously replicated
+      across Availability Zones to a standby replica..."
+      docs.aws.amazon.com/AmazonRDS/latest/UserGuide/Concepts.MultiAZSingleStandby.html
+      (verified 2026-09-21).

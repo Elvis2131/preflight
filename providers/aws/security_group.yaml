@@ -1,0 +1,28 @@
+# Security Group -> network_boundary. Mapped for vocabulary completeness (named in
+# PC-78's own title).
+#
+# reference_edge_type is deliberately UNSET (defaults to depends_on): an SG is not a
+# container other resources sit "inside" — an ALB referencing its security group is
+# attaching a permission boundary, not being placed within one. Setting
+# reference_edge_type: contained_in here (an earlier draft of this file did) would have
+# mislabeled every resource-to-SG attachment as containment, which is a different and
+# incorrect relationship. contained_in is reserved for genuine placement (subnet in
+# VPC, resource in subnet) — see vpc.yaml/subnet.yaml, where it IS correct.
+#
+# SCOPE DECISION, recorded per PC-78's acceptance criteria: this mapping does NOT
+# attempt security-group-to-security-group PERMISSION edges (aws_security_group_rule's
+# source_security_group_id, or an aws_security_group's own inline ingress/egress
+# security_groups references). Those are a fundamentally different kind of edge —
+# "what traffic is ALLOWED", not "what is CONTAINED in what" — and belong to the
+# Network Engine's Security Group/NACL evaluation (CLAUDE.md §10), a separate,
+# already-named future engine, not Layer 1 structural/containment analysis. Modeling
+# them here would silently repurpose contained_in (or invent a new edge type outside
+# PRD §4's frozen vocabulary) for a relationship it doesn't describe. A security
+# group's OWN references (e.g. an inline egress block naming another SG) are still
+# captured as ordinary depends_on edges by the existing reference-walking mechanism —
+# unavoidable, since ingest cannot distinguish "this reference is containment" from
+# "this reference is a permission rule" without resource-specific knowledge this
+# mapping deliberately does not add. That imprecision is accepted and named here, not
+# silently present.
+resource_type: aws_security_group
+node_type: network_boundary

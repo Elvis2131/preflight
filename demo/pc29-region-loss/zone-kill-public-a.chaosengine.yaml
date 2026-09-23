@@ -1,0 +1,21 @@
+# Derived from Preflight finding finding.zone-kill.public-a (AZ loss: eu-west-1a public subnet) — drains every node in eu-west-1a.
+# chaosServiceAccount (node-drain-sa) and the litmus namespace/RBAC must exist
+# in the target cluster before this runs — see LitmusChaos's own installation docs.
+apiVersion: litmuschaos.io/v1alpha1
+kind: ChaosEngine
+metadata:
+  name: preflight-finding-zone-kill-public-a
+  namespace: litmus
+spec:
+  engineState: "active"
+  annotationCheck: "false"
+  chaosServiceAccount: node-drain-sa
+  experiments:
+  - name: node-drain
+    spec:
+      components:
+        env:
+        - name: NODE_LABEL
+          value: 'topology.kubernetes.io/zone=eu-west-1a'
+        - name: TOTAL_CHAOS_DURATION
+          value: '60'

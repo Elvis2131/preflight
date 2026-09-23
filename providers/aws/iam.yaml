@@ -1,0 +1,16 @@
+# IAM -> identity. PRD §10 / CLAUDE.md §14 golden node type 8/8.
+#
+# Deliberately narrow scope: this mapping captures structural, stated facts about a
+# role's trust relationship. It does NOT scan policy documents for overly broad
+# statements (e.g. Action: "*", Resource: "*", as golden/aws-broken/iam.tf's defect 7
+# has) — that is compliance-rule analysis (PC-18), not a provider mapping fact. CLAUDE.md
+# §16 draws exactly this line: configuration validation / analysis / mapping are
+# different concerns and should not collapse into one.
+resource_type: aws_iam_role
+node_type: identity
+capabilities:
+  - field: trust_policy_present
+    source_attribute: assume_role_policy
+    on_absent: not_assessable
+    # aws_iam_role has no meaningful "default" trust policy — a role with this omitted
+    # is a configuration error for the validator to catch, not a fact to assume.

@@ -1,0 +1,83 @@
+# Declared workload (NFRs) for the golden reference architecture.
+#
+# RESHAPED to match core.Workload, the schema PC-7 froze (contracts/workload.schema.json).
+# The original version of this file predated PC-7 and used a shape derived only from
+# CLAUDE.md §14, with its own header stating "when PC-7 freezes the workload schema,
+# this file is validated against it and reshaped if they disagree — the schema wins,
+# not this file." PC-7 landed; this reshape is that promise being kept, not new scope.
+
+schema_version: "1.0.0"
+
+name: payments-api
+criticality: tier1
+data_classification: PCI
+regions:
+  - eu-west-1
+compliance_profiles:
+  - PCI
+
+# CLAUDE.md §14: 99.95%, RTO 60s, RPO 0. Each becomes a `hard` requirement per PRD §4
+# ("hard = constraint, violation is a failing finding") — none of these are goals to
+# trade against.
+requirements:
+  - id: availability.target
+    value: 99.95
+    priority: hard
+  - id: rto_seconds
+    value: 60
+    priority: hard
+  - id: rpo_seconds
+    value: 0
+    priority: hard
+
+# Per-node-type declared capacity (PRD §4's own worked example is exactly this key).
+# This is a new declaration, not present in the original file — added so PC-14's
+# capacity-discipline check (CLAUDE.md §9) has a real DECLARED value to exercise
+# against the golden fixture, alongside the undeclared-tier case every OTHER node type
+# in this workload still represents (nothing else is declared here, so a capacity
+# check against, say, managed_database is correctly capacity_unknown).
+capacity:
+  app_node_rps: 500
+
+# --- Everything below is NOT part of the frozen Workload schema -----------------------
+#
+# These fields predate PC-7 and do not correspond to any field core.Workload actually
+# has (PRD §4 does not name entry_points/capabilities/scenarios/external_dependencies
+# as Workload fields at all). They are kept here, clearly separated, as design
+# reference rather than deleted outright — PC-12's MVG entry-point/stateful-node lists
+# were cross-checked against `entry_points` below, and the six golden scenarios and
+# external dependency are real product concepts (CLAUDE.md §14) that may deserve their
+# own home once decided. A YAML loader that only reads the frozen fields above silently
+# ignores everything past this line — that is intentional, not a parsing gap.
+
+entry_points:
+  - dns
+
+capabilities:
+  - dns
+  - waf
+  - load_balancer
+  - container_workload
+  - managed_database
+  - cache
+  - queue
+  - identity
+
+scenarios:
+  - id: az_loss
+    description: Loss of a single availability zone.
+  - id: database_failure
+    description: Primary managed database becomes unavailable.
+  - id: queue_failure
+    description: Settlement queue unavailable or accumulating poison messages.
+  - id: identity_failure
+    description: Workload credential revoked, expired, or compromised.
+  - id: region_loss
+    description: Loss of the primary region.
+  - id: external_dependency_outage
+    description: Upstream payment rail unavailable.
+
+external_dependencies:
+  - name: payment_rail
+    description: Third-party card settlement network.
+    criticality: hard

@@ -1,0 +1,16 @@
+{
+  "schema_version": "1.0.0",
+  "name": "payments-api",
+  "criticality": "tier1",
+  "data_classification": "PCI",
+  "regions": ["eu-west-1"],
+  "compliance_profiles": ["PCI"],
+  "requirements": [
+    { "id": "availability.target", "value": 99.95, "priority": "hard" },
+    { "id": "rto_seconds", "value": 60, "priority": "hard" },
+    { "id": "cost_optimisation", "value": "minimize", "priority": "preference", "rank": 1 }
+  ],
+  "capacity": {
+    "app_node_rps": 500
+  }
+}

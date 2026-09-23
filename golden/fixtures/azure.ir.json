@@ -1,0 +1,176 @@
+{
+  "schema_version": "1.0.0",
+  "version_number": 1,
+  "version_hash": "sha256:974c95e2b9d50f5dbed7dd660141aac5780940ade512691bb6376ae060b01bef",
+  "nodes": [
+    {
+      "id": "azurerm_application_gateway.payments",
+      "type": "load_balancer",
+      "resolution": "known",
+      "raw_attributes": {
+        "backend_address_pool.name": "payments-backend-pool",
+        "backend_http_settings.cookie_based_affinity": "Disabled",
+        "backend_http_settings.name": "payments-backend-settings",
+        "backend_http_settings.port": 80,
+        "backend_http_settings.protocol": "Http",
+        "backend_http_settings.request_timeout": 30,
+        "frontend_ip_configuration.name": "payments-frontend-ip",
+        "frontend_port.name": "http-port",
+        "frontend_port.port": 80,
+        "gateway_ip_configuration.name": "payments-gateway-ip-config",
+        "http_listener.frontend_ip_configuration_name": "payments-frontend-ip",
+        "http_listener.frontend_port_name": "http-port",
+        "http_listener.name": "payments-http-listener",
+        "http_listener.protocol": "Http",
+        "name": "payments-appgw",
+        "request_routing_rule.backend_address_pool_name": "payments-backend-pool",
+        "request_routing_rule.backend_http_settings_name": "payments-backend-settings",
+        "request_routing_rule.http_listener_name": "payments-http-listener",
+        "request_routing_rule.name": "payments-routing-rule",
+        "request_routing_rule.priority": 100,
+        "request_routing_rule.rule_type": "Basic",
+        "sku.capacity": 2,
+        "sku.name": "WAF_v2",
+        "sku.tier": "WAF_v2"
+      },
+      "provenance": {
+        "kind": "stated",
+        "source": "/Users/larteyelvis/Documents/Developer/preflight/golden/azure/application_gateway.tf:23:azurerm_application_gateway.payments"
+      }
+    },
+    {
+      "id": "azurerm_dns_a_record.api",
+      "type": "dns",
+      "resolution": "known",
+      "raw_attributes": {
+        "name": "api",
+        "ttl": 300
+      },
+      "provenance": {
+        "kind": "stated",
+        "source": "/Users/larteyelvis/Documents/Developer/preflight/golden/azure/dns.tf:19:azurerm_dns_a_record.api"
+      }
+    },
+    {
+      "id": "azurerm_kubernetes_cluster.payments",
+      "type": "container_workload",
+      "resolution": "known",
+      "capability": {},
+      "raw_attributes": {
+        "default_node_pool.name": "default",
+        "default_node_pool.node_count": 3,
+        "default_node_pool.vm_size": "Standard_D2_v2",
+        "dns_prefix": "payments-aks",
+        "identity.type": "SystemAssigned",
+        "name": "payments-aks",
+        "private_cluster_enabled": true
+      },
+      "provenance": {
+        "kind": "stated",
+        "source": "/Users/larteyelvis/Documents/Developer/preflight/golden/azure/aks.tf:2:azurerm_kubernetes_cluster.payments"
+      }
+    },
+    {
+      "id": "azurerm_mssql_database.payments",
+      "type": "managed_database",
+      "resolution": "known",
+      "capability": {
+        "replication_mode": "sync",
+        "failover_mechanism": "zone-redundant automatic failover to a synchronized secondary replica",
+        "encryption_mechanism": "true"
+      },
+      "raw_attributes": {
+        "name": "payments-db",
+        "sku_name": "BC_Gen5_2",
+        "transparent_data_encryption_enabled": true,
+        "zone_redundant": true
+      },
+      "provenance": {
+        "kind": "stated",
+        "source": "/Users/larteyelvis/Documents/Developer/preflight/golden/azure/sql.tf:11:azurerm_mssql_database.payments"
+      }
+    },
+    {
+      "id": "azurerm_redis_cache.payments",
+      "type": "cache",
+      "resolution": "known",
+      "capability": {},
+      "raw_attributes": {
+        "capacity": 1,
+        "family": "P",
+        "name": "payments-redis",
+        "non_ssl_port_enabled": false,
+        "sku_name": "Premium"
+      },
+      "provenance": {
+        "kind": "stated",
+        "source": "/Users/larteyelvis/Documents/Developer/preflight/golden/azure/cache.tf:2:azurerm_redis_cache.payments"
+      }
+    },
+    {
+      "id": "azurerm_role_assignment.aks_to_rg",
+      "type": "identity",
+      "resolution": "known",
+      "raw_attributes": {
+        "role_definition_name": "Contributor"
+      },
+      "provenance": {
+        "kind": "stated",
+        "source": "/Users/larteyelvis/Documents/Developer/preflight/golden/azure/rbac.tf:7:azurerm_role_assignment.aks_to_rg"
+      }
+    },
+    {
+      "id": "azurerm_servicebus_queue.settlement",
+      "type": "queue/stream",
+      "resolution": "known",
+      "capability": {},
+      "raw_attributes": {
+        "dead_lettering_on_message_expiration": true,
+        "name": "settlement"
+      },
+      "provenance": {
+        "kind": "stated",
+        "source": "/Users/larteyelvis/Documents/Developer/preflight/golden/azure/queue.tf:9:azurerm_servicebus_queue.settlement"
+      }
+    },
+    {
+      "id": "azurerm_web_application_firewall_policy.payments",
+      "type": "network_boundary",
+      "resolution": "known",
+      "capability": {},
+      "raw_attributes": {
+        "name": "payments-waf-policy",
+        "policy_settings.enabled": true,
+        "policy_settings.mode": "Prevention"
+      },
+      "provenance": {
+        "kind": "stated",
+        "source": "/Users/larteyelvis/Documents/Developer/preflight/golden/azure/application_gateway.tf:5:azurerm_web_application_firewall_policy.payments"
+      }
+    }
+  ],
+  "edges": [
+    {
+      "id": "azurerm_application_gateway.payments-\u003eazurerm_web_application_firewall_policy.payments",
+      "type": "depends_on",
+      "from": "azurerm_application_gateway.payments",
+      "to": "azurerm_web_application_firewall_policy.payments",
+      "resolution": "known",
+      "provenance": {
+        "kind": "stated",
+        "source": "/Users/larteyelvis/Documents/Developer/preflight/golden/azure/application_gateway.tf:23:azurerm_application_gateway.payments"
+      }
+    },
+    {
+      "id": "azurerm_role_assignment.aks_to_rg-\u003eazurerm_kubernetes_cluster.payments",
+      "type": "depends_on",
+      "from": "azurerm_role_assignment.aks_to_rg",
+      "to": "azurerm_kubernetes_cluster.payments",
+      "resolution": "known",
+      "provenance": {
+        "kind": "stated",
+        "source": "/Users/larteyelvis/Documents/Developer/preflight/golden/azure/rbac.tf:7:azurerm_role_assignment.aks_to_rg"
+      }
+    }
+  ]
+}

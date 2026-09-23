@@ -1,0 +1,18 @@
+{
+  "adr": {
+    "id": "adr.accept-single-nat-in-dev",
+    "decision": "Accept single-AZ NAT gateway in the dev environment",
+    "reason": "Dev environment cost outweighs the AZ-loss risk; prod uses one NAT per AZ",
+    "trade_offs": ["Dev egress has no AZ redundancy"],
+    "controls_satisfied": [],
+    "failure_modes_addressed": ["az_loss (accepted, not mitigated, for dev only)"],
+    "provenance": { "kind": "stated", "source": "workload.yaml:environment=dev waiver" }
+  },
+  "waiver": {
+    "accepted_by": "platform-team@example.com",
+    "finding_id": "finding.spof-nat-gateway",
+    "accepted_at": "2026-09-20T00:00:00Z",
+    "reason": "Dev environment; see linked ADR",
+    "against_version": 1
+  }
+}

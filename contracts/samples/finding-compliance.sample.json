@@ -1,0 +1,48 @@
+{
+  "id": "finding.rds-storage-encryption.aws_db_instance.payments",
+  "title": "RDS storage encryption at rest",
+  "evidence": [
+    {
+      "node_id": "aws_db_instance.payments",
+      "attribute": "storage_encrypted",
+      "description": "storage_encrypted is false - database files, snapshots, and automated backups remain in plaintext; an attacker with access to a copied snapshot, a compromised backup, or the underlying storage can read sensitive data, risking large-scale exfiltration"
+    }
+  ],
+  "dimensions": {
+    "trigger": "unencrypted storage exposed via snapshot, backup, or underlying storage compromise",
+    "affected_components": ["aws_db_instance.payments"],
+    "detection": "modeled",
+    "impact": {
+      "state": "not_assessable",
+      "reason": "impact dimension not evaluated by this compliance check",
+      "provenance": { "kind": "derived", "source": "core/analyse:rds-storage-encryption-check" }
+    },
+    "likelihood": {
+      "state": "not_assessable",
+      "reason": "likelihood is not assessable from structural analysis alone",
+      "provenance": { "kind": "derived", "source": "core/analyse:likelihood" }
+    },
+    "detectability": {
+      "state": "assessed",
+      "value": "high - this simulator models the attribute directly",
+      "provenance": { "kind": "derived", "source": "core/analyse:detectability" }
+    },
+    "recoverability": {
+      "failover_path_exists": {
+        "state": "not_assessable",
+        "reason": "recoverability not evaluated by this compliance check",
+        "provenance": { "kind": "derived", "source": "core/analyse:rds-storage-encryption-check" }
+      },
+      "rpo_feasible": {
+        "state": "not_assessable",
+        "reason": "recoverability not evaluated by this compliance check",
+        "provenance": { "kind": "derived", "source": "core/analyse:rds-storage-encryption-check" }
+      }
+    }
+  },
+  "outcome": {
+    "state": "assessed",
+    "value": "unsatisfied",
+    "provenance": { "kind": "derived", "source": "core/analyse:rds-storage-encryption-check" }
+  }
+}

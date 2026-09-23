@@ -1,0 +1,87 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$defs": {
+    "Requirement": {
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "value": true,
+        "priority": {
+          "type": "string",
+          "enum": [
+            "hard",
+            "preference"
+          ]
+        },
+        "rank": {
+          "type": "integer",
+          "description": "Required when Priority is preference; must be absent when Priority is hard."
+        }
+      },
+      "additionalProperties": false,
+      "type": "object",
+      "required": [
+        "id",
+        "value",
+        "priority"
+      ]
+    }
+  },
+  "properties": {
+    "schema_version": {
+      "type": "string"
+    },
+    "name": {
+      "type": "string",
+      "minLength": 1
+    },
+    "criticality": {
+      "type": "string",
+      "description": "e.g. tier1 — the golden reference architecture's own vocabulary (CLAUDE.md §14)"
+    },
+    "data_classification": {
+      "type": "string"
+    },
+    "regions": {
+      "items": {
+        "type": "string"
+      },
+      "type": "array",
+      "minItems": 1
+    },
+    "compliance_profiles": {
+      "items": {
+        "type": "string"
+      },
+      "type": "array",
+      "description": "e.g. PCI — may be empty; not every workload has a stated compliance profile."
+    },
+    "requirements": {
+      "items": {
+        "$ref": "#/$defs/Requirement"
+      },
+      "type": "array"
+    },
+    "capacity": {
+      "additionalProperties": {
+        "type": "number"
+      },
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "type": "object",
+  "required": [
+    "schema_version",
+    "name",
+    "criticality",
+    "data_classification",
+    "regions",
+    "compliance_profiles",
+    "requirements"
+  ],
+  "x-changelog": "contracts/CHANGELOG.md",
+  "x-schema-version": "1.0.0"
+}

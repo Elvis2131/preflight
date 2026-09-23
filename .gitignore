@@ -1,0 +1,22 @@
+# Terraform. NOTE: .terraform.lock.hcl is deliberately NOT ignored - it pins exact
+# provider versions, and a golden fixture that resolves to a different provider build
+# on a different machine is not a deterministic fixture (CLAUDE.md §23).
+.terraform/
+*.tfstate
+*.tfstate.*
+crash.log
+override.tf
+override.tf.json
+
+# Go
+/bin/
+/dist/
+*.test
+*.out
+
+# SQLite (session/version/finding store, per ADR-002)
+*.db
+*.db-wal
+*.db-shm
+
+.DS_Store

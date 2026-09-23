@@ -1,0 +1,30 @@
+# WAF Policy -> network_boundary, mirroring AWS's own wafv2.yaml decision (PC-11,
+# docs/IR_DESIGN_NOTE.md): a WAF policy is modeled as its own node with an edge from
+# the load_balancer it protects (formed automatically via Application Gateway's
+# firewall_policy_id reference — see application_gateway.yaml), not as a capability of
+# the load balancer itself, because its attachment is an independently-failable
+# structural fact (a correctly-configured policy that simply isn't attached is a real,
+# distinct defect — the same shape as golden/aws-broken/waf.tf's defect 6).
+resource_type: azurerm_web_application_firewall_policy
+node_type: network_boundary
+capabilities:
+  - field: mode
+    source_attribute: policy_settings.mode
+    on_absent: assumed
+    assumed_default: "Prevention"
+    assumed_citation: >-
+      Terraform azurerm provider docs, azurerm_web_application_firewall_policy,
+      policy_settings.mode: "Describes if it is in detection mode or prevention mode at
+      the policy level. Valid values are Detection and Prevention. Defaults to
+      Prevention." Verified against
+      raw.githubusercontent.com/hashicorp/terraform-provider-azurerm (2026-09-21).
+
+  - field: enabled
+    source_attribute: policy_settings.enabled
+    on_absent: assumed
+    assumed_default: "true"
+    assumed_citation: >-
+      Terraform azurerm provider docs, azurerm_web_application_firewall_policy,
+      policy_settings.enabled: "Describes if the policy is in enabled state or disabled
+      state. Defaults to true." Verified against
+      raw.githubusercontent.com/hashicorp/terraform-provider-azurerm (2026-09-21).

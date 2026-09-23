@@ -1,0 +1,191 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$defs": {
+    "CapabilityModel": {
+      "properties": {
+        "replication_mode": {
+          "type": "string",
+          "description": "e.g. sync or async"
+        },
+        "failover_mechanism": {
+          "type": "string"
+        },
+        "failover_time_class": {
+          "type": "string",
+          "description": "A documented class (e.g. seconds/minutes)"
+        },
+        "backup_semantics": {
+          "type": "string"
+        },
+        "encryption_mechanism": {
+          "type": "string"
+        },
+        "key_ownership": {
+          "type": "string",
+          "description": "e.g. aws-managed or customer-managed (CMK)"
+        },
+        "multi_az_implementation": {
+          "type": "string"
+        },
+        "maintenance_behaviour": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": false,
+      "type": "object"
+    },
+    "Edge": {
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "type": {
+          "type": "string"
+        },
+        "from": {
+          "type": "string",
+          "description": "Node ID."
+        },
+        "to": {
+          "type": "string",
+          "description": "Node ID."
+        },
+        "resolution": {
+          "type": "string"
+        },
+        "provenance": {
+          "$ref": "#/$defs/Provenance"
+        }
+      },
+      "additionalProperties": false,
+      "type": "object",
+      "required": [
+        "id",
+        "type",
+        "from",
+        "to",
+        "resolution",
+        "provenance"
+      ]
+    },
+    "Node": {
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "type": {
+          "type": "string"
+        },
+        "resolution": {
+          "type": "string",
+          "enum": [
+            "known",
+            "inferred",
+            "unresolved"
+          ]
+        },
+        "capability": {
+          "$ref": "#/$defs/CapabilityModel",
+          "description": "Present only when Resolution is known or inferred enough to populate it; a node with capability entirely nil is not a claim of no capabilities"
+        },
+        "raw_attributes": {
+          "type": "object"
+        },
+        "provenance": {
+          "$ref": "#/$defs/Provenance"
+        }
+      },
+      "additionalProperties": false,
+      "type": "object",
+      "required": [
+        "id",
+        "type",
+        "resolution",
+        "provenance"
+      ]
+    },
+    "Provenance": {
+      "properties": {
+        "kind": {
+          "type": "string",
+          "enum": [
+            "stated",
+            "derived",
+            "assumed",
+            "llm_reasoned",
+            "observed"
+          ]
+        },
+        "source": {
+          "type": "string",
+          "minLength": 1
+        },
+        "reason": {
+          "type": "string",
+          "description": "Required for assumed and llm_reasoned; the IR evidence citation or the overridable default's justification."
+        },
+        "evidence_tier": {
+          "type": "string",
+          "enum": [
+            "functional",
+            "performance",
+            "resilience"
+          ]
+        },
+        "rung": {
+          "type": "integer",
+          "enum": [
+            1,
+            2,
+            3
+          ]
+        }
+      },
+      "additionalProperties": false,
+      "type": "object",
+      "required": [
+        "kind",
+        "source"
+      ]
+    }
+  },
+  "properties": {
+    "schema_version": {
+      "type": "string",
+      "description": "Contract version of this schema itself — see CHANGELOG.md. Not the same thing as VersionNumber below"
+    },
+    "version_number": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "version_hash": {
+      "type": "string",
+      "minLength": 1
+    },
+    "nodes": {
+      "items": {
+        "$ref": "#/$defs/Node"
+      },
+      "type": "array"
+    },
+    "edges": {
+      "items": {
+        "$ref": "#/$defs/Edge"
+      },
+      "type": "array"
+    }
+  },
+  "additionalProperties": false,
+  "type": "object",
+  "required": [
+    "schema_version",
+    "version_number",
+    "version_hash",
+    "nodes",
+    "edges"
+  ],
+  "x-changelog": "contracts/CHANGELOG.md",
+  "x-schema-version": "1.0.0"
+}

@@ -1,0 +1,45 @@
+{
+  "description": "Simulate AZ loss: eu-west-1a public subnet (derived from Preflight finding finding.zone-kill.public-a): stop all running EC2 instances in eu-west-1a, restart after 2 minutes.",
+  "targets": {
+    "AffectedInstances": {
+      "resourceType": "aws:ec2:instance",
+      "filters": [
+        {
+          "path": "Placement.AvailabilityZone",
+          "values": [
+            "eu-west-1a"
+          ]
+        },
+        {
+          "path": "State.Name",
+          "values": [
+            "running"
+          ]
+        }
+      ],
+      "selectionMode": "ALL"
+    }
+  },
+  "actions": {
+    "StopInstances": {
+      "actionId": "aws:ec2:stop-instances",
+      "description": "stop the instances",
+      "parameters": {
+        "startInstancesAfterDuration": "PT2M"
+      },
+      "targets": {
+        "Instances": "AffectedInstances"
+      }
+    }
+  },
+  "stopConditions": [
+    {
+      "source": "none"
+    }
+  ],
+  "roleArn": "arn:aws:iam::111122223333:role/FISExperimentRole",
+  "tags": {
+    "Name": "Preflight-finding.zone-kill.public-a",
+    "source_finding": "finding.zone-kill.public-a"
+  }
+}

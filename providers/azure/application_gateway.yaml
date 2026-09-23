@@ -1,0 +1,27 @@
+# Application Gateway -> load_balancer. PC-22, golden node type 3/8 (mirrors AWS's ALB
+# slot) — chosen over Front Door after explicit confirmation: Front Door's own WAF
+# policy only attaches to a Front Door endpoint, not to Application Gateway, so
+# modeling both for real would mean a full Front Door profile/endpoint/origin/route
+# chain sitting in front of this gateway, not a simple substitution. Front Door is out
+# of this pass's scope, named explicitly rather than silently dropped — the same way
+# AWS's own CloudFront (a comparable edge/CDN layer) is never modeled in the golden
+# AWS bundle either.
+#
+# No capabilities declared here — deliberately, not an oversight. Verified against
+# raw.githubusercontent.com/hashicorp/terraform-provider-azurerm (2026-09-21): unlike
+# AWS's aws_lb, which has a flat internal boolean, Application Gateway's public-vs-
+# internal distinction is determined by whether frontend_ip_configuration carries a
+# public_ip_address_id (a resource REFERENCE) vs only a private_ip_address (a literal
+# IP) — a reference expression is never captured in ParsedResource.Attributes (only
+# literals are; see ingest/parse.go), so this cannot be read as a capability the same
+# way alb.yaml's `internal` field is. The WAF policy attachment (firewall_policy_id) is
+# the same shape: a resource reference, not a literal, so it is likewise not declared
+# as a capability here — the load_balancer -> network_boundary(waf policy) edge forms
+# correctly anyway via ingest's generic reference-detection (buildEdges), no capability
+# declaration required to produce it. This is a real structural difference from AWS,
+# not a gap: AWS needs a separate association resource (aws_wafv2_web_acl_association)
+# for this exact relationship because ALB and WAFv2 have no direct attribute reference
+# between them; Application Gateway's firewall_policy_id makes the same relationship a
+# plain, ordinary reference — simpler here, not missing.
+resource_type: azurerm_application_gateway
+node_type: load_balancer

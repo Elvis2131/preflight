@@ -1,0 +1,27 @@
+# Azure DNS -> dns. PC-22, golden node type 1/8 (mirrors AWS's Route 53 slot).
+#
+# No capabilities declared here — deliberately, not an oversight. target_resource_id
+# (the DNS -> load_balancer edge, Azure's structural analog of Route 53's alias block)
+# is itself a resource-reference expression, not a literal value: ingest's parser only
+# captures attributes whose expression evaluates to a literal with no external
+# references (ingest/parse.go's own ParsedResource.Attributes doc comment). Declaring
+# it as a capability here would always read as absent — silently misleading, since the
+# resulting "not_assessable" would look like a real check that never fires rather than
+# a field that structurally can never populate this way. The dns -> load_balancer edge
+# itself still forms correctly via the same generic reference-detection mechanism every
+# other resource-to-resource reference in this codebase already uses (ingest/build.go's
+# buildEdges) — no capability declaration is needed to produce it.
+#
+# Structural gap, stated rather than silently matched: AWS's Route 53 alias record
+# combines DNS resolution AND health-check-aware routing (evaluate_target_health) in
+# one resource. Azure splits this: azurerm_dns_a_record is plain DNS with no
+# health-evaluation concept at all — that capability belongs to Azure Traffic Manager
+# (a separate resource, azurerm_traffic_manager_profile), out of scope for this pass,
+# the same way AWS's own Route 53 health check resource (aws_route53_health_check) is
+# never modeled as its own node either. Verified against
+# raw.githubusercontent.com/hashicorp/terraform-provider-azurerm (2026-09-21):
+# azurerm_dns_a_record's only alias-style argument is target_resource_id ("either
+# records OR target_resource_id must be specified, but not both"), with no
+# health-evaluation flag documented anywhere on it.
+resource_type: azurerm_dns_a_record
+node_type: dns

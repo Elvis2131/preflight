@@ -1,0 +1,36 @@
+# ElastiCache -> cache. PRD §10 / CLAUDE.md §14 golden node type 6/8.
+resource_type: aws_elasticache_replication_group
+node_type: cache
+capabilities:
+  - field: automatic_failover_enabled
+    source_attribute: automatic_failover_enabled
+    on_absent: assumed
+    assumed_default: "false"
+    assumed_citation: >-
+      Terraform AWS provider docs, aws_elasticache_replication_group:
+      "automatic_failover_enabled - ... Defaults to false." Verified against
+      raw.githubusercontent.com/hashicorp/terraform-provider-aws (2026-09-20). A cache
+      with this omitted has no automatic failover — directly relevant to the "cache
+      failure" golden scenario (CLAUDE.md §14).
+
+  - field: transit_encryption_enabled
+    source_attribute: transit_encryption_enabled
+    on_absent: not_assessable
+    # Not independently confirmed this pass.
+
+  - field: at_rest_encryption_enabled
+    source_attribute: at_rest_encryption_enabled
+    on_absent: not_assessable
+    # Not independently confirmed this pass.
+
+failover:
+  source_attribute: automatic_failover_enabled
+  when_enabled:
+    replication_mode: async
+    failover_mechanism: "automatic promotion of a replica to primary on primary failure"
+    citation: >-
+      AWS ElastiCache User Guide, "Minimizing downtime in ElastiCache by using Multi-AZ
+      with Valkey and Redis OSS": "the read replica with the least replication lag is
+      promoted to primary" and "Valkey and Redis OSS replication is asynchronous."
+      docs.aws.amazon.com/AmazonElastiCache/latest/red-ug/AutoFailover.html
+      (verified 2026-09-21).

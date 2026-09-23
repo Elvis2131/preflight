@@ -1,0 +1,20 @@
+# Azure RBAC Role Assignment -> identity. PC-22, golden node type 8/8 (mirrors AWS's
+# IAM slot).
+#
+# No capabilities declared here — a genuine model difference, not an oversight.
+# Verified against raw.githubusercontent.com/hashicorp/terraform-provider-azurerm
+# (2026-09-21): azurerm_role_assignment has no trust-policy or assume-role equivalent
+# concept at all. This is not a documentation gap to fill in later — it reflects a real
+# difference between the two identity models: AWS IAM roles require a SEPARATE trust
+# policy (who/what may assume this role) from the permission policy, which is exactly
+# what golden/aws/iam.yaml's trust_policy_present field checks. Azure RBAC has no
+# equivalent step — a role assignment simply binds a principal to a role definition at
+# a scope, with no separate trust relationship to configure or omit. Forcing a
+# "trust_policy_present"-shaped field onto this resource would assert a concept Azure's
+# own access-control model does not have, which is the exact kind of forced-fit this
+# ticket's own Conversation warns against treating as a mapping-file detail to paper
+# over. Additionally, this resource's three required arguments (scope, principal_id,
+# role_definition_id/name) are themselves resource-reference expressions in any real
+# usage, not literal values ingest's parser would capture as attributes.
+resource_type: azurerm_role_assignment
+node_type: identity

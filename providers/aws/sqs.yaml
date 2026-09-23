@@ -1,0 +1,21 @@
+# SQS -> queue/stream. PRD §10 / CLAUDE.md §14 golden node type 7/8.
+resource_type: aws_sqs_queue
+node_type: queue/stream
+capabilities:
+  - field: server_side_encryption
+    source_attribute: kms_master_key_id
+    on_absent: assumed
+    assumed_default: "false"
+    assumed_citation: >-
+      Terraform AWS provider docs, aws_sqs_queue: both kms_master_key_id and
+      sqs_managed_sse_enabled are documented as optional, opt-in settings — encryption
+      is not applied unless one is explicitly configured. Verified against
+      raw.githubusercontent.com/hashicorp/terraform-provider-aws (2026-09-20). Note:
+      this mapping checks only kms_master_key_id (the attribute the golden bundle uses);
+      a bundle using sqs_managed_sse_enabled instead is a known gap in this v1 mapping,
+      not a claim that such a bundle is definitely unencrypted.
+
+  - field: visibility_timeout_seconds
+    source_attribute: visibility_timeout_seconds
+    on_absent: not_assessable
+    # Not independently confirmed this pass.

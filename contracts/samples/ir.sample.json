@@ -1,0 +1,37 @@
+{
+  "schema_version": "1.0.0",
+  "version_number": 1,
+  "version_hash": "sha256:placeholder-golden-aws-v1",
+  "nodes": [
+    {
+      "id": "nat_gateway.nat_a",
+      "type": "network_boundary",
+      "resolution": "known",
+      "capability": {
+        "multi_az_implementation": "single-AZ (defect: only one NAT gateway serves three private subnets)"
+      },
+      "provenance": { "kind": "derived", "source": "golden/aws-broken/network.tf:aws_nat_gateway.nat_a" }
+    },
+    {
+      "id": "rds.payments",
+      "type": "managed_database",
+      "resolution": "known",
+      "capability": {
+        "replication_mode": "async",
+        "multi_az_implementation": "none",
+        "encryption_mechanism": "none"
+      },
+      "provenance": { "kind": "derived", "source": "golden/aws-broken/rds.tf:aws_db_instance.payments" }
+    }
+  ],
+  "edges": [
+    {
+      "id": "edge.rds-depends-on-nat",
+      "type": "depends_on",
+      "from": "rds.payments",
+      "to": "nat_gateway.nat_a",
+      "resolution": "inferred",
+      "provenance": { "kind": "derived", "source": "core/analyse:dependency-inference" }
+    }
+  ]
+}

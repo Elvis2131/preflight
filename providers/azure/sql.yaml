@@ -1,0 +1,48 @@
+# Azure SQL Database -> managed_database. PC-22, golden node type 5/8 (mirrors AWS's
+# RDS slot).
+#
+# Scope boundary, stated explicitly (confirmed before writing this file, not
+# discovered after): this mapping covers only zone-redundant HA (zone_redundant),
+# Azure SQL's direct analog to RDS's multi_az — same resource, boolean flag, automatic
+# failover. Active geo-replication / auto-failover groups (Azure's cross-region DR
+# capability) are a SEPARATE Terraform resource (azurerm_mssql_failover_group) linking
+# primary and secondary databases, not an attribute on this resource — structurally the
+# same shape as AWS's own cross-region read replica, which the RDS mapping doesn't
+# model either. Out of scope for this pass on both clouds symmetrically, not a gap
+# introduced for Azure specifically.
+resource_type: azurerm_mssql_database
+node_type: managed_database
+capabilities:
+  - field: encryption_mechanism
+    source_attribute: transparent_data_encryption_enabled
+    on_absent: assumed
+    assumed_default: "true"
+    assumed_citation: >-
+      Terraform azurerm provider docs, azurerm_mssql_database:
+      "transparent_data_encryption_enabled - ... Defaults to true." Verified against
+      raw.githubusercontent.com/hashicorp/terraform-provider-azurerm (2026-09-21).
+
+  - field: zone_redundant_configured
+    source_attribute: zone_redundant
+    on_absent: not_assessable
+    # No documented default was found for this field when omitted — checked directly,
+    # not assumed from memory (CLAUDE.md §5). Terraform azurerm provider docs describe
+    # only what the field DOES when set ("replicas of this database will be spread
+    # across multiple availability zones"), not what happens when it's absent.
+
+failover:
+  source_attribute: zone_redundant
+  when_enabled:
+    replication_mode: sync
+    failover_mechanism: "zone-redundant automatic failover to a synchronized secondary replica"
+    citation: >-
+      Azure SQL Database docs, "Availability Through Local and Zone Redundancy": for
+      Business Critical/Premium zone-redundant configurations, "the primary replica
+      constantly pushes changes to the secondary replicas in order and ensures that the
+      data is persisted on a sufficient number of secondary replicas before committing
+      each transaction... The failover is initiated by the Azure Service Fabric." The
+      same article states zone-redundant configurations guarantee "a Recovery Point
+      Objective (RPO) with zero loss of committed data upon failover" — the explicit
+      RPO=0 claim RPOFeasibility's "sync" classification requires.
+      learn.microsoft.com/en-us/azure/azure-sql/database/high-availability-sla-local-zone-redundancy
+      (verified 2026-09-21).

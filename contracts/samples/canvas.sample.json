@@ -1,0 +1,24 @@
+{
+  "nodes": [
+    {
+      "id": "load_balancer-1",
+      "type": "load_balancer",
+      "label": "Load Balancer",
+      "capability": {}
+    },
+    {
+      "id": "managed_database-2",
+      "type": "managed_database",
+      "label": "Managed Database",
+      "capability": { "encryption_mechanism": "true" }
+    }
+  ],
+  "edges": [
+    {
+      "id": "xy-edge__load_balancer-1-managed_database-2",
+      "type": "reads/writes",
+      "from": "load_balancer-1",
+      "to": "managed_database-2"
+    }
+  ]
+}

@@ -1,0 +1,63 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$defs": {
+    "Provenance": {
+      "properties": {
+        "kind": {
+          "type": "string",
+          "enum": [
+            "stated",
+            "derived",
+            "assumed",
+            "llm_reasoned",
+            "observed"
+          ]
+        },
+        "source": {
+          "type": "string",
+          "minLength": 1
+        },
+        "reason": {
+          "type": "string",
+          "description": "Required for assumed and llm_reasoned; the IR evidence citation or the overridable default's justification."
+        },
+        "evidence_tier": {
+          "type": "string",
+          "enum": [
+            "functional",
+            "performance",
+            "resilience"
+          ]
+        },
+        "rung": {
+          "type": "integer",
+          "enum": [
+            1,
+            2,
+            3
+          ]
+        }
+      },
+      "additionalProperties": false,
+      "type": "object",
+      "required": [
+        "kind",
+        "source"
+      ]
+    }
+  },
+  "properties": {
+    "value": true,
+    "provenance": {
+      "$ref": "#/$defs/Provenance"
+    }
+  },
+  "additionalProperties": false,
+  "type": "object",
+  "required": [
+    "value",
+    "provenance"
+  ],
+  "x-changelog": "contracts/CHANGELOG.md",
+  "x-schema-version": "1.0.0"
+}
