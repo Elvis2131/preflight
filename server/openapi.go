@@ -142,6 +142,40 @@ func buildOpenAPISpec() map[string]any {
 					},
 				},
 			},
+			"/sessions/{id}/versions": map[string]any{
+				"get": map[string]any{
+					"summary":     "List every version 1..latest for a session (PC-92 groundwork)",
+					"description": "Each entry is exactly what GET /sessions/{id}/versions/{n} would return for that version — reused directly, not reimplemented, so a timeline caller gets the identical AssuranceDelta computation in one call instead of N sequential ones. A session that exists but has zero stored versions (an assessment failed before persisting) returns a real empty array, not an error.",
+					"parameters": []any{
+						map[string]any{
+							"name": "id", "in": "path", "required": true,
+							"schema":      map[string]any{"type": "string"},
+							"description": "Session ID.",
+						},
+					},
+					"responses": map[string]any{
+						"200": map[string]any{
+							"description": "A JSON array of AssessResponse, one per version, oldest first",
+							"content": map[string]any{
+								"application/json": map[string]any{
+									"schema": map[string]any{
+										"type":  "array",
+										"items": reflectSchema(AssessResponse{}),
+									},
+								},
+							},
+						},
+						"404": map[string]any{
+							"description": "No such session (error_code: session_not_found)",
+							"content": map[string]any{
+								"application/json": map[string]any{
+									"schema": reflectSchema(errorBody{}),
+								},
+							},
+						},
+					},
+				},
+			},
 			"/sessions/{id}/versions/{n}": map[string]any{
 				"get": map[string]any{
 					"summary":     "Re-fetch a previously-computed assessment (PC-94)",

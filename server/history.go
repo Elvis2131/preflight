@@ -74,6 +74,64 @@ func GetStoredVersion(store *Store, sessionID string, versionNumber int) (Assess
 	}, nil
 }
 
+// ListVersions (PC-92 groundwork) returns every version 1..latest for a session, each
+// exactly what GetStoredVersion would return for that one version — reused directly,
+// not reimplemented, so a caller building a timeline (per-dimension scorecard
+// trajectory, PC-92's own card) gets the identical AssuranceDelta computation the
+// single-version read-back already has, in one call instead of N sequential ones. A
+// real gap found starting on PC-92: neither GetStoredVersion nor anything else could
+// answer "how many versions does this session even have" — a CLI/one-shot caller
+// never needed that, only "the latest" or "one specific number" (LatestVersion,
+// GetVersion) — the same root pattern as every prior browser-surfaced API gap this
+// session found (node_loss, CORS, inline workload, ...). A session that exists but
+// has zero stored versions (EnsureSession succeeded, then the assessment itself
+// failed before StoreVersion — e.g. an invalid workload) returns a real empty list,
+// not an error: the session is real, it simply has no history yet.
+func ListVersions(store *Store, sessionID string) ([]AssessResponse, error) {
+	exists, err := store.SessionExists(sessionID)
+	if err != nil {
+		return nil, err
+	}
+	if !exists {
+		return nil, newAPIError(http.StatusNotFound, "session_not_found", "server: no session %s found", sessionID)
+	}
+
+	latest, hadAny, err := store.LatestVersion(sessionID)
+	if err != nil {
+		return nil, err
+	}
+	if !hadAny {
+		return []AssessResponse{}, nil
+	}
+
+	out := make([]AssessResponse, 0, latest.VersionNumber)
+	for n := 1; n <= latest.VersionNumber; n++ {
+		resp, err := GetStoredVersion(store, sessionID, n)
+		if err != nil {
+			return nil, err
+		}
+		out = append(out, resp)
+	}
+	return out, nil
+}
+
+// ListVersionsHandler serves GET /sessions/{id}/versions (PC-92 groundwork) — no
+// trailing {n}, a distinct route from GetVersionHandler's own pattern.
+func ListVersionsHandler(store *Store) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		sessionID := r.PathValue("id")
+
+		resp, err := ListVersions(store, sessionID)
+		if err != nil {
+			writeError(w, err)
+			return
+		}
+
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(resp)
+	}
+}
+
 // GetVersionHandler serves GET /sessions/{id}/versions/{n} (PC-94), registered with
 // Go 1.22+'s pattern-matching ServeMux (see cmd/assessd/main.go) — same thin-wrapper
 // discipline as every other handler in http.go.
