@@ -1,0 +1,58 @@
+name: CI
+
+# PC-6's own last acceptance criterion: "CI blocks merge on any of the above failing"
+# — the "above" being I1 (core/'s purity, enforced two ways: the internal/ package
+# boundary via the compiler itself, plus depguard/forbidigo as defense-in-depth for
+# what the compiler alone can't catch — an added preflight/providers import, a stray
+# time.Now()), I2 (core.Tagged's panic-on-zero-Provenance constructor), and I4
+# (core.Assessment's no-bare-bool-field structure). None of those are special-cased
+# below: `go test ./...` already runs core/boundary_test.go, core/provenance_test.go,
+# and core/assessment_test.go along with everything else, so this workflow just needs
+# to run the whole suite and fail loudly if any of it fails — the tests themselves are
+# what prove the invariants, not this file.
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  build-test-lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+
+      - name: go build
+        run: go build ./...
+
+      - name: go vet
+        run: go vet ./...
+
+      - name: gofmt
+        run: |
+          if [ -n "$(gofmt -l .)" ]; then
+            echo "The following files are not gofmt'd:"
+            gofmt -l .
+            exit 1
+          fi
+
+      # Runs the full suite, not a filtered subset — I1/I2/I4's own enforcement
+      # tests (core/boundary_test.go, core/provenance_test.go, core/assessment_test.go)
+      # are ordinary Go tests with no special build tag, so `go test ./...` already
+      # exercises them; singling them out here would just be a second, divergent list
+      # to keep in sync with the real one.
+      - name: go test
+        run: go test ./...
+
+      # I1's own "defense in depth" half (CLAUDE.md §4/ADR-004) — depguard blocks
+      # core/ from importing the impure process packages, forbidigo blocks core/ from
+      # reading the clock or unseeded math/rand directly. Version pinned to match
+      # what this config was actually authored and verified against locally
+      # (golangci-lint config verify + a real negative-control run — see .golangci.yml's
+      # own doc comments for what that caught).
+      - uses: golangci/golangci-lint-action@v9
+        with:
+          version: v2.13.2

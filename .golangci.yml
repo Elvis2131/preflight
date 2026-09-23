@@ -4,55 +4,104 @@
 # (core/boundary_test.go proves that half), but nothing in the Go compiler stops core/
 # from *adding* an import of providers/ or calling time.Now() — that half is this file.
 #
-# NOT YET RUN. golangci-lint is not installed in this environment; this config has not
-# been executed against the codebase. Treat it as a first draft to validate, not as a
-# passing gate. Written against the v1 config schema (linters-settings.depguard /
-# forbidigo) — confirm against whatever golangci-lint version CI actually installs, since
-# v2 changed both sections' shape.
+# Migrated to the v2 config schema and actually run against this codebase for the
+# first time (PC-6) — the original draft predated golangci-lint v2 and was never
+# executed; every field below was verified against golangci-lint 2.13.2's real JSON
+# schema (golangci-lint config verify), not assumed from memory or from the v1-era
+# docs the original draft was written against.
+
+version: "2"
 
 run:
   timeout: 3m
 
 linters:
+  # default: none — this file's own scope is PC-6's I1 defense-in-depth specifically
+  # (depguard + forbidigo), not a general code-quality policy. golangci-lint v2's
+  # default linter set (errcheck, staticcheck, ineffassign, govet, unused, ...) found
+  # 15 real, pre-existing issues on first run — genuine, but adopting that broader
+  # standard is a separate, deliberate decision for a future ticket to make, not
+  # something this ticket's own CI gate should silently start enforcing.
+  default: none
   enable:
     - depguard
     - forbidigo
+  settings:
+    depguard:
+      rules:
+        core-purity:
+          # I1: core/ (and everything under core/internal/) must not import the impure
+          # process packages, or reach for network/OS I/O directly.
+          #
+          # TWO patterns, deliberately — golangci-lint's doublestar globbing requires
+          # >=1 directory segment between "core/" and the filename for a
+          # "**/core/**/*.go"-shaped pattern to match, so a single such pattern
+          # silently misses every file directly under core/ (core/ir.go,
+          # core/assess.go, ...) while still matching nested ones
+          # (core/internal/analyse/compliance.go). Found by NEGATIVE CONTROL: a
+          # deliberately introduced os import in core/ir.go was NOT flagged with only
+          # the single-pattern form — verified empirically against golangci-lint
+          # 2.13.2's real glob matching in an isolated reproduction, not assumed from
+          # the library's own docs.
+          files:
+            - "**/core/*.go"
+            - "**/core/**/*.go"
+          deny:
+            - pkg: "preflight/ingest"
+              desc: "I1 violation: core/ must not import ingest/ — ingest calls INTO core, never the reverse"
+            - pkg: "preflight/reason"
+              desc: "I1 violation: core/ must not import reason/ — LLM annotation is P2, outside the pure engine"
+            - pkg: "preflight/server"
+              desc: "I1 violation: core/ must not import server/ — the HTTP/MCP layer calls INTO core, never the reverse"
+            - pkg: "preflight/providers"
+              desc: "I1 violation: core/ must not import provider-specific code directly — provider data flows in as already-resolved IR, not as a live import"
+            - pkg: "preflight/validate"
+              desc: "I1 violation: core/ must not import validate/ — that package is P3, credentialed, and core/ must never be credentialed"
+            - pkg: "net/http"
+              desc: "I1 violation: core/ must not perform network I/O"
+            - pkg: "net"
+              desc: "I1 violation: core/ must not perform network I/O"
+            - pkg: "os"
+              desc: "I1 violation: core/ must not perform OS I/O (files, env vars, credentials)"
 
-linters-settings:
-  depguard:
+    forbidigo:
+      # Scoped to core/ via the path-based exclusion rule below, not via `pkg` —
+      # see that rule's own comment for why `pkg` can't do this.
+      forbid:
+        - pattern: '^time\.Now$'
+          msg: "I1 violation: core/ must not read the clock directly — accept time as an explicit parameter from the caller so results stay deterministic and replayable"
+        - pattern: '^rand\.(Int|Int31|Int63|Float64|Float32|Intn|Seed)$'
+          msg: "I1 violation: core/ must not use unseeded/global math/rand — accept an *rand.Rand constructed with an explicit seed from the caller"
+
+  exclusions:
+    paths:
+      - zz_boundary_probe # core/boundary_test.go's scratch probe directory; always removed after the test runs, but excluded defensively
     rules:
-      core-purity:
-        # I1: core/ (and everything under core/internal/) must not import the impure
-        # process packages, or reach for network/OS I/O directly.
-        files:
-          - "**/core/**/*.go"
-        deny:
-          - pkg: "preflight/ingest"
-            desc: "I1 violation: core/ must not import ingest/ — ingest calls INTO core, never the reverse"
-          - pkg: "preflight/reason"
-            desc: "I1 violation: core/ must not import reason/ — LLM annotation is P2, outside the pure engine"
-          - pkg: "preflight/server"
-            desc: "I1 violation: core/ must not import server/ — the HTTP/MCP layer calls INTO core, never the reverse"
-          - pkg: "preflight/providers"
-            desc: "I1 violation: core/ must not import provider-specific code directly — provider data flows in as already-resolved IR, not as a live import"
-          - pkg: "preflight/validate"
-            desc: "I1 violation: core/ must not import validate/ — that package is P3, credentialed, and core/ must never be credentialed"
-          - pkg: "net/http"
-            desc: "I1 violation: core/ must not perform network I/O"
-          - pkg: "net"
-            desc: "I1 violation: core/ must not perform network I/O"
-          - pkg: "os"
-            desc: "I1 violation: core/ must not perform OS I/O (files, env vars, credentials)"
-
-  forbidigo:
-    forbid:
-      - pattern: '^time\.Now$'
-        pkg: "^preflight/core"
-        msg: "I1 violation: core/ must not read the clock directly — accept time as an explicit parameter from the caller so results stay deterministic and replayable"
-      - pattern: '^rand\.(Int|Int31|Int63|Float64|Float32|Intn|Seed)$'
-        pkg: "^preflight/core"
-        msg: "I1 violation: core/ must not use unseeded/global math/rand — accept an *rand.Rand constructed with an explicit seed from the caller"
-
-issues:
-  exclude-dirs:
-    - zz_boundary_probe # core/boundary_test.go's scratch probe directory; always removed after the test runs, but excluded defensively
+      # I1 constrains package core (and core/internal/*) itself — not test files in
+      # the same directory. Several golden-bundle tests are deliberately declared
+      # `package core_test` (an external test package) specifically so they CAN
+      # import ingest/providers for fixture setup without that being an I1 violation
+      # — a real, pre-existing, correct Go idiom this rule must not flag. Found by
+      # running the fixed files-glob pattern above against the real codebase: it
+      # correctly caught core/ir.go's negative-control violation but ALSO flagged
+      # six legitimate `package core_test` golden-bundle test files, which would have
+      # made this CI gate red on day one for files that were never actually wrong.
+      - linters:
+          - depguard
+        path: "_test\\.go"
+      # forbidigo's own config has no per-rule path scoping (unlike depguard's
+      # `files`) — its `pkg` field disambiguates which PACKAGE a matched call
+      # belongs to (e.g. which "v1" a v1.Dump() means), NOT which package is doing
+      # the calling, confirmed empirically (pkg: "^preflight/core" never matched
+      # anything, since time.Now()'s own package is "time", not "preflight/core").
+      # Real server/*.go code legitimately calls time.Now() (ComputeDurationMS) —
+      # that is NOT an I1 violation, since I1 only constrains core/. Since Go's RE2
+      # has no negative lookahead, "every path except core/" can't be written as one
+      # pattern — this explicitly enumerates every OTHER top-level package instead.
+      # A new top-level package added later needs adding here too, or it will only
+      # under-enforce (a real core/ violation still gets caught; a new package
+      # outside core/ just won't be checked for something it was never meant to be
+      # checked for anyway) — this list errs toward that direction, not the reverse.
+      - linters:
+          - forbidigo
+        path: "^(cmd|contracts_test|exporters|ingest|providers|reason|server|ui|validate)/"

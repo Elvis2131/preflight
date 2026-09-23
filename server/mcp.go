@@ -86,4 +86,3 @@ func simulateTool(store *Store) mcp.ToolHandlerFor[SimulateRequest, any] {
 		}, resp, nil
 	}
 }
-
