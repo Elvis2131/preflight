@@ -25,11 +25,15 @@ import (
 // via apt in CI — the workflow prints `dot -V` so that version is always visible,
 // not silently assumed). This is NOT a claim that two DIFFERENT Graphviz versions
 // produce identical output for the same input — Graphviz's own layout engine has
-// changed between major versions historically, and nothing here has tested that
-// cross-version case. If assessd's SVG output is ever expected to be byte-identical
-// across two different deployment environments, THAT requires pinning the exact
-// same Graphviz version in both — a real, current gap (only a single version is
-// verified against, not proven invariant across versions), not a silent assumption.
+// changed between major versions historically, and no two actual different versions
+// have been compared here. What IS guarded, not just disclosed: a version drift
+// between two separate CI runs (an apt/brew upgrade on the runner) would previously
+// have passed silently, since render_golden_test.go only ever compared two
+// invocations within the same run against each other. render_fixture_test.go closes
+// that gap — it byte-compares live output against a CHECKED-IN fixture
+// (render/testdata/golden_aws.svg), so any drift, whatever its cause, fails CI
+// immediately rather than sitting undetected. See render/testdata/README.md for what
+// a failure there means and how to regenerate responsibly.
 func SVG(dot string) (string, error) {
 	if _, err := exec.LookPath("dot"); err != nil {
 		return "", fmt.Errorf("render: graphviz's \"dot\" binary not found on PATH: %w", err)
