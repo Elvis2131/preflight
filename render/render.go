@@ -17,6 +17,19 @@ import (
 // stdout. A missing Graphviz install, or any other invocation failure, returns a
 // real, specific error naming what happened — never a silently-empty or fabricated
 // SVG string standing in for a real one.
+//
+// Determinism scope, stated precisely rather than implied more broadly: verified
+// (render_test.go, render_golden_test.go) that the SAME dot input produces
+// byte-identical SVG output across repeated invocations of a GIVEN, FIXED Graphviz
+// install (Homebrew's 16.1.0, locally; whatever `.github/workflows/ci.yml` installs
+// via apt in CI — the workflow prints `dot -V` so that version is always visible,
+// not silently assumed). This is NOT a claim that two DIFFERENT Graphviz versions
+// produce identical output for the same input — Graphviz's own layout engine has
+// changed between major versions historically, and nothing here has tested that
+// cross-version case. If assessd's SVG output is ever expected to be byte-identical
+// across two different deployment environments, THAT requires pinning the exact
+// same Graphviz version in both — a real, current gap (only a single version is
+// verified against, not proven invariant across versions), not a silent assumption.
 func SVG(dot string) (string, error) {
 	if _, err := exec.LookPath("dot"); err != nil {
 		return "", fmt.Errorf("render: graphviz's \"dot\" binary not found on PATH: %w", err)

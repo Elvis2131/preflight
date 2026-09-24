@@ -25,6 +25,33 @@ jobs:
         with:
           go-version-file: go.mod
 
+      # render/'s tests (render_test.go, render_golden_test.go) shell out to the real
+      # `dot` binary — without this step CI fails outright the first time `go test
+      # ./...` reaches them, not just "renders slightly differently". Found and fixed
+      # only when asked directly whether Graphviz's version was pinned anywhere: it
+      # wasn't, and this workflow had never actually been run against a real CI
+      # runner to notice (no GitHub remote exists yet — see PC-6's own closing
+      # comment). `dot -V` is printed so the ACTUAL version this run used is always
+      # visible in the log, not silently unknown.
+      #
+      # Honest scope of the determinism guarantee (PC-81, NFR-1), stated precisely
+      # rather than implied more broadly: core.RenderDOT's own output (pure Go, no
+      # external dependency) is byte-identical on any machine, always. The SVG bytes
+      # `render.SVG` produces are proven byte-identical only for a GIVEN, FIXED
+      # Graphviz install — verified locally against Homebrew's 16.1.0 (core/graph_test.go,
+      # render/render_golden_test.go). Graphviz's own layout engine has changed
+      # between major versions historically; nothing here claims — or has tested —
+      # that two DIFFERENT Graphviz versions produce identical output for the same
+      # input. Apt's graphviz package on ubuntu-latest is very likely a different
+      # version than 16.1.0; that is a real, named gap (not every environment this
+      # code might run in is guaranteed to produce byte-identical SVGs to every
+      # other), not a silent assumption.
+      - name: install graphviz
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y graphviz
+          dot -V
+
       - name: go build
         run: go build ./...
 
