@@ -40,13 +40,9 @@ func TestHTTPAndMCP_CallTheSameFunction(t *testing.T) {
 	// Call through the MCP tool handler directly (same function assessTool returns,
 	// without needing a full client/server transport round-trip for this test).
 	toolHandler := assessTool(mcpStore)
-	_, mcpOut, err := toolHandler(context.Background(), nil, req)
+	_, mcpResp, err := toolHandler(context.Background(), nil, req)
 	if err != nil {
 		t.Fatalf("MCP tool handler: %v", err)
-	}
-	mcpResp, ok := mcpOut.(AssessResponse)
-	if !ok {
-		t.Fatalf("MCP tool output type = %T, want AssessResponse", mcpOut)
 	}
 
 	// Compare the parts that must be identical given identical input against

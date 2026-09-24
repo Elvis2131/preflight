@@ -111,8 +111,8 @@ func TestSimulate_RegionLoss_MultiRegionWorkload_IsNotAssessable(t *testing.T) {
 // the wire guarantee directly, at the actual JSON boundary, not just against the Go
 // slice — a nil Go slice and an empty-but-non-nil one look identical to len() but
 // marshal completely differently (null vs []), and a caller that ranges over the
-// decoded value (a CLI script, PC-93's eventual MCP tool, anything besides this one
-// canvas that was fixed reactively) reasonably expects an array either way.
+// decoded value (a CLI script, the "simulate" MCP tool's own real output schema —
+// PC-93 — or the canvas) reasonably expects an array either way.
 func TestSimulate_NoFaults_SeveredPathsAndJourneysAreNeverJSONNull(t *testing.T) {
 	ir := &core.IR{Nodes: []core.Node{syntheticNode("dns.api", core.NodeTypeDNS)}}
 	workload := testWorkloadWithRegion("eu-west-1")

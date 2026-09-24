@@ -5,84 +5,120 @@ import (
 	"encoding/json"
 
 	"github.com/modelcontextprotocol/go-sdk/mcp"
+
+	"preflight/core"
 )
 
-// NewMCPServer builds the MCP server exposing the "assess" tool — the other half of
-// PC-21's "MCP tools and HTTP routes must call identical underlying functions"
-// requirement. assessTool below and AssessHandler (http.go) both call Assess and
-// nothing else; neither reimplements any part of it.
+// NewMCPServer builds the MCP server exposing "assess", "simulate", and
+// "assess_canvas" — the other half of PC-21's "MCP tools and HTTP routes must call
+// identical underlying functions" requirement. Each *Tool below and its HTTP
+// counterpart (http.go) both call the same Assess/Simulate/AssessCanvas function;
+// neither reimplements any part of it.
 //
-// Out is `any`, not AssessResponse, deliberately — found the hard way: mcp.AddTool's
-// generic form reflects the Out type's struct tags via google/jsonschema-go to build
-// an output schema, and that library parses the `jsonschema:` tag differently than
-// invopop/jsonschema does (the library contracts/*.schema.json is correctly generated
-// with — see contracts_test's own passing validation against those exact tags).
-// google/jsonschema-go panics on the mix of a bare `required` keyword with
-// `minLength=1` in the same tag that invopop/jsonschema treats as entirely valid.
-// Rather than weaken core/'s frozen contract tags to satisfy a second, incompatible
-// schema library, this tool uses `any` for Out (per mcp.AddTool's own documented
-// behavior: "If the Out type is any, the output schema is omitted") and populates the
-// result content manually.
+// PC-93's fix, and the reasoning behind it (recorded here per this ticket's own
+// first acceptance criterion): mcp.AddTool's generic form reflects a tool's In/Out
+// struct tags via google/jsonschema-go when — and ONLY when — Tool.InputSchema/
+// OutputSchema is nil at call time (confirmed by reading go-sdk v1.0.0's own
+// setSchema, mcp/server.go — the reflection branch is gated on `*sfield == nil`,
+// the else branch just re-marshals whatever was already provided through plain
+// encoding/json, agnostic to its concrete Go type). That reflection library parses
+// the `jsonschema:` struct tag completely differently than invopop/jsonschema does
+// (confirmed by reading google/jsonschema-go v0.3.0's own infer.go): it does not
+// parse `required`/`minLength=1` as separate constraint keywords at all — the ENTIRE
+// tag value becomes the field's Description string, required-ness is derived instead
+// from the JSON `omitempty`/`omitzero` tag, and any tag content containing a bare
+// `key=value` pattern (like our own `minLength=1`) is REJECTED outright by a
+// deliberate guard (disallowedPrefixRegexp) — not a bug in that library, a real,
+// permanent incompatibility with how core/'s own tags are written for
+// invopop/jsonschema (contracts/*.schema.json's own generator, cmd/gen-contracts).
 //
-// PC-86 hit the same root cause on the INPUT side (AssessCanvasRequest, see below) —
-// two independent occurrences of one incompatibility. PC-93 owns fixing this properly
-// (a real decision between: manually decoding raw tool arguments for any frozen-contract
-// input type, patching the tag reflection, or normalizing core/'s own jsonschema tags to
-// a syntax both libraries accept) rather than each new tool re-discovering and
-// re-documenting the same workaround.
+// Given that, none of PC-93's own three originally-listed options were actually the
+// best fix: manually decoding raw arguments (still correct, but unnecessary extra
+// work per tool) and patching the tag reflection (wouldn't even produce a CORRECT
+// schema — the library still can't express required/minLength as real schema
+// keywords, only as description text) are both strictly worse than simply supplying
+// Tool.InputSchema/OutputSchema ourselves, reflected via the SAME invopop reflector
+// server/openapi.go's reflectSchema already uses for contracts/*.schema.json and the
+// OpenAPI spec — one schema-generation mechanism for this whole codebase, not two,
+// and core/'s frozen contract tags stay exactly as they are.
 func NewMCPServer(store *Store) *mcp.Server {
 	s := mcp.NewServer(&mcp.Implementation{Name: "preflight", Title: "Preflight architecture assurance"}, nil)
 	mcp.AddTool(s, &mcp.Tool{
-		Name:        "assess",
-		Description: "Run a deterministic architecture assessment against a Terraform bundle and workload declaration, returning findings, a scorecard, and (from a session's second call onward) an Assurance Delta against the previous version.",
+		Name:         "assess",
+		Description:  "Run a deterministic architecture assessment against a Terraform bundle and workload declaration, returning findings, a scorecard, and (from a session's second call onward) an Assurance Delta against the previous version.",
+		OutputSchema: reflectSchema(AssessResponse{}),
 	}, assessTool(store))
 	mcp.AddTool(s, &mcp.Tool{
-		Name:        "simulate",
-		Description: "Declare a single fault (region_loss or node_loss) against an already-assessed version and get back severed paths, cascade, surviving capacity, and a verdict — without re-running the full /assess pipeline. PC-82, PC-88.",
+		Name:         "simulate",
+		Description:  "Declare a single fault (region_loss or node_loss) against an already-assessed version and get back severed paths, cascade, surviving capacity, and a verdict — without re-running the full /assess pipeline. PC-82, PC-88.",
+		OutputSchema: reflectSchema(core.SimulateResponse{}),
 	}, simulateTool(store))
-	// No "assess_canvas" MCP tool, deliberately: mcp.AddTool[AssessCanvasRequest, _]
-	// panics at registration time — core.CanvasDocument's own fields use
-	// jsonschema:"required,minLength=1", the same tag combination this file's own doc
-	// comment above already found google/jsonschema-go cannot parse, previously only
-	// hit and worked around on the OUTPUT side (Out any). This is PC-93 now — filed
-	// once this became a second independent occurrence of the same root cause, not a
-	// one-off. The HTTP endpoint (AssessCanvasHandler, http.go) is fully working and
-	// verified live; only the MCP tool is missing pending PC-93.
+	mcp.AddTool(s, &mcp.Tool{
+		Name:         "assess_canvas",
+		Description:  "Assess a canvas-authored architecture (PC-85/86) — builds an IR directly from a posted CanvasDocument rather than parsing Terraform, then runs the identical downstream pipeline as \"assess\". PC-93: previously missing because its input type's struct tags panicked the SDK's default schema reflection.",
+		InputSchema:  reflectSchema(AssessCanvasRequest{}),
+		OutputSchema: reflectSchema(AssessResponse{}),
+	}, assessCanvasTool(store))
 	return s
 }
 
-func assessTool(store *Store) mcp.ToolHandlerFor[AssessRequest, any] {
-	return func(_ context.Context, _ *mcp.CallToolRequest, input AssessRequest) (*mcp.CallToolResult, any, error) {
+func assessTool(store *Store) mcp.ToolHandlerFor[AssessRequest, AssessResponse] {
+	return func(_ context.Context, _ *mcp.CallToolRequest, input AssessRequest) (*mcp.CallToolResult, AssessResponse, error) {
 		resp, err := Assess(store, input)
 		if err != nil {
-			return nil, nil, err
+			return nil, AssessResponse{}, err
 		}
 
 		buf, err := json.Marshal(resp)
 		if err != nil {
-			return nil, nil, err
+			return nil, AssessResponse{}, err
 		}
 		return &mcp.CallToolResult{
-			Content: []mcp.Content{&mcp.TextContent{Text: string(buf)}},
+			Content:           []mcp.Content{&mcp.TextContent{Text: string(buf)}},
+			StructuredContent: resp,
 		}, resp, nil
 	}
 }
 
-// simulateTool is /simulate's MCP counterpart (PC-82) — same Out-any workaround as
-// assessTool, for the same reason (see NewMCPServer's own doc comment).
-func simulateTool(store *Store) mcp.ToolHandlerFor[SimulateRequest, any] {
-	return func(_ context.Context, _ *mcp.CallToolRequest, input SimulateRequest) (*mcp.CallToolResult, any, error) {
+// simulateTool is /simulate's MCP counterpart (PC-82) — same thin-wrapper discipline
+// as assessTool, for the same reason (see NewMCPServer's own doc comment).
+func simulateTool(store *Store) mcp.ToolHandlerFor[SimulateRequest, core.SimulateResponse] {
+	return func(_ context.Context, _ *mcp.CallToolRequest, input SimulateRequest) (*mcp.CallToolResult, core.SimulateResponse, error) {
 		resp, err := Simulate(store, input)
 		if err != nil {
-			return nil, nil, err
+			return nil, core.SimulateResponse{}, err
 		}
 
 		buf, err := json.Marshal(resp)
 		if err != nil {
-			return nil, nil, err
+			return nil, core.SimulateResponse{}, err
 		}
 		return &mcp.CallToolResult{
-			Content: []mcp.Content{&mcp.TextContent{Text: string(buf)}},
+			Content:           []mcp.Content{&mcp.TextContent{Text: string(buf)}},
+			StructuredContent: resp,
+		}, resp, nil
+	}
+}
+
+// assessCanvasTool is /sessions/{id}/canvas's MCP counterpart (PC-86/PC-93) — same
+// thin-wrapper discipline as assessTool. Unlike the HTTP route, there is no URL path
+// to take SessionID from, so a real caller must supply it in the tool arguments
+// (AssessCanvasRequest.SessionID carries a real json tag for exactly this reason —
+// see that field's own doc comment in server/canvas.go).
+func assessCanvasTool(store *Store) mcp.ToolHandlerFor[AssessCanvasRequest, AssessResponse] {
+	return func(_ context.Context, _ *mcp.CallToolRequest, input AssessCanvasRequest) (*mcp.CallToolResult, AssessResponse, error) {
+		resp, err := AssessCanvas(store, input)
+		if err != nil {
+			return nil, AssessResponse{}, err
+		}
+
+		buf, err := json.Marshal(resp)
+		if err != nil {
+			return nil, AssessResponse{}, err
+		}
+		return &mcp.CallToolResult{
+			Content:           []mcp.Content{&mcp.TextContent{Text: string(buf)}},
+			StructuredContent: resp,
 		}, resp, nil
 	}
 }

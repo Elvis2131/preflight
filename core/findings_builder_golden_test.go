@@ -95,3 +95,38 @@ func TestBuildFindings_NowHasThreeDeltaVisibleFindings(t *testing.T) {
 		t.Errorf("only %d findings differ between bundles, want at least 3 (nat-gateway-redundancy, rds-storage-encryption, and the RPO finding's state even though its VALUE comparison won't show as differing due to not_assessable on one side — recount if this changes)", differing)
 	}
 }
+
+// TestNATRedundancyFinding_NoGoldenSubnetsPresent_StillValidatesAgainstSchema
+// (found live via PC-93's own real MCP client call, which validates a real tool
+// response against its own schema — not a hand-written test with a matched fixture)
+// is the real bug this session found: an IR with NONE of goldenPublicSubnets (a
+// canvas-authored architecture, or any Azure bundle) left AffectedComponents nil,
+// violating FailureMode.AffectedComponents' own required,minItems=1 contract in real,
+// live output. The compliance check's own Outcome was already correctly
+// not_assessable in this case (NATGatewayRedundancyCheck's own "no public subnets
+// were found" branch) — only the Dimensions.AffectedComponents field was wrong.
+func TestNATRedundancyFinding_NoGoldenSubnetsPresent_StillValidatesAgainstSchema(t *testing.T) {
+	ir := &core.IR{
+		SchemaVersion: "1.0.0", VersionNumber: 1, VersionHash: "test",
+		Nodes: []core.Node{
+			{ID: "dns1", Type: core.NodeTypeDNS, Resolution: core.ResolutionKnown, Provenance: core.NewProvenance(core.KindStated, "test")},
+			{ID: "db1", Type: core.NodeTypeManagedDatabase, Resolution: core.ResolutionKnown, Provenance: core.NewProvenance(core.KindStated, "test")},
+		},
+	}
+	workload := core.Workload{
+		SchemaVersion: "1.0.0", Name: "test", Criticality: "tier1", DataClassification: "PCI",
+		Regions: []string{"eu-west-1"}, ComplianceProfiles: []string{}, Requirements: []core.Requirement{},
+	}
+
+	f := findingByIDIn(t, core.BuildFindings(ir, workload), "finding.compliance.nat-gateway-redundancy")
+
+	if f.Outcome.State != core.AssessmentStateNotAssessable {
+		t.Errorf("Outcome.State = %q, want not_assessable — no golden public subnets exist in this IR at all", f.Outcome.State)
+	}
+	if len(f.Dimensions.AffectedComponents) == 0 {
+		t.Fatal("AffectedComponents is empty — violates its own required,minItems=1 schema contract")
+	}
+	if err := f.Validate(); err != nil {
+		t.Errorf("finding failed its own frozen schema validation: %v", err)
+	}
+}

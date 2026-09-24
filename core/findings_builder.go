@@ -176,7 +176,6 @@ func natGatewayRedundancyFinding(ir *IR, containmentEdges []DirectedEdge) Findin
 	}
 
 	counts := map[string]int{}
-	var allAffected []string
 	for _, subnet := range goldenPublicSubnets {
 		if _, present := nodeTypeByID[subnet]; !present {
 			continue // this subnet isn't in the IR at all (out of scope for this bundle)
@@ -188,7 +187,6 @@ func natGatewayRedundancyFinding(ir *IR, containmentEdges []DirectedEdge) Findin
 			}
 		}
 		counts[subnet] = count
-		allAffected = append(allAffected, subnet)
 	}
 
 	prov := NewProvenance(KindDerived, "core/analyse:nat-gateway-redundancy")
@@ -203,8 +201,22 @@ func natGatewayRedundancyFinding(ir *IR, containmentEdges []DirectedEdge) Findin
 		ID:    "finding.compliance.nat-gateway-redundancy",
 		Title: "NAT gateway redundancy across public subnets",
 		Dimensions: FailureMode{
-			Trigger:            "a single NAT gateway's AZ is lost, or the gateway itself fails",
-			AffectedComponents: allAffected,
+			Trigger: "a single NAT gateway's AZ is lost, or the gateway itself fails",
+			// AffectedComponents names what this check is ABOUT (the golden public
+			// subnets it evaluates NAT gateway coverage against) — the same "identify
+			// what's being evaluated, not what happened to be present" semantic
+			// zoneKillFinding's own AffectedComponents already uses, never the subset
+			// that happened to exist in a given bundle. A real bug this replaces: when
+			// NONE of goldenPublicSubnets existed in the IR (a canvas-authored or
+			// Azure architecture, which never has these AWS-specific subnet IDs at
+			// all), the previous "only subnets actually found" logic left this field
+			// nil — violating its own required,minItems=1 schema contract in real,
+			// live output. Found by a real MCP client call validating a real tool
+			// response against its own schema (PC-93), not a hand-written test with a
+			// matched fixture — the same class of gap this project has caught
+			// everywhere else two independent code paths (a schema's own contract,
+			// and the code that must satisfy it) could silently disagree.
+			AffectedComponents: goldenPublicSubnets,
 			Detection:          DetectionModeled,
 			Impact:             NotAssessable[any]("impact dimension not evaluated by this compliance check", prov).ToEnvelope(),
 			Likelihood:         DeriveLikelihood(prov).ToEnvelope(),

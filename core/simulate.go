@@ -110,8 +110,9 @@ func Simulate(ir *IR, workload Workload, faults []Fault, prov Provenance) Simula
 	// unconditionally. Guarding against `null` only in one TS consumer (as this
 	// codebase briefly did) is exactly the symptomatic fix PC-83 already rejected
 	// elsewhere — the real fix is here, at the one place that produces the response,
-	// so it's fixed for every current and future caller (a CLI script, PC-93's
-	// eventual MCP tool, anything else that calls /simulate directly).
+	// so it's fixed for every current and future caller (a CLI script, the
+	// "simulate" MCP tool's own real output schema — PC-93 — anything else that
+	// calls /simulate directly).
 	journeys := make([]Journey, 0)
 	severedSet := map[string]bool{}
 	for _, target := range statefulNodes {
