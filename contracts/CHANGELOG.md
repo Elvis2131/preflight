@@ -10,6 +10,57 @@ Each generated `contracts/*.schema.json` carries its own version in `x-schema-ve
 stamped by `cmd/gen-contracts` — check that field against this file, not the other way
 around, since a schema file is regenerated output, not hand-edited.
 
+## workload.schema.json 1.1.0 — 2026-09-25 (PC-124: DeclaredJourney, service_time_ms added)
+
+**Additive change to `workload.schema.json` only** — the other five schemas are
+untouched and remain at their current versions.
+
+`core.Workload` gains two new, optional fields: `journeys` (a new `DeclaredJourney`
+array — id, name, ordered component `path` (IR Node.IDs, minimum 2), protocol, port,
+criticality, and pointer `peak_rps`/`steady_rps`) and `service_time_ms` (a per-node-type
+latency budget map, same shape and "absence means unknown" discipline as the existing
+`capacity` map). A caller holding a pre-1.1.0 workload document is unaffected: both
+fields are `omitempty`, so a document without them parses exactly as before.
+
+**Why this was necessary, not scope creep:** journeys were already a real concept in
+this codebase (PC-14/82's own `core.Journey` computes per-journey reachability), but
+there was no first-class, architect-declared version of one with load attached — the
+Card's own words, "make it explicit." Named `DeclaredJourney` here, deliberately
+distinct from the pre-existing `core.Journey` (`core/simulate.go`) — that type is a
+*computed* `/simulate` response fact ("did this entry-point-to-target path survive"),
+a different concept that happens to share the English word; a real Go name collision,
+resolved by not reusing the same identifier for two different things.
+
+**No second capacity concept, per the Card's own explicit instruction:**
+`DeclaredJourney` carries no capacity field of its own — per-component capacity is
+still `Workload.Capacity` (unchanged, pre-existing), looked up via a new, GENERAL key
+convention this ticket establishes and records (`core.JourneyCapacityKey`: a node's
+own `NodeType` string, suffixed `_rps` — e.g. `"managed_database_rps"`). This is a new
+convention, not a pre-existing GENERAL one being reused — `core/simulate.go`'s own
+`SurvivingCapacity` call already reads this same map, but via one single hardcoded
+key (`"app_node_rps"`, scoped only to its own PC-82 container_workload capacity
+check), not a scheme any caller can resolve for any component's own node type. That
+pre-existing key is left exactly as it was (renaming or removing it would break
+`core/simulate_golden_test.go`, which depends on it being declared) — the new
+convention is additive, living alongside it.
+
+`core.EvaluateJourneyLoadReadiness` (`core/journey.go`) is the acceptance criterion
+made real: a journey missing `peak_rps`, `steady_rps`, referencing an unknown IR
+component, or missing a capacity declaration (by the new convention) for any real
+component's node type is honestly `not_assessable`, naming the specific gap —
+structural flow (PC-125) still works regardless; only *load* results are gated on
+this. Full load distribution and bottleneck detection remain PC-125/126's own job;
+this is the readiness gate those tickets build on.
+
+`golden/workload.yaml` updated: `app_node_rps: 500` is kept, unchanged (load-bearing
+for the pre-existing `/simulate` capacity check), with new keys
+(`container_workload_rps`/`managed_database_rps`/`load_balancer_rps`/`dns_rps`) added
+alongside it. A `checkout` journey (DNS → ALB → EKS → RDS, fully declared, matching
+every new capacity key above) and a `settlement` journey (EKS → SQS) deliberately left
+without `peak_rps`/`steady_rps` — a real, checked `not_assessable` case, the same
+"golden fixtures include a checked not_assessable case" discipline PC-15's own
+findings fixtures already established.
+
 ## ir.schema.json 1.2.0 — 2026-09-25 (PC-115: Node.Sizing added)
 
 **Additive change to `ir.schema.json` only** — the other five schemas are untouched

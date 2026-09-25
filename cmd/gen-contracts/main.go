@@ -42,7 +42,7 @@ func main() {
 	contracts := []contract{
 		{"ir.schema.json", core.IR{}, "1.2.0"},
 		{"provenance.schema.json", core.TaggedEnvelope{}, "1.0.0"},
-		{"workload.schema.json", core.Workload{}, "1.0.0"},
+		{"workload.schema.json", core.Workload{}, "1.1.0"},
 		{"finding.schema.json", core.Finding{}, "1.2.0"}, // PC-18: EvidenceRef.Attribute added — see CHANGELOG.md
 		{"adr.schema.json", adrAndWaiver{}, "1.0.0"},
 		{"canvas.schema.json", core.CanvasDocument{}, "1.0.0"}, // PC-86 groundwork: sixth frozen contract — see CHANGELOG.md

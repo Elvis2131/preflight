@@ -30,14 +30,52 @@ requirements:
     value: 0
     priority: hard
 
-# Per-node-type declared capacity (PRD §4's own worked example is exactly this key).
-# This is a new declaration, not present in the original file — added so PC-14's
-# capacity-discipline check (CLAUDE.md §9) has a real DECLARED value to exercise
-# against the golden fixture, alongside the undeclared-tier case every OTHER node type
-# in this workload still represents (nothing else is declared here, so a capacity
-# check against, say, managed_database is correctly capacity_unknown).
+# Per-node-type declared capacity. "app_node_rps" is PRE-EXISTING and load-bearing —
+# core/simulate.go's own /simulate capacity check hardcodes exactly that key (do not
+# rename or remove it; core/simulate_golden_test.go depends on it being declared here).
+# The rest are new, added under PC-124's own recorded convention
+# (core.JourneyCapacityKey: a node's canonical NodeType string, suffixed "_rps") so the
+# "checkout" journey below can be fully assessed — a second, more general key scheme
+# living alongside the older single-purpose one, not a second CAPACITY CONCEPT (the
+# Card's own instruction was against a second field, not a second key name). Every
+# OTHER node type (object_store, identity, external_dependency, ...) stays undeclared,
+# so a capacity check against one of those is still correctly capacity_unknown.
 capacity:
   app_node_rps: 500
+  dns_rps: 1000
+  load_balancer_rps: 2000
+  container_workload_rps: 500
+  managed_database_rps: 300
+  queue/stream_rps: 200
+
+# Declared user journeys (PC-124) — the Card's own example, against real golden node
+# IDs. "checkout" is fully declared (every path component has a matching capacity
+# entry above) — a real, positive EvaluateJourneyLoadReadiness case. "settlement"
+# deliberately omits peak_rps/steady_rps — a real, checked not_assessable case
+# (structural flow, PC-125, still works for it; load results do not), the same
+# "golden fixtures include a checked not_assessable case" discipline PC-15's own
+# findings fixtures already established.
+journeys:
+  - id: checkout
+    name: "Checkout: internet -> ALB -> EKS -> RDS"
+    path:
+      - aws_route53_record.api
+      - aws_lb.payments
+      - aws_eks_cluster.payments
+      - aws_db_instance.payments
+    protocol: tcp
+    port: 443
+    criticality: tier1
+    peak_rps: 800
+    steady_rps: 500
+  - id: settlement
+    name: "Settlement: EKS -> SQS"
+    path:
+      - aws_eks_cluster.payments
+      - aws_sqs_queue.settlement
+    protocol: tcp
+    port: 443
+    criticality: tier1
 
 # --- Everything below is NOT part of the frozen Workload schema -----------------------
 #
