@@ -140,7 +140,11 @@
     "title": "NAT gateway redundancy across public subnets",
     "dimensions": {
       "trigger": "a single NAT gateway's AZ is lost, or the gateway itself fails",
-      "affected_components": null,
+      "affected_components": [
+        "aws_subnet.public_a",
+        "aws_subnet.public_b",
+        "aws_subnet.public_c"
+      ],
       "detection": "modeled",
       "impact": {
         "state": "not_assessable",

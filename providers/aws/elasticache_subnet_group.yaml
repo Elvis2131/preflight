@@ -1,0 +1,9 @@
+# aws_elasticache_subnet_group -> network_boundary. Same real gap, same fix, as
+# aws_db_subnet_group.yaml (PC-80) — see that file's own doc comment for the full
+# account. aws_elasticache_replication_group references this by name
+# (subnet_group_name = aws_elasticache_subnet_group.payments.name), and this
+# resource's own subnet_ids list is the real, multi-AZ placement fact that was
+# previously invisible to zone-kill.
+resource_type: aws_elasticache_subnet_group
+node_type: network_boundary
+reference_edge_type: contained_in

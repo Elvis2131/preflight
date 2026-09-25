@@ -79,11 +79,17 @@
       "affected_components": [
         "aws_subnet.data_a"
       ],
+      "blast_radius": [
+        "aws_db_instance.payments",
+        "aws_db_subnet_group.payments",
+        "aws_elasticache_replication_group.payments",
+        "aws_elasticache_subnet_group.payments"
+      ],
       "detection": "modeled",
       "existing_mitigation": "none stated",
       "impact": {
-        "state": "not_assessable",
-        "reason": "blast radius is empty — either the failure is fully contained/redundant, or blast radius could not be computed",
+        "state": "assessed",
+        "value": "4 component(s) in blast radius; workload criticality \"tier1\"",
         "provenance": {
           "kind": "derived",
           "source": "core/analyse:zone-kill:aws_subnet.data_a"
@@ -131,8 +137,8 @@
       }
     ],
     "outcome": {
-      "state": "not_assessable",
-      "reason": "zone-kill impact could not be determined — either the failure is fully contained/redundant, or the affected substrate is not yet mapped (see golden/fixtures/README.md)",
+      "state": "assessed",
+      "value": "4 component(s) affected",
       "provenance": {
         "kind": "derived",
         "source": "core/analyse:zone-kill:aws_subnet.data_a"

@@ -179,10 +179,14 @@ bundle — verified as the COMPLETE expected set per AZ (`reflect.DeepEqual`, no
 - `aws_subnet.private_a` → exactly `[aws_eks_cluster.payments]`
 - `aws_subnet.public_b`, clean vs broken → the case that actually shows defect 1
   through zone-kill (broken loses only the ALB placement; nat_b is already gone)
-- `aws_subnet.data_a` → empty, and **known to be a real blind spot, not a confirmed
-  safe result**: RDS/ElastiCache reach their subnets through `aws_db_subnet_group`/
-  `aws_elasticache_subnet_group`, which remain unmapped — see the test's own comment
-  in `core/zoneloss_golden_test.go`.
+- `aws_subnet.data_a` → **PC-80 closed this gap**: `aws_db_subnet_group`/
+  `aws_elasticache_subnet_group` are now mapped (`network_boundary`,
+  `reference_edge_type: contained_in` — same pattern `aws_subnet` itself uses),
+  giving RDS/ElastiCache real, two-hop containment visibility with zero changes to
+  `ingest`/`core/internal/analyse` — both were already generic enough. Exactly
+  `[aws_db_instance.payments, aws_db_subnet_group.payments,
+  aws_elasticache_replication_group.payments, aws_elasticache_subnet_group.payments]`
+  in both bundles (identical — neither bundle's own defects touch subnet placement).
 
 **Remaining, still-honest gap**: entry-to-critical-node SPOF (dns/lb → database/cache/
 queue) still correctly reports "no path" — Terraform doesn't encode application-level

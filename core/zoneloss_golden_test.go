@@ -94,16 +94,28 @@ func TestZoneKill_CleanBundle_PrivateA_ExactBlastRadius(t *testing.T) {
 	}
 }
 
-// TestZoneKill_CleanBundle_DataA_ExactBlastRadius: data_a exists in network.tf but
-// NOTHING references it — RDS/ElastiCache go through their own subnet-group
-// indirection (aws_db_subnet_group/aws_elasticache_subnet_group), which is itself
-// unmapped (an explicitly named, separate gap — see docs from PC-13/PC-78's own
-// scoping notes). Hand-worked expected answer: EMPTY. This is as important a case as
-// the non-empty ones — it proves the function doesn't fabricate a loss where no real
-// containment edge exists, and documents a real, current blind spot (RDS/cache AZ
-// placement isn't visible to zone-kill yet) rather than letting a silently-empty
-// result be mistaken for "verified safe."
-func TestZoneKill_CleanBundle_DataA_ExactBlastRadius_KnownBlindSpot(t *testing.T) {
+// TestZoneKill_CleanBundle_DataA_ExactBlastRadius: this test used to assert EMPTY —
+// see its own prior comment, which named the exact gap and predicted this exact
+// moment ("if this now returns something, that gap has been closed and this test's
+// own comment is stale, not failing for the reason it says"). PC-80 closed it:
+// aws_db_subnet_group/aws_elasticache_subnet_group are now mapped (network_boundary,
+// reference_edge_type: contained_in — same pattern aws_subnet itself uses), so RDS's
+// and ElastiCache's real subnet placement is visible via two real, generic hops each
+// (RDS -> its subnet group -> data_a/b/c; ElastiCache -> its subnet group ->
+// data_a/b/c) — zero new ingest/core code, confirmed by reading
+// core.ContainmentBlastRadius directly: it is already a real multi-hop BFS over
+// reverse containment adjacency, not a single-hop lookup.
+//
+// Hand-worked expected answer, worked out from the actual Terraform: both
+// aws_db_subnet_group.payments and aws_elasticache_subnet_group.payments list
+// data_a/b/c (rds.tf, cache.tf) — killing data_a takes down BOTH subnet groups
+// (each loses one of three subnets, but the containment edge from the RDS/cache
+// instance to its subnet GROUP is unconditional, matching how aws_lb.payments'
+// placement across three public subnets was handled in
+// TestZoneKill_CleanBundle_PublicA_ExactBlastRadius above) and, transitively, both
+// the database and the cache instance themselves. Nothing else: no other node
+// references either subnet group or data_a/b/c at all.
+func TestZoneKill_CleanBundle_DataA_ExactBlastRadius(t *testing.T) {
 	reg, err := awsprovider.Load()
 	if err != nil {
 		t.Fatalf("providers/aws.Load(): %v", err)
@@ -111,8 +123,44 @@ func TestZoneKill_CleanBundle_DataA_ExactBlastRadius_KnownBlindSpot(t *testing.T
 	_, edges := containmentEdgesOf(t, "../golden/aws", reg)
 
 	lost := core.ContainmentBlastRadius(edges, "aws_subnet.data_a")
-	if len(lost) != 0 {
-		t.Fatalf("lost = %v, want empty — RDS/ElastiCache's own subnet placement is not visible to zone-kill yet (aws_db_subnet_group/aws_elasticache_subnet_group are unmapped); if this now returns something, that gap has been closed and this test's own comment is stale, not failing for the reason it says", lost)
+	sort.Strings(lost)
+
+	want := []string{
+		"aws_db_instance.payments",
+		"aws_db_subnet_group.payments",
+		"aws_elasticache_replication_group.payments",
+		"aws_elasticache_subnet_group.payments",
+	}
+	if !reflect.DeepEqual(lost, want) {
+		t.Fatalf("lost = %v, want exactly %v — both subnet groups list data_a, and RDS/ElastiCache are each unconditionally contained_in their own subnet group", lost, want)
+	}
+}
+
+// TestZoneKill_BrokenBundle_DataA_ExactBlastRadius_IdenticalToClean: golden/aws-broken's
+// own defects (RDS multi_az/encryption, ElastiCache failover/encryption — see rds.tf/
+// cache.tf's own DEFECT 2/3 comments) never touch subnet placement — both bundles
+// reference the identical data_a/b/c subnets via their subnet groups. Worth asserting
+// explicitly, not assumed: this is the SAME "same AZ, broken bundle, same answer"
+// pattern TestZoneKill_BrokenBundle_PublicA_ExactBlastRadius below already
+// establishes for a different subnet.
+func TestZoneKill_BrokenBundle_DataA_ExactBlastRadius_IdenticalToClean(t *testing.T) {
+	reg, err := awsprovider.Load()
+	if err != nil {
+		t.Fatalf("providers/aws.Load(): %v", err)
+	}
+	_, edges := containmentEdgesOf(t, "../golden/aws-broken", reg)
+
+	lost := core.ContainmentBlastRadius(edges, "aws_subnet.data_a")
+	sort.Strings(lost)
+
+	want := []string{
+		"aws_db_instance.payments",
+		"aws_db_subnet_group.payments",
+		"aws_elasticache_replication_group.payments",
+		"aws_elasticache_subnet_group.payments",
+	}
+	if !reflect.DeepEqual(lost, want) {
+		t.Fatalf("lost = %v, want exactly %v (identical to the clean bundle — golden/aws-broken's defects don't touch subnet placement)", lost, want)
 	}
 }
 

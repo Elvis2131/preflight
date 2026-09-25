@@ -1,7 +1,7 @@
 {
   "schema_version": "1.0.0",
   "version_number": 1,
-  "version_hash": "sha256:a3fe7037da6baa4eb2991e18c1754438337897371817d0749a5f6f2c0d17ee17",
+  "version_hash": "sha256:b67141d6e165637249e86f9d2252963c59eb59f180cb5e84dc51f9f9e4b2e809",
   "nodes": [
     {
       "id": "aws_db_instance.payments",
@@ -48,6 +48,21 @@
       "provenance": {
         "kind": "stated",
         "source": "/Users/larteyelvis/Documents/Developer/preflight/golden/aws-broken/rds.tf:39:aws_db_instance.payments"
+      }
+    },
+    {
+      "id": "aws_db_subnet_group.payments",
+      "type": "network_boundary",
+      "resolution": "known",
+      "raw_attributes": {
+        "name": "payments-db-subnets",
+        "tags": {
+          "Name": "payments-db-subnets"
+        }
+      },
+      "provenance": {
+        "kind": "stated",
+        "source": "/Users/larteyelvis/Documents/Developer/preflight/golden/aws-broken/rds.tf:15:aws_db_subnet_group.payments"
       }
     },
     {
@@ -105,6 +120,18 @@
       "provenance": {
         "kind": "stated",
         "source": "/Users/larteyelvis/Documents/Developer/preflight/golden/aws-broken/cache.tf:16:aws_elasticache_replication_group.payments"
+      }
+    },
+    {
+      "id": "aws_elasticache_subnet_group.payments",
+      "type": "network_boundary",
+      "resolution": "known",
+      "raw_attributes": {
+        "name": "payments-cache-subnets"
+      },
+      "provenance": {
+        "kind": "stated",
+        "source": "/Users/larteyelvis/Documents/Developer/preflight/golden/aws-broken/cache.tf:11:aws_elasticache_subnet_group.payments"
       }
     },
     {
@@ -513,6 +540,17 @@
   ],
   "edges": [
     {
+      "id": "aws_db_instance.payments-\u003eaws_db_subnet_group.payments",
+      "type": "contained_in",
+      "from": "aws_db_instance.payments",
+      "to": "aws_db_subnet_group.payments",
+      "resolution": "known",
+      "provenance": {
+        "kind": "stated",
+        "source": "/Users/larteyelvis/Documents/Developer/preflight/golden/aws-broken/rds.tf:39:aws_db_instance.payments"
+      }
+    },
+    {
       "id": "aws_db_instance.payments-\u003eaws_security_group.database",
       "type": "depends_on",
       "from": "aws_db_instance.payments",
@@ -521,6 +559,39 @@
       "provenance": {
         "kind": "stated",
         "source": "/Users/larteyelvis/Documents/Developer/preflight/golden/aws-broken/rds.tf:39:aws_db_instance.payments"
+      }
+    },
+    {
+      "id": "aws_db_subnet_group.payments-\u003eaws_subnet.data_a",
+      "type": "contained_in",
+      "from": "aws_db_subnet_group.payments",
+      "to": "aws_subnet.data_a",
+      "resolution": "known",
+      "provenance": {
+        "kind": "stated",
+        "source": "/Users/larteyelvis/Documents/Developer/preflight/golden/aws-broken/rds.tf:15:aws_db_subnet_group.payments"
+      }
+    },
+    {
+      "id": "aws_db_subnet_group.payments-\u003eaws_subnet.data_b",
+      "type": "contained_in",
+      "from": "aws_db_subnet_group.payments",
+      "to": "aws_subnet.data_b",
+      "resolution": "known",
+      "provenance": {
+        "kind": "stated",
+        "source": "/Users/larteyelvis/Documents/Developer/preflight/golden/aws-broken/rds.tf:15:aws_db_subnet_group.payments"
+      }
+    },
+    {
+      "id": "aws_db_subnet_group.payments-\u003eaws_subnet.data_c",
+      "type": "contained_in",
+      "from": "aws_db_subnet_group.payments",
+      "to": "aws_subnet.data_c",
+      "resolution": "known",
+      "provenance": {
+        "kind": "stated",
+        "source": "/Users/larteyelvis/Documents/Developer/preflight/golden/aws-broken/rds.tf:15:aws_db_subnet_group.payments"
       }
     },
     {
@@ -568,6 +639,17 @@
       }
     },
     {
+      "id": "aws_elasticache_replication_group.payments-\u003eaws_elasticache_subnet_group.payments",
+      "type": "contained_in",
+      "from": "aws_elasticache_replication_group.payments",
+      "to": "aws_elasticache_subnet_group.payments",
+      "resolution": "known",
+      "provenance": {
+        "kind": "stated",
+        "source": "/Users/larteyelvis/Documents/Developer/preflight/golden/aws-broken/cache.tf:16:aws_elasticache_replication_group.payments"
+      }
+    },
+    {
       "id": "aws_elasticache_replication_group.payments-\u003eaws_security_group.cache",
       "type": "depends_on",
       "from": "aws_elasticache_replication_group.payments",
@@ -576,6 +658,39 @@
       "provenance": {
         "kind": "stated",
         "source": "/Users/larteyelvis/Documents/Developer/preflight/golden/aws-broken/cache.tf:16:aws_elasticache_replication_group.payments"
+      }
+    },
+    {
+      "id": "aws_elasticache_subnet_group.payments-\u003eaws_subnet.data_a",
+      "type": "contained_in",
+      "from": "aws_elasticache_subnet_group.payments",
+      "to": "aws_subnet.data_a",
+      "resolution": "known",
+      "provenance": {
+        "kind": "stated",
+        "source": "/Users/larteyelvis/Documents/Developer/preflight/golden/aws-broken/cache.tf:11:aws_elasticache_subnet_group.payments"
+      }
+    },
+    {
+      "id": "aws_elasticache_subnet_group.payments-\u003eaws_subnet.data_b",
+      "type": "contained_in",
+      "from": "aws_elasticache_subnet_group.payments",
+      "to": "aws_subnet.data_b",
+      "resolution": "known",
+      "provenance": {
+        "kind": "stated",
+        "source": "/Users/larteyelvis/Documents/Developer/preflight/golden/aws-broken/cache.tf:11:aws_elasticache_subnet_group.payments"
+      }
+    },
+    {
+      "id": "aws_elasticache_subnet_group.payments-\u003eaws_subnet.data_c",
+      "type": "contained_in",
+      "from": "aws_elasticache_subnet_group.payments",
+      "to": "aws_subnet.data_c",
+      "resolution": "known",
+      "provenance": {
+        "kind": "stated",
+        "source": "/Users/larteyelvis/Documents/Developer/preflight/golden/aws-broken/cache.tf:11:aws_elasticache_subnet_group.payments"
       }
     },
     {

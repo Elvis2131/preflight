@@ -52,23 +52,27 @@ func TestFixtureFindings_AllValidateAgainstFrozenSchema(t *testing.T) {
 	}
 }
 
-// TestFixtureFindings_ZoneKillDataA_IsNotAssessable is THE case this whole line of
-// work was about: the data tier's zone-kill finding must carry not_assessable with a
-// real reason in BOTH bundles — not a bare empty/zero result that could be misread as
-// "confirmed safe." See core/finding.go's DeriveImpact doc comment and golden/fixtures/
-// README.md for why this is currently correct (unmapped subnet-group substrate) rather
-// than a bug.
-func TestFixtureFindings_ZoneKillDataA_IsNotAssessable(t *testing.T) {
+// TestFixtureFindings_ZoneKillDataA_IsAssessed: this test used to assert
+// not_assessable — the data tier's own subnet-group substrate (aws_db_subnet_group/
+// aws_elasticache_subnet_group) was out of vocabulary, so zone-kill had no path from
+// the killed subnet to the database/cache at all. PC-80 mapped both subnet-group
+// resources (network_boundary, reference_edge_type: contained_in — same pattern
+// aws_subnet.yaml already established), closing that gap: killing data_a now has a
+// real, non-vacuous, hand-verified blast radius in both bundles (see
+// core/zoneloss_golden_test.go's TestZoneKill_CleanBundle_DataA_ExactBlastRadius and
+// its broken-bundle sibling for the exact hand-worked 4-element set this finding's
+// Outcome.Value below is derived from).
+func TestFixtureFindings_ZoneKillDataA_IsAssessed(t *testing.T) {
 	for _, path := range []string{"../../golden/fixtures/aws.findings.json", "../../golden/fixtures/aws-broken.findings.json"} {
 		f := findingByID(t, loadFindings(t, path), "finding.zone-kill.data-a")
-		if f.Outcome.State != core.AssessmentStateNotAssessable {
-			t.Fatalf("%s: finding.zone-kill.data-a Outcome.State = %q, want not_assessable", path, f.Outcome.State)
+		if f.Outcome.State != core.AssessmentStateAssessed {
+			t.Fatalf("%s: finding.zone-kill.data-a Outcome.State = %q, want assessed", path, f.Outcome.State)
 		}
-		if f.Outcome.Reason == "" {
-			t.Fatalf("%s: finding.zone-kill.data-a has no stated reason for its not_assessable outcome (I4)", path)
+		if f.Outcome.Value != "4 component(s) affected" {
+			t.Fatalf("%s: finding.zone-kill.data-a Outcome.Value = %v, want \"4 component(s) affected\"", path, f.Outcome.Value)
 		}
-		if f.Dimensions.Impact.State != core.AssessmentStateNotAssessable {
-			t.Errorf("%s: finding.zone-kill.data-a's Impact dimension = %q, want not_assessable", path, f.Dimensions.Impact.State)
+		if f.Dimensions.Impact.State != core.AssessmentStateAssessed {
+			t.Errorf("%s: finding.zone-kill.data-a's Impact dimension = %q, want assessed", path, f.Dimensions.Impact.State)
 		}
 	}
 }

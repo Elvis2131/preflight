@@ -83,15 +83,17 @@ The original three, unchanged:
 - **`finding.zone-kill.public-a`** — a real, non-empty zone-kill result (`core.
   ContainmentBlastRadius` + `core.DeriveImpact`, PC-14/PC-78). The positive control:
   proves a finding CAN be confidently assessed, not everything is unknown.
-- **`finding.zone-kill.data-a`** — the honest not_assessable example, chosen
-  deliberately, not incidentally. RDS/ElastiCache's own subnet placement isn't visible
-  to zone-kill yet (their `aws_db_subnet_group`/`aws_elasticache_subnet_group`
-  indirection is unmapped — PC-80). `Outcome.State` and `Dimensions.Impact.State` are
-  both `not_assessable` with a stated reason in this frozen fixture — checked
-  end-to-end (not just by reading source) before generating any fixture, per the
-  explicit instruction that prompted this: verify the TAG is correct, not just that
-  *something* non-empty comes back. See `cmd/gen-golden-fixtures/main_test.go`'s
-  `TestFixtureFindings_ZoneKillDataA_IsNotAssessable`.
+- **`finding.zone-kill.data-a`** — used to be the honest not_assessable example:
+  RDS/ElastiCache's own subnet placement wasn't visible to zone-kill (their
+  `aws_db_subnet_group`/`aws_elasticache_subnet_group` indirection was unmapped).
+  PC-80 closed that gap (both resources now map to `network_boundary` with
+  `reference_edge_type: contained_in`, the same pattern `aws_subnet` itself uses), so
+  this finding is now a real, non-empty, `assessed` result in both bundles — `4
+  component(s) affected`, checked end-to-end (not just by reading source) against
+  the actual regenerated fixture. See `cmd/gen-golden-fixtures/main_test.go`'s
+  `TestFixtureFindings_ZoneKillDataA_IsAssessed` and `core/zoneloss_golden_test.go`'s
+  `TestZoneKill_CleanBundle_DataA_ExactBlastRadius` for the hand-worked blast radius
+  this value is derived from.
 - **`finding.compliance.rds-storage-encryption...`** — PC-18's one control, differing
   correctly by bundle (`satisfied` clean, `unsatisfied` broken/defect 2).
 
