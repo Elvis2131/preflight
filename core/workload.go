@@ -55,6 +55,34 @@ type DeclaredJourney struct {
 	// (EvaluateJourneyLoadReadiness, core/journey.go), never a guessed number.
 	PeakRPS   *float64 `json:"peak_rps,omitempty" yaml:"peak_rps,omitempty"`
 	SteadyRPS *float64 `json:"steady_rps,omitempty" yaml:"steady_rps,omitempty"`
+
+	// IAMCheck is PC-135's own addition: an optional IAM authorization check applied
+	// to this journey's FINAL hop only (its ultimate target — the Card's own named
+	// examples, Lambda -> S3 and ECS task -> Secrets Manager, are both end-to-end
+	// service calls, not per-hop network transits). Nil means this journey declares
+	// no IAM check at all — ComputeJourneyFlow then evaluates it exactly as PC-125
+	// left it, network-only. A per-hop IAM check would need a principal/action/
+	// resource declared for every intermediate hop, real, separate, larger scope
+	// this ticket does not attempt.
+	IAMCheck *JourneyIAMCheck `json:"iam_check,omitempty" yaml:"iam_check,omitempty"`
+}
+
+// JourneyIAMCheck names the IAM authorization query to run against a journey's final
+// hop — see DeclaredJourney.IAMCheck's own doc comment for why only the final hop.
+type JourneyIAMCheck struct {
+	// PrincipalID is the IR node ID of the identity making the call (e.g. the
+	// Lambda's own execution role) — PC-133 attaches identity policies directly to
+	// identity nodes, so this is a real, resolvable IR reference, not a free-text ARN.
+	PrincipalID string `json:"principal_id" yaml:"principal_id" validate:"required,min=1" jsonschema:"required,minLength=1"`
+	// Action is the real AWS action string this journey's final call performs (e.g.
+	// "s3:GetObject") — preserved verbatim, matched via PC-134's own wildcard-aware
+	// evaluator, never guessed from the destination's NodeType.
+	Action string `json:"action" yaml:"action" validate:"required,min=1" jsonschema:"required,minLength=1"`
+	// ResourceARN is compared against the destination's own policy Resource/
+	// NotResource elements verbatim — see IAMRequest's own doc comment (core/
+	// iam_evaluate.go) for why this is a caller-supplied ARN string, not something
+	// this engine can resolve from an IR node ID (core.Node has no ARN field).
+	ResourceARN string `json:"resource_arn,omitempty" yaml:"resource_arn,omitempty"`
 }
 
 // Workload is PRD §4's required input: "name, criticality, data_classification,

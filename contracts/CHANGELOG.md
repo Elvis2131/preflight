@@ -10,6 +10,24 @@ Each generated `contracts/*.schema.json` carries its own version in `x-schema-ve
 stamped by `cmd/gen-contracts` — check that field against this file, not the other way
 around, since a schema file is regenerated output, not hand-edited.
 
+## workload.schema.json 1.2.0 — 2026-09-25 (PC-135: DeclaredJourney.iam_check added)
+
+**Additive change to `workload.schema.json` only** — the other five schemas are
+untouched and remain at their current versions.
+
+`DeclaredJourney` gains one new, optional field: `iam_check` (a new `JourneyIAMCheck`
+object — `principal_id`, `action`, and optional `resource_arn`). A caller holding a
+pre-1.2.0 workload document is unaffected: the field is `omitempty`, so a document
+without it parses exactly as before, and `core.ComputeJourneyFlow` treats a nil
+`IAMCheck` exactly as it did before this field existed — network-only structural flow.
+
+**Scope, stated explicitly:** the IAM check applies only to a journey's own FINAL hop
+(its ultimate target), not per intermediate hop — see `DeclaredJourney.IAMCheck`'s own
+doc comment (`core/workload.go`) for why: the Card's own named examples (Lambda → S3,
+ECS task → Secrets Manager) are both end-to-end service calls, and a per-hop version
+would need a principal/action/resource declared for every intermediate hop, real,
+separate, larger scope this ticket does not attempt.
+
 ## workload.schema.json 1.1.0 — 2026-09-25 (PC-124: DeclaredJourney, service_time_ms added)
 
 **Additive change to `workload.schema.json` only** — the other five schemas are

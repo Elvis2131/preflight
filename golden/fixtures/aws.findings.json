@@ -548,5 +548,413 @@
         "source": "core/routing:public-subnet-check:aws_subnet.public_c"
       }
     }
+  },
+  {
+    "id": "finding.compliance.iam-least-privilege-wildcard-admin.aws_iam_role.eks_cluster",
+    "title": "IAM role aws_iam_role.eks_cluster: least-privilege check for wildcard administrative access",
+    "dimensions": {
+      "trigger": "a compromised or misused credential for this role has unrestricted access to every resource",
+      "affected_components": [
+        "aws_iam_role.eks_cluster"
+      ],
+      "detection": "modeled",
+      "impact": {
+        "state": "not_assessable",
+        "reason": "impact dimension not evaluated by this compliance check",
+        "provenance": {
+          "kind": "derived",
+          "source": "core/iam_evaluate:least-privilege-wildcard-admin:aws_iam_role.eks_cluster"
+        }
+      },
+      "likelihood": {
+        "state": "not_assessable",
+        "reason": "likelihood is not assessable from structural analysis alone — no frequency/probability data exists to assume from; an assumed guess here would be exactly the fabrication CLAUDE.md §10 warns against",
+        "provenance": {
+          "kind": "derived",
+          "source": "core/iam_evaluate:least-privilege-wildcard-admin:aws_iam_role.eks_cluster"
+        }
+      },
+      "detectability": {
+        "state": "assessed",
+        "value": "high — this simulator models the failure directly",
+        "provenance": {
+          "kind": "derived",
+          "source": "core/iam_evaluate:least-privilege-wildcard-admin:aws_iam_role.eks_cluster"
+        }
+      },
+      "recoverability": {
+        "failover_path_exists": {
+          "state": "not_assessable",
+          "reason": "recoverability not evaluated by this compliance check",
+          "provenance": {
+            "kind": "derived",
+            "source": "core/iam_evaluate:least-privilege-wildcard-admin:aws_iam_role.eks_cluster"
+          }
+        },
+        "rpo_feasible": {
+          "state": "not_assessable",
+          "reason": "recoverability not evaluated by this compliance check",
+          "provenance": {
+            "kind": "derived",
+            "source": "core/iam_evaluate:least-privilege-wildcard-admin:aws_iam_role.eks_cluster"
+          }
+        }
+      }
+    },
+    "evidence": [
+      {
+        "node_id": "aws_iam_role.eks_cluster",
+        "description": "no identity policy statement grants every action (\"*\") on every resource (\"*\")",
+        "attribute": "iam_identity_policies"
+      }
+    ],
+    "outcome": {
+      "state": "assessed",
+      "value": "satisfied",
+      "provenance": {
+        "kind": "derived",
+        "source": "core/iam_evaluate:least-privilege-wildcard-admin:aws_iam_role.eks_cluster"
+      }
+    }
+  },
+  {
+    "id": "finding.compliance.iam-least-privilege-assumable-by-any-principal.aws_iam_role.eks_cluster",
+    "title": "IAM role aws_iam_role.eks_cluster: least-privilege check for an overly broad trust policy",
+    "dimensions": {
+      "trigger": "any AWS principal, not just the intended one, can assume this role",
+      "affected_components": [
+        "aws_iam_role.eks_cluster"
+      ],
+      "detection": "modeled",
+      "impact": {
+        "state": "not_assessable",
+        "reason": "impact dimension not evaluated by this compliance check",
+        "provenance": {
+          "kind": "derived",
+          "source": "core/iam_evaluate:least-privilege-assumable-by-any-principal:aws_iam_role.eks_cluster"
+        }
+      },
+      "likelihood": {
+        "state": "not_assessable",
+        "reason": "likelihood is not assessable from structural analysis alone — no frequency/probability data exists to assume from; an assumed guess here would be exactly the fabrication CLAUDE.md §10 warns against",
+        "provenance": {
+          "kind": "derived",
+          "source": "core/iam_evaluate:least-privilege-assumable-by-any-principal:aws_iam_role.eks_cluster"
+        }
+      },
+      "detectability": {
+        "state": "assessed",
+        "value": "high — this simulator models the failure directly",
+        "provenance": {
+          "kind": "derived",
+          "source": "core/iam_evaluate:least-privilege-assumable-by-any-principal:aws_iam_role.eks_cluster"
+        }
+      },
+      "recoverability": {
+        "failover_path_exists": {
+          "state": "not_assessable",
+          "reason": "recoverability not evaluated by this compliance check",
+          "provenance": {
+            "kind": "derived",
+            "source": "core/iam_evaluate:least-privilege-assumable-by-any-principal:aws_iam_role.eks_cluster"
+          }
+        },
+        "rpo_feasible": {
+          "state": "not_assessable",
+          "reason": "recoverability not evaluated by this compliance check",
+          "provenance": {
+            "kind": "derived",
+            "source": "core/iam_evaluate:least-privilege-assumable-by-any-principal:aws_iam_role.eks_cluster"
+          }
+        }
+      }
+    },
+    "evidence": [
+      {
+        "node_id": "aws_iam_role.eks_cluster",
+        "description": "this role's trust policy does not allow an unrestricted (\"*\") principal to assume it",
+        "attribute": "iam_trust_policy"
+      }
+    ],
+    "outcome": {
+      "state": "assessed",
+      "value": "satisfied",
+      "provenance": {
+        "kind": "derived",
+        "source": "core/iam_evaluate:least-privilege-assumable-by-any-principal:aws_iam_role.eks_cluster"
+      }
+    }
+  },
+  {
+    "id": "finding.compliance.iam-least-privilege-wildcard-admin.aws_iam_role.eks_node",
+    "title": "IAM role aws_iam_role.eks_node: least-privilege check for wildcard administrative access",
+    "dimensions": {
+      "trigger": "a compromised or misused credential for this role has unrestricted access to every resource",
+      "affected_components": [
+        "aws_iam_role.eks_node"
+      ],
+      "detection": "modeled",
+      "impact": {
+        "state": "not_assessable",
+        "reason": "impact dimension not evaluated by this compliance check",
+        "provenance": {
+          "kind": "derived",
+          "source": "core/iam_evaluate:least-privilege-wildcard-admin:aws_iam_role.eks_node"
+        }
+      },
+      "likelihood": {
+        "state": "not_assessable",
+        "reason": "likelihood is not assessable from structural analysis alone — no frequency/probability data exists to assume from; an assumed guess here would be exactly the fabrication CLAUDE.md §10 warns against",
+        "provenance": {
+          "kind": "derived",
+          "source": "core/iam_evaluate:least-privilege-wildcard-admin:aws_iam_role.eks_node"
+        }
+      },
+      "detectability": {
+        "state": "assessed",
+        "value": "high — this simulator models the failure directly",
+        "provenance": {
+          "kind": "derived",
+          "source": "core/iam_evaluate:least-privilege-wildcard-admin:aws_iam_role.eks_node"
+        }
+      },
+      "recoverability": {
+        "failover_path_exists": {
+          "state": "not_assessable",
+          "reason": "recoverability not evaluated by this compliance check",
+          "provenance": {
+            "kind": "derived",
+            "source": "core/iam_evaluate:least-privilege-wildcard-admin:aws_iam_role.eks_node"
+          }
+        },
+        "rpo_feasible": {
+          "state": "not_assessable",
+          "reason": "recoverability not evaluated by this compliance check",
+          "provenance": {
+            "kind": "derived",
+            "source": "core/iam_evaluate:least-privilege-wildcard-admin:aws_iam_role.eks_node"
+          }
+        }
+      }
+    },
+    "evidence": [
+      {
+        "node_id": "aws_iam_role.eks_node",
+        "description": "no identity policy statement grants every action (\"*\") on every resource (\"*\")",
+        "attribute": "iam_identity_policies"
+      }
+    ],
+    "outcome": {
+      "state": "assessed",
+      "value": "satisfied",
+      "provenance": {
+        "kind": "derived",
+        "source": "core/iam_evaluate:least-privilege-wildcard-admin:aws_iam_role.eks_node"
+      }
+    }
+  },
+  {
+    "id": "finding.compliance.iam-least-privilege-assumable-by-any-principal.aws_iam_role.eks_node",
+    "title": "IAM role aws_iam_role.eks_node: least-privilege check for an overly broad trust policy",
+    "dimensions": {
+      "trigger": "any AWS principal, not just the intended one, can assume this role",
+      "affected_components": [
+        "aws_iam_role.eks_node"
+      ],
+      "detection": "modeled",
+      "impact": {
+        "state": "not_assessable",
+        "reason": "impact dimension not evaluated by this compliance check",
+        "provenance": {
+          "kind": "derived",
+          "source": "core/iam_evaluate:least-privilege-assumable-by-any-principal:aws_iam_role.eks_node"
+        }
+      },
+      "likelihood": {
+        "state": "not_assessable",
+        "reason": "likelihood is not assessable from structural analysis alone — no frequency/probability data exists to assume from; an assumed guess here would be exactly the fabrication CLAUDE.md §10 warns against",
+        "provenance": {
+          "kind": "derived",
+          "source": "core/iam_evaluate:least-privilege-assumable-by-any-principal:aws_iam_role.eks_node"
+        }
+      },
+      "detectability": {
+        "state": "assessed",
+        "value": "high — this simulator models the failure directly",
+        "provenance": {
+          "kind": "derived",
+          "source": "core/iam_evaluate:least-privilege-assumable-by-any-principal:aws_iam_role.eks_node"
+        }
+      },
+      "recoverability": {
+        "failover_path_exists": {
+          "state": "not_assessable",
+          "reason": "recoverability not evaluated by this compliance check",
+          "provenance": {
+            "kind": "derived",
+            "source": "core/iam_evaluate:least-privilege-assumable-by-any-principal:aws_iam_role.eks_node"
+          }
+        },
+        "rpo_feasible": {
+          "state": "not_assessable",
+          "reason": "recoverability not evaluated by this compliance check",
+          "provenance": {
+            "kind": "derived",
+            "source": "core/iam_evaluate:least-privilege-assumable-by-any-principal:aws_iam_role.eks_node"
+          }
+        }
+      }
+    },
+    "evidence": [
+      {
+        "node_id": "aws_iam_role.eks_node",
+        "description": "this role's trust policy does not allow an unrestricted (\"*\") principal to assume it",
+        "attribute": "iam_trust_policy"
+      }
+    ],
+    "outcome": {
+      "state": "assessed",
+      "value": "satisfied",
+      "provenance": {
+        "kind": "derived",
+        "source": "core/iam_evaluate:least-privilege-assumable-by-any-principal:aws_iam_role.eks_node"
+      }
+    }
+  },
+  {
+    "id": "finding.compliance.iam-least-privilege-wildcard-admin.aws_iam_role.payments_app",
+    "title": "IAM role aws_iam_role.payments_app: least-privilege check for wildcard administrative access",
+    "dimensions": {
+      "trigger": "a compromised or misused credential for this role has unrestricted access to every resource",
+      "affected_components": [
+        "aws_iam_role.payments_app"
+      ],
+      "detection": "modeled",
+      "impact": {
+        "state": "not_assessable",
+        "reason": "impact dimension not evaluated by this compliance check",
+        "provenance": {
+          "kind": "derived",
+          "source": "core/iam_evaluate:least-privilege-wildcard-admin:aws_iam_role.payments_app"
+        }
+      },
+      "likelihood": {
+        "state": "not_assessable",
+        "reason": "likelihood is not assessable from structural analysis alone — no frequency/probability data exists to assume from; an assumed guess here would be exactly the fabrication CLAUDE.md §10 warns against",
+        "provenance": {
+          "kind": "derived",
+          "source": "core/iam_evaluate:least-privilege-wildcard-admin:aws_iam_role.payments_app"
+        }
+      },
+      "detectability": {
+        "state": "assessed",
+        "value": "high — this simulator models the failure directly",
+        "provenance": {
+          "kind": "derived",
+          "source": "core/iam_evaluate:least-privilege-wildcard-admin:aws_iam_role.payments_app"
+        }
+      },
+      "recoverability": {
+        "failover_path_exists": {
+          "state": "not_assessable",
+          "reason": "recoverability not evaluated by this compliance check",
+          "provenance": {
+            "kind": "derived",
+            "source": "core/iam_evaluate:least-privilege-wildcard-admin:aws_iam_role.payments_app"
+          }
+        },
+        "rpo_feasible": {
+          "state": "not_assessable",
+          "reason": "recoverability not evaluated by this compliance check",
+          "provenance": {
+            "kind": "derived",
+            "source": "core/iam_evaluate:least-privilege-wildcard-admin:aws_iam_role.payments_app"
+          }
+        }
+      }
+    },
+    "evidence": [
+      {
+        "node_id": "aws_iam_role.payments_app",
+        "description": "no identity policy statement grants every action (\"*\") on every resource (\"*\")",
+        "attribute": "iam_identity_policies"
+      }
+    ],
+    "outcome": {
+      "state": "assessed",
+      "value": "satisfied",
+      "provenance": {
+        "kind": "derived",
+        "source": "core/iam_evaluate:least-privilege-wildcard-admin:aws_iam_role.payments_app"
+      }
+    }
+  },
+  {
+    "id": "finding.compliance.iam-least-privilege-assumable-by-any-principal.aws_iam_role.payments_app",
+    "title": "IAM role aws_iam_role.payments_app: least-privilege check for an overly broad trust policy",
+    "dimensions": {
+      "trigger": "any AWS principal, not just the intended one, can assume this role",
+      "affected_components": [
+        "aws_iam_role.payments_app"
+      ],
+      "detection": "modeled",
+      "impact": {
+        "state": "not_assessable",
+        "reason": "impact dimension not evaluated by this compliance check",
+        "provenance": {
+          "kind": "derived",
+          "source": "core/iam_evaluate:least-privilege-assumable-by-any-principal:aws_iam_role.payments_app"
+        }
+      },
+      "likelihood": {
+        "state": "not_assessable",
+        "reason": "likelihood is not assessable from structural analysis alone — no frequency/probability data exists to assume from; an assumed guess here would be exactly the fabrication CLAUDE.md §10 warns against",
+        "provenance": {
+          "kind": "derived",
+          "source": "core/iam_evaluate:least-privilege-assumable-by-any-principal:aws_iam_role.payments_app"
+        }
+      },
+      "detectability": {
+        "state": "assessed",
+        "value": "high — this simulator models the failure directly",
+        "provenance": {
+          "kind": "derived",
+          "source": "core/iam_evaluate:least-privilege-assumable-by-any-principal:aws_iam_role.payments_app"
+        }
+      },
+      "recoverability": {
+        "failover_path_exists": {
+          "state": "not_assessable",
+          "reason": "recoverability not evaluated by this compliance check",
+          "provenance": {
+            "kind": "derived",
+            "source": "core/iam_evaluate:least-privilege-assumable-by-any-principal:aws_iam_role.payments_app"
+          }
+        },
+        "rpo_feasible": {
+          "state": "not_assessable",
+          "reason": "recoverability not evaluated by this compliance check",
+          "provenance": {
+            "kind": "derived",
+            "source": "core/iam_evaluate:least-privilege-assumable-by-any-principal:aws_iam_role.payments_app"
+          }
+        }
+      }
+    },
+    "evidence": [
+      {
+        "node_id": "aws_iam_role.payments_app",
+        "description": "this role's trust policy does not allow an unrestricted (\"*\") principal to assume it",
+        "attribute": "iam_trust_policy"
+      }
+    ],
+    "outcome": {
+      "state": "assessed",
+      "value": "satisfied",
+      "provenance": {
+        "kind": "derived",
+        "source": "core/iam_evaluate:least-privilege-assumable-by-any-principal:aws_iam_role.payments_app"
+      }
+    }
   }
 ]

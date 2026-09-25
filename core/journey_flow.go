@@ -82,6 +82,20 @@ func ComputeJourneyFlow(ir *IR, j DeclaredJourney, killed map[string]bool) Journ
 			result.Flows, result.BlockedAt, result.BlockedReason = false, to, trace.Concise
 			return result
 		}
+
+		// PC-135: the IAM step applies only once every network hop has already
+		// passed, and only on the journey's own final hop (see
+		// DeclaredJourney.IAMCheck's own doc comment for why) — checked here, inside
+		// the loop's own success path, so it naturally only ever runs after the last
+		// hop's network trace has already succeeded.
+		if j.IAMCheck != nil && i+2 == len(j.Path) {
+			iamTrace := BuildTraceWithIAM(ir, from, to, j.IAMCheck.PrincipalID, j.IAMCheck.Action, j.IAMCheck.ResourceARN, "", j.Protocol, j.Port)
+			if !iamTrace.Allowed {
+				result.Hops[len(result.Hops)-1] = JourneyHopFlow{From: from, To: to, Allowed: false, Reason: iamTrace.Concise}
+				result.Flows, result.BlockedAt, result.BlockedReason = false, to, iamTrace.Concise
+				return result
+			}
+		}
 	}
 	return result
 }

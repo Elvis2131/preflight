@@ -18,6 +18,15 @@ type Fault struct {
 	// Empty for every other fault type. Not part of any of the six frozen contracts
 	// (contracts/CHANGELOG.md), so this is a plain additive field, no version bump.
 	DestinationCIDR string `json:"destination_cidr,omitempty" jsonschema:"description=Required only for route_removal — the destination_cidr of the specific route to remove from Target (a route table ID). Empty for every other fault type."`
+
+	// IAMPolicyID/IAMRemoveStatementSid/IAMAddDenyStatement are PC-135's own addition
+	// — required only for "iam_policy_change": Target names the policy document
+	// (see core/iam_fault.go's own doc comment for the three places a policy ID can
+	// come from) to mutate. Exactly one of IAMRemoveStatementSid or
+	// IAMAddDenyStatement must be set — the Card's own two named mutations, "remove a
+	// statement, add a deny" — never both, never neither.
+	IAMRemoveStatementSid string           `json:"iam_remove_statement_sid,omitempty" jsonschema:"description=Required only for iam_policy_change when removing a statement — the Sid of the statement to remove from the policy document named by Target."`
+	IAMAddDenyStatement    *PolicyStatement `json:"iam_add_deny_statement,omitempty" jsonschema:"description=Required only for iam_policy_change when adding a deny — a new statement appended to the policy document named by Target. Effect is always forced to Deny regardless of what is supplied here, since this fault only ever injects a new restriction."`
 }
 
 // Journey is one entry-point-to-stateful-node path's fate under the declared faults —
@@ -224,6 +233,26 @@ func resolveFaults(ir *IR, workload Workload, faults []Fault) (mutatedIR *IR, ki
 				return nil, nil, false, "route_removal requires destination_cidr — refusing to guess which route on \"" + f.Target + "\" was meant"
 			}
 			mutatedIR = WithRouteRemoved(mutatedIR, f.Target, f.DestinationCIDR)
+		case "iam_policy_change":
+			hasRemove := f.IAMRemoveStatementSid != ""
+			hasAdd := f.IAMAddDenyStatement != nil
+			if hasRemove == hasAdd {
+				return nil, nil, false, "iam_policy_change requires exactly one of iam_remove_statement_sid or iam_add_deny_statement, not both or neither"
+			}
+			var mutated *IR
+			var ok bool
+			if hasRemove {
+				mutated, ok = WithIAMStatementRemoved(mutatedIR, f.Target, f.IAMRemoveStatementSid)
+				if !ok {
+					return nil, nil, false, "iam_policy_change target \"" + f.Target + "\" (a policy document ID) or statement Sid \"" + f.IAMRemoveStatementSid + "\" does not exist in this IR — refusing to guess which statement was meant"
+				}
+			} else {
+				mutated, ok = WithIAMDenyStatementAdded(mutatedIR, f.Target, *f.IAMAddDenyStatement)
+				if !ok {
+					return nil, nil, false, "iam_policy_change target \"" + f.Target + "\" (a policy document ID) does not exist in this IR — refusing to guess which policy was meant"
+				}
+			}
+			mutatedIR = mutated
 		}
 	}
 	killed, ok, reason = killedNodesForFaults(mutatedIR, workload, faults)
@@ -257,12 +286,12 @@ func killedNodesForFaults(ir *IR, workload Workload, faults []Fault) (killed map
 				return nil, false, "nat_gateway_loss target \"" + f.Target + "\" does not exist in this IR — refusing to guess which NAT gateway was meant"
 			}
 			killed[f.Target] = true
-		case "route_removal":
+		case "route_removal", "iam_policy_change":
 			// Already applied as an IR mutation by resolveFaults, before ir (this
 			// function's own parameter) was even built — nothing to add to the
-			// killed-node set for this fault type; ir already reflects it.
+			// killed-node set for either fault type; ir already reflects it.
 		default:
-			return nil, false, "fault type \"" + f.Type + "\" is not implemented — only region_loss, node_loss, nat_gateway_loss, and route_removal are hand-verified in this version (PC-82, PC-88, PC-129)"
+			return nil, false, "fault type \"" + f.Type + "\" is not implemented — only region_loss, node_loss, nat_gateway_loss, route_removal, and iam_policy_change are hand-verified in this version (PC-82, PC-88, PC-129, PC-135)"
 		}
 	}
 	return killed, true, ""

@@ -33,6 +33,9 @@
         },
         "steady_rps": {
           "type": "number"
+        },
+        "iam_check": {
+          "$ref": "#/$defs/JourneyIAMCheck"
         }
       },
       "additionalProperties": false,
@@ -44,6 +47,27 @@
         "protocol",
         "port",
         "criticality"
+      ]
+    },
+    "JourneyIAMCheck": {
+      "properties": {
+        "principal_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "action": {
+          "type": "string",
+          "minLength": 1
+        },
+        "resource_arn": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": false,
+      "type": "object",
+      "required": [
+        "principal_id",
+        "action"
       ]
     },
     "Requirement": {
@@ -140,5 +164,5 @@
     "requirements"
   ],
   "x-changelog": "contracts/CHANGELOG.md",
-  "x-schema-version": "1.1.0"
+  "x-schema-version": "1.2.0"
 }

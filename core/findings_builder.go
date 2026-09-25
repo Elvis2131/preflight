@@ -64,6 +64,10 @@ func BuildFindings(ir *IR, workload Workload) []Finding {
 		}
 	}
 
+	// PC-135: least-privilege IAM controls, evaluated purely via PC-134's own
+	// evaluator (see core/iam_compliance_findings.go's own boundary-rule doc comment).
+	findings = append(findings, IAMLeastPrivilegeFindings(ir)...)
+
 	return findings
 }
 
