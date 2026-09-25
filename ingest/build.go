@@ -45,6 +45,13 @@ type Result struct {
 	Insufficient      *InsufficientModel
 	OutOfVocabulary   []OutOfVocabularyResource
 	EdgeOnlyResources []EdgeOnlyResource
+
+	// UnsupportedRoutes is PC-111's own acceptance criterion: every route this
+	// codebase recognizes but doesn't yet model (VPC peering, transit gateway, VPC
+	// endpoint, ...) — never silently dropped, never treated as a blackhole or as
+	// success. The caller (server.Assess, cmd/gen-golden-fixtures) turns each one into
+	// a real not_assessable Finding via core.BuildUnsupportedRouteFindings.
+	UnsupportedRoutes []UnsupportedRoute
 }
 
 // Ingest parses dir, maps resources through registry, runs the MVG check, and returns
@@ -66,6 +73,16 @@ func Ingest(dir string, registry providers.Registry, versionNumber int) (Result,
 	var mappedEdges []core.Edge
 
 	for _, r := range parsed {
+		if r.Type == "aws_route" {
+			// PC-111: aws_route is a real, recognized resource that produces neither
+			// a node nor a generic mapped edge — its own route (destination CIDR ->
+			// target) is built by buildRouteEdges below, which needs the full
+			// ParsedResource (nested attributes + references), not the node/edge-only
+			// shape this loop otherwise assumes. Tracked in edgeOnly (not oov: it IS
+			// recognized) once buildRouteEdges below reports whether it produced a
+			// real edge — see the EdgeOnlyResources append after buildRouteEdges runs.
+			continue
+		}
 		mapping, ok := registry.Lookup(r.Type)
 		if !ok {
 			oov = append(oov, OutOfVocabularyResource{
@@ -89,20 +106,29 @@ func Ingest(dir string, registry providers.Registry, versionNumber int) (Result,
 		return Result{Insufficient: insufficient, OutOfVocabulary: oov, EdgeOnlyResources: edgeOnly}, nil
 	}
 
-	edges := buildEdges(parsed, byKey, registry)
+	routeEdges, unsupportedRoutes, ownedRouteRefs, routeProducedFor := buildRouteEdges(parsed, byKey, registry)
+	for _, r := range parsed {
+		if r.Type != "aws_route" {
+			continue
+		}
+		edgeOnly = append(edgeOnly, EdgeOnlyResource{ResourceType: r.Type, ResourceName: r.Name, Produced: routeProducedFor[r.Key()]})
+	}
+
+	edges := buildEdges(parsed, byKey, registry, ownedRouteRefs)
 	edges = append(edges, mappedEdges...)
+	edges = append(edges, routeEdges...)
 
 	sort.Slice(nodes, func(i, j int) bool { return nodes[i].ID < nodes[j].ID })
 	sort.Slice(edges, func(i, j int) bool { return edges[i].ID < edges[j].ID })
 
 	ir := &core.IR{
-		SchemaVersion: "1.0.0",
+		SchemaVersion: "1.1.0",
 		VersionNumber: versionNumber,
 		VersionHash:   contentHash(nodes, edges),
 		Nodes:         nodes,
 		Edges:         edges,
 	}
-	return Result{IR: ir, OutOfVocabulary: oov, EdgeOnlyResources: edgeOnly}, nil
+	return Result{IR: ir, OutOfVocabulary: oov, EdgeOnlyResources: edgeOnly, UnsupportedRoutes: unsupportedRoutes}, nil
 }
 
 // buildMappedEdge resolves an EdgeMapping's from/to attributes to their referenced
@@ -316,7 +342,7 @@ func assignCapabilityField(cap *core.CapabilityModel, field string, val any) {
 // edge at all — silently, from this function's point of view, though EdgeOnlyResource.
 // Produced==false does make it visible in Result. Not a case golden/aws exercises
 // today; worth a test the day a resource type that needs it is added.
-func buildEdges(parsed []ParsedResource, byKey map[string]ParsedResource, registry providers.Registry) []core.Edge {
+func buildEdges(parsed []ParsedResource, byKey map[string]ParsedResource, registry providers.Registry, ownedRouteRefs map[string]bool) []core.Edge {
 	var edges []core.Edge
 	for _, r := range parsed {
 		mapping, mapped := registry.Lookup(r.Type)
@@ -333,6 +359,14 @@ func buildEdges(parsed []ParsedResource, byKey map[string]ParsedResource, regist
 			// was already correct.
 		}
 		for _, ref := range r.References {
+			// PC-111: a route table's own gateway_id/nat_gateway_id reference is
+			// already accounted for as a real routes_to edge (with destination CIDR
+			// data this generic walk cannot express) by buildRouteEdges — skip it here
+			// so the same relationship doesn't ALSO appear as a second, data-less
+			// depends_on edge.
+			if ownedRouteRefs[r.Key()+"\x00"+ref.Key()] {
+				continue
+			}
 			target, exists := byKey[ref.Key()]
 			resolution := core.ResolutionKnown
 			reason := ""

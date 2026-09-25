@@ -52,7 +52,74 @@ func BuildFindings(ir *IR, workload Workload) []Finding {
 		findings = append(findings, rpoFeasibilityFinding(node, workload))
 	}
 
+	for _, node := range ir.Nodes {
+		if declaredPublicTier(node) {
+			findings = append(findings, publicSubnetRouteMismatchFinding(node, ir.Edges))
+		}
+	}
+
 	return findings
+}
+
+// declaredPublicTier reports whether a node declares itself public via this project's
+// own established tagging convention (golden/aws/network.tf: tags.Tier = "public",
+// already the real, existing signal this codebase's own golden bundle uses — not a new
+// convention invented for this check). Generic over every node carrying this tag, not
+// hardcoded to golden subnet IDs (PC-29's own "any node of this type" discipline,
+// applied here to a label rather than a NodeType).
+func declaredPublicTier(node Node) bool {
+	tags, ok := node.RawAttributes["tags"].(map[string]any)
+	if !ok {
+		return false
+	}
+	tier, _ := tags["Tier"].(string)
+	return tier == "public"
+}
+
+// publicSubnetRouteMismatchFinding is PC-111's own acceptance criterion, verbatim: "a
+// subnet labelled public with no IGW route is reported as a finding, not trusted." The
+// label is a convenience; IsPublicSubnet's own real route-table lookup is the
+// authority — see that function's doc comment (core/routing.go) for the AWS VPC User
+// Guide citation this whole check is built on.
+func publicSubnetRouteMismatchFinding(node Node, edges []Edge) Finding {
+	prov := NewProvenance(KindDerived, "core/routing:public-subnet-check:"+node.ID)
+	isPublic, hasRouteTable := IsPublicSubnet(edges, node.ID)
+
+	nodeID := node.ID
+	var outcome AssessmentEnvelope
+	var evidenceDesc string
+	switch {
+	case !hasRouteTable:
+		outcome = NotAssessable[any]("subnet has no resolvable effective route table (no aws_route_table_association, and this codebase does not yet model AWS's own implicit main-route-table fallback)", prov).ToEnvelope()
+		evidenceDesc = "no effective route table found for this subnet"
+	case isPublic:
+		outcome = Assessed[any]("consistent: declared public, and a real default route to an internet gateway confirms it", prov).ToEnvelope()
+		evidenceDesc = "effective route table has a 0.0.0.0/0 route to an internet gateway"
+	default:
+		outcome = Assessed[any]("mismatch: declared public, but no default route to an internet gateway exists — the label is not trustworthy", prov).ToEnvelope()
+		evidenceDesc = "effective route table has no 0.0.0.0/0 route to an internet gateway, despite the tags.Tier=public label"
+	}
+
+	return Finding{
+		ID:    "finding.routing.public-subnet-label." + node.ID,
+		Title: "Declared-public subnet's route table actually routes to an internet gateway",
+		Dimensions: FailureMode{
+			Trigger:            "a subnet is tagged Tier=public but its effective route table has no default route to an internet gateway",
+			AffectedComponents: []string{nodeID},
+			Detection:          DetectionModeled,
+			Impact:             NotAssessable[any]("impact dimension not evaluated by this structural check", prov).ToEnvelope(),
+			Likelihood:         DeriveLikelihood(prov).ToEnvelope(),
+			Detectability:      DeriveDetectability(DetectionModeled, prov).ToEnvelope(),
+			Recoverability: Recoverability{
+				FailoverPathExists: NotAssessable[any]("recoverability not evaluated by this structural check", prov).ToEnvelope(),
+				RPOFeasible:        NotAssessable[any]("recoverability not evaluated by this structural check", prov).ToEnvelope(),
+			},
+		},
+		Evidence: []EvidenceRef{
+			{NodeID: &nodeID, Description: evidenceDesc},
+		},
+		Outcome: outcome,
+	}
 }
 
 // managedDatabaseLabel derives the finding-ID prefix, human-readable title noun, and

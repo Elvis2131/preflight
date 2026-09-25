@@ -37,4 +37,4 @@ apart before regenerating anything:
   "don't trust a regeneration silently, verify it" discipline `golden/fixtures/`
   already established for IR/findings.
 
-Generated against Graphviz **16.1.0** (Homebrew, macOS arm64), 2026-09-25 (PC-80: regenerated after golden/aws's IR gained aws_db_subnet_group.payments/aws_elasticache_subnet_group.payments and their contained_in edges — same Graphviz version as the prior regeneration, so this update is content-only, not a version bump).
+Generated against Graphviz **16.1.0** (Homebrew, macOS arm64), 2026-09-25 (PC-111: regenerated after golden/aws's IR gained aws_route_table/aws_internet_gateway nodes and their routes_to/depends_on edges — same Graphviz version as the prior regeneration, so this update is content-only, not a version bump).

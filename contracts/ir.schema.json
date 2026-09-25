@@ -56,6 +56,9 @@
         },
         "provenance": {
           "$ref": "#/$defs/Provenance"
+        },
+        "raw_attributes": {
+          "type": "object"
         }
       },
       "additionalProperties": false,
@@ -187,5 +190,5 @@
     "edges"
   ],
   "x-changelog": "contracts/CHANGELOG.md",
-  "x-schema-version": "1.0.0"
+  "x-schema-version": "1.1.0"
 }

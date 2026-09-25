@@ -84,7 +84,7 @@ func IngestCanvas(doc core.CanvasDocument, versionNumber int) (Result, error) {
 	}
 
 	ir := &core.IR{
-		SchemaVersion: "1.0.0",
+		SchemaVersion: "1.1.0",
 		VersionNumber: versionNumber,
 		VersionHash:   contentHash(nodes, edges),
 		Nodes:         nodes,

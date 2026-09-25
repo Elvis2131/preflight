@@ -10,6 +10,33 @@ Each generated `contracts/*.schema.json` carries its own version in `x-schema-ve
 stamped by `cmd/gen-contracts` — check that field against this file, not the other way
 around, since a schema file is regenerated output, not hand-edited.
 
+## ir.schema.json 1.1.0 — 2026-09-25 (PC-111: routes, IGW, NAT — Edge.RawAttributes added)
+
+**Additive change to `ir.schema.json` only** — the other five schemas are untouched
+and remain at their current versions (`canvas.schema.json` deliberately not bumped;
+see below).
+
+`core.Edge` gains one new, optional field: `raw_attributes` (an untyped object,
+`omitempty` — mirroring `core.Node.RawAttributes`, already frozen since v1). A caller
+holding a pre-1.1.0 IR document is unaffected: every edge that existed before this
+ticket (`contained_in`, `depends_on`, etc.) simply carries no `raw_attributes`, exactly
+as if the field had always been absent-and-optional.
+
+**Why this was necessary, not cosmetic:** a `routes_to` edge (route table -> IGW/NAT)
+needs to carry its destination CIDR — `core/internal/analyse`'s longest-prefix-match
+route selection (AWS VPC User Guide, "How route priority works," verified 2026-09-25)
+needs the real CIDR, not just "a route exists to this target." A plain `(From, To,
+Type)` triple cannot express that; `Node.RawAttributes` already established the exact
+precedent (real per-element data a fixed field set can't anticipate) this reuses on
+the edge side.
+
+**`canvas.schema.json` NOT bumped, a stated decision, not an oversight:** PC-111's own
+Card asks for a canvas schema bump "if the canvas can author routes." It cannot yet —
+the Architect Workspace's route/IGW/NAT authoring UI is separate, not-yet-built work
+under the PC-96 epic. When it lands, `canvas.schema.json` gets its own version bump and
+migration note at that point, on the same "extended when a genuine new producer earns
+one" standard `canvas.schema.json` was itself added under.
+
 ## canvas.schema.json 1.0.0 — 2026-09-22 (PC-86 groundwork: sixth frozen contract)
 
 **New contract, not a change to the existing five.** `core.CanvasDocument` (nodes +

@@ -1,7 +1,7 @@
 {
-  "schema_version": "1.0.0",
+  "schema_version": "1.1.0",
   "version_number": 1,
-  "version_hash": "sha256:b67141d6e165637249e86f9d2252963c59eb59f180cb5e84dc51f9f9e4b2e809",
+  "version_hash": "sha256:c673b83b363e8ce80783b0cb804004b39765116f9c2745fb35c45bea4f98e480",
   "nodes": [
     {
       "id": "aws_db_instance.payments",
@@ -187,6 +187,20 @@
       }
     },
     {
+      "id": "aws_internet_gateway.payments",
+      "type": "network_boundary",
+      "resolution": "known",
+      "raw_attributes": {
+        "tags": {
+          "Name": "payments-igw"
+        }
+      },
+      "provenance": {
+        "kind": "stated",
+        "source": "/Users/larteyelvis/Documents/Developer/preflight/golden/aws-broken/network.tf:25:aws_internet_gateway.payments"
+      }
+    },
+    {
       "id": "aws_lb.payments",
       "type": "load_balancer",
       "resolution": "known",
@@ -235,6 +249,66 @@
       "provenance": {
         "kind": "stated",
         "source": "/Users/larteyelvis/Documents/Developer/preflight/golden/aws-broken/dns.tf:20:aws_route53_record.api"
+      }
+    },
+    {
+      "id": "aws_route_table.private_a",
+      "type": "network_boundary",
+      "resolution": "known",
+      "raw_attributes": {
+        "route.cidr_block": "0.0.0.0/0",
+        "tags": {
+          "Name": "payments-rt-private-a"
+        }
+      },
+      "provenance": {
+        "kind": "stated",
+        "source": "/Users/larteyelvis/Documents/Developer/preflight/golden/aws-broken/network.tf:191:aws_route_table.private_a"
+      }
+    },
+    {
+      "id": "aws_route_table.private_b",
+      "type": "network_boundary",
+      "resolution": "known",
+      "raw_attributes": {
+        "route.cidr_block": "0.0.0.0/0",
+        "tags": {
+          "Name": "payments-rt-private-b"
+        }
+      },
+      "provenance": {
+        "kind": "stated",
+        "source": "/Users/larteyelvis/Documents/Developer/preflight/golden/aws-broken/network.tf:204:aws_route_table.private_b"
+      }
+    },
+    {
+      "id": "aws_route_table.private_c",
+      "type": "network_boundary",
+      "resolution": "known",
+      "raw_attributes": {
+        "route.cidr_block": "0.0.0.0/0",
+        "tags": {
+          "Name": "payments-rt-private-c"
+        }
+      },
+      "provenance": {
+        "kind": "stated",
+        "source": "/Users/larteyelvis/Documents/Developer/preflight/golden/aws-broken/network.tf:217:aws_route_table.private_c"
+      }
+    },
+    {
+      "id": "aws_route_table.public",
+      "type": "network_boundary",
+      "resolution": "known",
+      "raw_attributes": {
+        "route.cidr_block": "0.0.0.0/0",
+        "tags": {
+          "Name": "payments-rt-public"
+        }
+      },
+      "provenance": {
+        "kind": "stated",
+        "source": "/Users/larteyelvis/Documents/Developer/preflight/golden/aws-broken/network.tf:163:aws_route_table.public"
       }
     },
     {
@@ -694,6 +768,17 @@
       }
     },
     {
+      "id": "aws_internet_gateway.payments-\u003eaws_vpc.payments",
+      "type": "contained_in",
+      "from": "aws_internet_gateway.payments",
+      "to": "aws_vpc.payments",
+      "resolution": "known",
+      "provenance": {
+        "kind": "stated",
+        "source": "/Users/larteyelvis/Documents/Developer/preflight/golden/aws-broken/network.tf:25:aws_internet_gateway.payments"
+      }
+    },
+    {
       "id": "aws_lb.payments-\u003eaws_security_group.alb",
       "type": "depends_on",
       "from": "aws_lb.payments",
@@ -738,6 +823,17 @@
       }
     },
     {
+      "id": "aws_nat_gateway.nat_a-\u003eaws_internet_gateway.payments",
+      "type": "depends_on",
+      "from": "aws_nat_gateway.nat_a",
+      "to": "aws_internet_gateway.payments",
+      "resolution": "known",
+      "provenance": {
+        "kind": "stated",
+        "source": "/Users/larteyelvis/Documents/Developer/preflight/golden/aws-broken/network.tf:151:aws_nat_gateway.nat_a"
+      }
+    },
+    {
       "id": "aws_nat_gateway.nat_a-\u003eaws_subnet.public_a",
       "type": "contained_in",
       "from": "aws_nat_gateway.nat_a",
@@ -757,6 +853,110 @@
       "provenance": {
         "kind": "stated",
         "source": "/Users/larteyelvis/Documents/Developer/preflight/golden/aws-broken/dns.tf:20:aws_route53_record.api"
+      }
+    },
+    {
+      "id": "aws_route_table.private_a-\u003eaws_vpc.payments",
+      "type": "contained_in",
+      "from": "aws_route_table.private_a",
+      "to": "aws_vpc.payments",
+      "resolution": "known",
+      "provenance": {
+        "kind": "stated",
+        "source": "/Users/larteyelvis/Documents/Developer/preflight/golden/aws-broken/network.tf:191:aws_route_table.private_a"
+      }
+    },
+    {
+      "id": "aws_route_table.private_a-route[0]-\u003eaws_nat_gateway.nat_a",
+      "type": "routes_to",
+      "from": "aws_route_table.private_a",
+      "to": "aws_nat_gateway.nat_a",
+      "resolution": "known",
+      "provenance": {
+        "kind": "stated",
+        "source": "/Users/larteyelvis/Documents/Developer/preflight/golden/aws-broken/network.tf:191:aws_route_table.private_a"
+      },
+      "raw_attributes": {
+        "destination_cidr": "0.0.0.0/0",
+        "target_kind": "nat_gateway"
+      }
+    },
+    {
+      "id": "aws_route_table.private_b-\u003eaws_vpc.payments",
+      "type": "contained_in",
+      "from": "aws_route_table.private_b",
+      "to": "aws_vpc.payments",
+      "resolution": "known",
+      "provenance": {
+        "kind": "stated",
+        "source": "/Users/larteyelvis/Documents/Developer/preflight/golden/aws-broken/network.tf:204:aws_route_table.private_b"
+      }
+    },
+    {
+      "id": "aws_route_table.private_b-route[0]-\u003eaws_nat_gateway.nat_a",
+      "type": "routes_to",
+      "from": "aws_route_table.private_b",
+      "to": "aws_nat_gateway.nat_a",
+      "resolution": "known",
+      "provenance": {
+        "kind": "stated",
+        "source": "/Users/larteyelvis/Documents/Developer/preflight/golden/aws-broken/network.tf:204:aws_route_table.private_b"
+      },
+      "raw_attributes": {
+        "destination_cidr": "0.0.0.0/0",
+        "target_kind": "nat_gateway"
+      }
+    },
+    {
+      "id": "aws_route_table.private_c-\u003eaws_vpc.payments",
+      "type": "contained_in",
+      "from": "aws_route_table.private_c",
+      "to": "aws_vpc.payments",
+      "resolution": "known",
+      "provenance": {
+        "kind": "stated",
+        "source": "/Users/larteyelvis/Documents/Developer/preflight/golden/aws-broken/network.tf:217:aws_route_table.private_c"
+      }
+    },
+    {
+      "id": "aws_route_table.private_c-route[0]-\u003eaws_nat_gateway.nat_a",
+      "type": "routes_to",
+      "from": "aws_route_table.private_c",
+      "to": "aws_nat_gateway.nat_a",
+      "resolution": "known",
+      "provenance": {
+        "kind": "stated",
+        "source": "/Users/larteyelvis/Documents/Developer/preflight/golden/aws-broken/network.tf:217:aws_route_table.private_c"
+      },
+      "raw_attributes": {
+        "destination_cidr": "0.0.0.0/0",
+        "target_kind": "nat_gateway"
+      }
+    },
+    {
+      "id": "aws_route_table.public-\u003eaws_vpc.payments",
+      "type": "contained_in",
+      "from": "aws_route_table.public",
+      "to": "aws_vpc.payments",
+      "resolution": "known",
+      "provenance": {
+        "kind": "stated",
+        "source": "/Users/larteyelvis/Documents/Developer/preflight/golden/aws-broken/network.tf:163:aws_route_table.public"
+      }
+    },
+    {
+      "id": "aws_route_table.public-route[0]-\u003eaws_internet_gateway.payments",
+      "type": "routes_to",
+      "from": "aws_route_table.public",
+      "to": "aws_internet_gateway.payments",
+      "resolution": "known",
+      "provenance": {
+        "kind": "stated",
+        "source": "/Users/larteyelvis/Documents/Developer/preflight/golden/aws-broken/network.tf:163:aws_route_table.public"
+      },
+      "raw_attributes": {
+        "destination_cidr": "0.0.0.0/0",
+        "target_kind": "internet_gateway"
       }
     },
     {
@@ -870,6 +1070,17 @@
       }
     },
     {
+      "id": "aws_subnet.private_a-\u003eaws_route_table.private_a (via aws_route_table_association.private_a)",
+      "type": "depends_on",
+      "from": "aws_subnet.private_a",
+      "to": "aws_route_table.private_a",
+      "resolution": "known",
+      "provenance": {
+        "kind": "stated",
+        "source": "/Users/larteyelvis/Documents/Developer/preflight/golden/aws-broken/network.tf:230:aws_route_table_association.private_a"
+      }
+    },
+    {
       "id": "aws_subnet.private_a-\u003eaws_vpc.payments",
       "type": "contained_in",
       "from": "aws_subnet.private_a",
@@ -878,6 +1089,17 @@
       "provenance": {
         "kind": "stated",
         "source": "/Users/larteyelvis/Documents/Developer/preflight/golden/aws-broken/network.tf:73:aws_subnet.private_a"
+      }
+    },
+    {
+      "id": "aws_subnet.private_b-\u003eaws_route_table.private_b (via aws_route_table_association.private_b)",
+      "type": "depends_on",
+      "from": "aws_subnet.private_b",
+      "to": "aws_route_table.private_b",
+      "resolution": "known",
+      "provenance": {
+        "kind": "stated",
+        "source": "/Users/larteyelvis/Documents/Developer/preflight/golden/aws-broken/network.tf:235:aws_route_table_association.private_b"
       }
     },
     {
@@ -892,6 +1114,17 @@
       }
     },
     {
+      "id": "aws_subnet.private_c-\u003eaws_route_table.private_c (via aws_route_table_association.private_c)",
+      "type": "depends_on",
+      "from": "aws_subnet.private_c",
+      "to": "aws_route_table.private_c",
+      "resolution": "known",
+      "provenance": {
+        "kind": "stated",
+        "source": "/Users/larteyelvis/Documents/Developer/preflight/golden/aws-broken/network.tf:240:aws_route_table_association.private_c"
+      }
+    },
+    {
       "id": "aws_subnet.private_c-\u003eaws_vpc.payments",
       "type": "contained_in",
       "from": "aws_subnet.private_c",
@@ -900,6 +1133,17 @@
       "provenance": {
         "kind": "stated",
         "source": "/Users/larteyelvis/Documents/Developer/preflight/golden/aws-broken/network.tf:95:aws_subnet.private_c"
+      }
+    },
+    {
+      "id": "aws_subnet.public_a-\u003eaws_route_table.public (via aws_route_table_association.public_a)",
+      "type": "depends_on",
+      "from": "aws_subnet.public_a",
+      "to": "aws_route_table.public",
+      "resolution": "known",
+      "provenance": {
+        "kind": "stated",
+        "source": "/Users/larteyelvis/Documents/Developer/preflight/golden/aws-broken/network.tf:176:aws_route_table_association.public_a"
       }
     },
     {
@@ -914,6 +1158,17 @@
       }
     },
     {
+      "id": "aws_subnet.public_b-\u003eaws_route_table.public (via aws_route_table_association.public_b)",
+      "type": "depends_on",
+      "from": "aws_subnet.public_b",
+      "to": "aws_route_table.public",
+      "resolution": "known",
+      "provenance": {
+        "kind": "stated",
+        "source": "/Users/larteyelvis/Documents/Developer/preflight/golden/aws-broken/network.tf:181:aws_route_table_association.public_b"
+      }
+    },
+    {
       "id": "aws_subnet.public_b-\u003eaws_vpc.payments",
       "type": "contained_in",
       "from": "aws_subnet.public_b",
@@ -922,6 +1177,17 @@
       "provenance": {
         "kind": "stated",
         "source": "/Users/larteyelvis/Documents/Developer/preflight/golden/aws-broken/network.tf:47:aws_subnet.public_b"
+      }
+    },
+    {
+      "id": "aws_subnet.public_c-\u003eaws_route_table.public (via aws_route_table_association.public_c)",
+      "type": "depends_on",
+      "from": "aws_subnet.public_c",
+      "to": "aws_route_table.public",
+      "resolution": "known",
+      "provenance": {
+        "kind": "stated",
+        "source": "/Users/larteyelvis/Documents/Developer/preflight/golden/aws-broken/network.tf:186:aws_route_table_association.public_c"
       }
     },
     {

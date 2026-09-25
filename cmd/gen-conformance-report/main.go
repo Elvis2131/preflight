@@ -68,6 +68,9 @@ func renderReport(entries []conformancescan.Entry) string {
 	currentArea := ""
 	for _, e := range entries {
 		if e.Area != currentArea {
+			if currentArea != "" {
+				b.WriteString("\n")
+			}
 			currentArea = e.Area
 			fmt.Fprintf(&b, "## %s\n\n", currentArea)
 		}

@@ -1,0 +1,13 @@
+# Internet Gateway -> network_boundary. PC-111: real routing substrate, not the
+# generic vocabulary — same reasoning as PC-78's vpc.yaml/subnet.yaml/nat_gateway.yaml:
+# an IGW has no capability model of its own (no encryption/failover/replication
+# semantics — it is a pure routing target) and no AZ placement, so network_boundary
+# (a containment/routing level with no component-level failure mode of its own) is the
+# same fit those files already established, not a new special case.
+#
+# reference_edge_type is deliberately UNSET (defaults to depends_on): an IGW is a route
+# TARGET, not a container something else sits inside — a route pointing at an IGW is
+# "traffic destined elsewhere is directed here," not containment. contained_in stays
+# reserved for genuine placement (vpc.yaml/subnet.yaml's own established meaning).
+resource_type: aws_internet_gateway
+node_type: network_boundary

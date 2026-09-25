@@ -1,0 +1,17 @@
+# Route table -> network_boundary. PC-111: same reasoning as internet_gateway.yaml —
+# a route table has no capability model of its own; it is pure routing policy data.
+# The routes THEMSELVES (destination CIDR -> target) are not expressible through this
+# declarative node-mapping mechanism at all (a route table can declare an arbitrary
+# number of route{} blocks, and each route needs its own destination CIDR carried on
+# the resulting edge — providers.ResourceMapping has no concept of "one resource
+# produces N edges, each with different per-edge data"). Real route construction is
+# custom Go logic in ingest/build.go (buildRouteEdges), reading ParsedResource's own
+# NestedBlocks["route"] (this ticket's own addition to ingest/parse.go) directly,
+# not expressed here as YAML data.
+#
+# reference_edge_type is deliberately UNSET (defaults to depends_on): a subnet's
+# association with its route table (aws_route_table_association, mapped separately,
+# route_table_association.yaml) is "this subnet's routing behaviour depends on this
+# table's rules," not containment.
+resource_type: aws_route_table
+node_type: network_boundary

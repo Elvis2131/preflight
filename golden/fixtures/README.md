@@ -122,6 +122,13 @@ nat_b`, `aws_nat_gateway.nat_c` (defect 1: only one NAT gateway remains) and
 `aws_sqs_queue.settlement_dlq` (defect 4: no DLQ) — confirmed by diffing the two node
 ID sets directly, not by assuming the counts meant what they appeared to.
 
+(Counts have moved further since: PC-80 added the RDS/ElastiCache subnet-group
+substrate, and PC-111 added route tables/IGW/NAT-gateway routing — `aws.ir.json` is now
+35 nodes / 59 edges, `aws-broken.ir.json` 32 nodes / 52 edges. Recorded here rather than
+silently updating the PC-78 numbers above, which describe what PC-78 itself actually
+produced at the time — see `git log` on this file, or `go run ./cmd/gen-golden-fixtures`'s
+own stdout, for the current real counts going forward.)
+
 Original record, still accurate for the golden-8 node types and their edges:
 
 - The edge differences include defects 4 and 6: the `settlement -> settlement_dlq`

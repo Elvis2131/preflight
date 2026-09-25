@@ -81,9 +81,21 @@ func main() {
 			len(result.IR.Nodes), len(result.IR.Edges), len(result.OutOfVocabulary), len(result.EdgeOnlyResources))
 
 		findings := core.BuildFindings(result.IR, workload)
+		findings = append(findings, core.BuildUnsupportedRouteFindings(toUnsupportedRouteInfos(result.UnsupportedRoutes))...)
 		writeJSON(outDir, b.findName, findings)
 		fmt.Printf("wrote %s (%d findings)\n", filepath.Join("golden", "fixtures", b.findName), len(findings))
 	}
+}
+
+// toUnsupportedRouteInfos converts ingest's own UnsupportedRoute into core's
+// UnsupportedRouteInfo — core cannot import ingest (I1), so this small conversion
+// lives at this real caller boundary, mirroring server.assessFromResult's own copy.
+func toUnsupportedRouteInfos(routes []ingest.UnsupportedRoute) []core.UnsupportedRouteInfo {
+	infos := make([]core.UnsupportedRouteInfo, len(routes))
+	for i, r := range routes {
+		infos[i] = core.UnsupportedRouteInfo{RouteTableID: r.RouteTableKey, TargetKind: r.TargetKind, Source: r.Source}
+	}
+	return infos
 }
 
 func writeJSON(outDir, name string, v any) {

@@ -101,6 +101,15 @@ type Edge struct {
 	To         string          `json:"to" validate:"required" jsonschema:"required,description=Node ID."`
 	Resolution ResolutionState `json:"resolution" validate:"required,oneof=known inferred unresolved" jsonschema:"required"`
 	Provenance Provenance      `json:"provenance" validate:"required" jsonschema:"required"`
+
+	// RawAttributes is PC-111's ir.schema.json 1.1.0 addition — the Edge-level
+	// counterpart to Node.RawAttributes above, added for the same reason: a routes_to
+	// edge needs to carry data a plain (From, To, Type) triple cannot express at all —
+	// specifically a route's destination CIDR (core/internal/analyse's longest-prefix-
+	// match route selection needs the real CIDR, not just "a route exists to this
+	// target"). Optional and additive: every edge type that existed before this ticket
+	// (contained_in, depends_on, etc.) is unaffected and simply carries nil here.
+	RawAttributes map[string]any `json:"raw_attributes,omitempty"`
 }
 
 // IR is the top-level architecture model (PRD §4). "The model is versioned. Every

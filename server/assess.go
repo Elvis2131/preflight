@@ -132,6 +132,17 @@ func nextVersion(store *Store, sessionID string) (versionNumber int, hadPrev boo
 // AssessCanvas duplicates any of this — PC-21's own Conversation names duplicated
 // logic here as the exact risk to guard against, and PC-86 extends that same
 // discipline to the second producer rather than growing a second copy alongside it.
+// toUnsupportedRouteInfos converts ingest's own UnsupportedRoute (a plain ingest-side
+// fact) into core's UnsupportedRouteInfo — core cannot import ingest (I1), so this
+// small conversion lives here, at the one real caller boundary between the two.
+func toUnsupportedRouteInfos(routes []ingest.UnsupportedRoute) []core.UnsupportedRouteInfo {
+	infos := make([]core.UnsupportedRouteInfo, len(routes))
+	for i, r := range routes {
+		infos[i] = core.UnsupportedRouteInfo{RouteTableID: r.RouteTableKey, TargetKind: r.TargetKind, Source: r.Source}
+	}
+	return infos
+}
+
 func assessFromResult(store *Store, sessionID string, versionNumber int, hadPrev bool, prev StoredVersion, workload core.Workload, result ingest.Result, start time.Time) (AssessResponse, error) {
 	if result.Insufficient != nil {
 		return AssessResponse{}, newAPIError(http.StatusUnprocessableEntity, "insufficient_model",
@@ -139,6 +150,7 @@ func assessFromResult(store *Store, sessionID string, versionNumber int, hadPrev
 	}
 
 	findings := core.BuildFindings(result.IR, workload)
+	findings = append(findings, core.BuildUnsupportedRouteFindings(toUnsupportedRouteInfos(result.UnsupportedRoutes))...)
 	scorecard := core.BuildScorecard(findings, versionNumber)
 
 	var delta []core.DeltaEntry

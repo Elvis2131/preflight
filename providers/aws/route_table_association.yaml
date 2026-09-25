@@ -1,0 +1,12 @@
+# aws_route_table_association -> an edge, not a node. Real AWS semantic, verified
+# against docs.aws.amazon.com/vpc/latest/userguide/subnet-route-tables.html: "A subnet
+# can only be associated with one route table at a time" — an explicit association
+# resource is exactly that fact made real in the IR. depends_on (not contained_in): the
+# subnet's traffic-routing BEHAVIOUR depends on the table's rules; the subnet isn't
+# physically "inside" the route table the way it's inside a VPC (vpc.yaml's own
+# contained_in reference_edge_type).
+resource_type: aws_route_table_association
+edge:
+  type: depends_on
+  from_attribute: subnet_id
+  to_attribute: route_table_id

@@ -75,8 +75,12 @@ func TestRDSRPOFeasibilityFinding_AgainstGoldenBundles(t *testing.T) {
 }
 
 // TestBuildFindings_NowHasThreeDeltaVisibleFindings is the structural confirmation
-// that PC-28's output-shape fix actually worked: 3 of 5 findings now differ
-// meaningfully between the broken and clean bundles (up from 1 of 3 originally).
+// that PC-28's output-shape fix actually worked: 3 findings differed meaningfully
+// between the broken and clean bundles at the time this test was written (up from 1
+// of 3 originally) — the total finding count has grown since (PC-111 added
+// finding.routing.public-subnet-label.*, identical in both bundles since neither
+// bundle's own defects touch routing), but this test's own specific IDs/assertions
+// below are what it actually checks, not a total count.
 func TestBuildFindings_NowHasThreeDeltaVisibleFindings(t *testing.T) {
 	broken := buildAllFindings(t, "../golden/aws-broken")
 	clean := buildAllFindings(t, "../golden/aws")

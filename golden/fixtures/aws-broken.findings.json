@@ -347,5 +347,206 @@
         "source": "core/analyse:rpo-feasibility:aws_db_instance.payments"
       }
     }
+  },
+  {
+    "id": "finding.routing.public-subnet-label.aws_subnet.public_a",
+    "title": "Declared-public subnet's route table actually routes to an internet gateway",
+    "dimensions": {
+      "trigger": "a subnet is tagged Tier=public but its effective route table has no default route to an internet gateway",
+      "affected_components": [
+        "aws_subnet.public_a"
+      ],
+      "detection": "modeled",
+      "impact": {
+        "state": "not_assessable",
+        "reason": "impact dimension not evaluated by this structural check",
+        "provenance": {
+          "kind": "derived",
+          "source": "core/routing:public-subnet-check:aws_subnet.public_a"
+        }
+      },
+      "likelihood": {
+        "state": "not_assessable",
+        "reason": "likelihood is not assessable from structural analysis alone — no frequency/probability data exists to assume from; an assumed guess here would be exactly the fabrication CLAUDE.md §10 warns against",
+        "provenance": {
+          "kind": "derived",
+          "source": "core/routing:public-subnet-check:aws_subnet.public_a"
+        }
+      },
+      "detectability": {
+        "state": "assessed",
+        "value": "high — this simulator models the failure directly",
+        "provenance": {
+          "kind": "derived",
+          "source": "core/routing:public-subnet-check:aws_subnet.public_a"
+        }
+      },
+      "recoverability": {
+        "failover_path_exists": {
+          "state": "not_assessable",
+          "reason": "recoverability not evaluated by this structural check",
+          "provenance": {
+            "kind": "derived",
+            "source": "core/routing:public-subnet-check:aws_subnet.public_a"
+          }
+        },
+        "rpo_feasible": {
+          "state": "not_assessable",
+          "reason": "recoverability not evaluated by this structural check",
+          "provenance": {
+            "kind": "derived",
+            "source": "core/routing:public-subnet-check:aws_subnet.public_a"
+          }
+        }
+      }
+    },
+    "evidence": [
+      {
+        "node_id": "aws_subnet.public_a",
+        "description": "effective route table has a 0.0.0.0/0 route to an internet gateway"
+      }
+    ],
+    "outcome": {
+      "state": "assessed",
+      "value": "consistent: declared public, and a real default route to an internet gateway confirms it",
+      "provenance": {
+        "kind": "derived",
+        "source": "core/routing:public-subnet-check:aws_subnet.public_a"
+      }
+    }
+  },
+  {
+    "id": "finding.routing.public-subnet-label.aws_subnet.public_b",
+    "title": "Declared-public subnet's route table actually routes to an internet gateway",
+    "dimensions": {
+      "trigger": "a subnet is tagged Tier=public but its effective route table has no default route to an internet gateway",
+      "affected_components": [
+        "aws_subnet.public_b"
+      ],
+      "detection": "modeled",
+      "impact": {
+        "state": "not_assessable",
+        "reason": "impact dimension not evaluated by this structural check",
+        "provenance": {
+          "kind": "derived",
+          "source": "core/routing:public-subnet-check:aws_subnet.public_b"
+        }
+      },
+      "likelihood": {
+        "state": "not_assessable",
+        "reason": "likelihood is not assessable from structural analysis alone — no frequency/probability data exists to assume from; an assumed guess here would be exactly the fabrication CLAUDE.md §10 warns against",
+        "provenance": {
+          "kind": "derived",
+          "source": "core/routing:public-subnet-check:aws_subnet.public_b"
+        }
+      },
+      "detectability": {
+        "state": "assessed",
+        "value": "high — this simulator models the failure directly",
+        "provenance": {
+          "kind": "derived",
+          "source": "core/routing:public-subnet-check:aws_subnet.public_b"
+        }
+      },
+      "recoverability": {
+        "failover_path_exists": {
+          "state": "not_assessable",
+          "reason": "recoverability not evaluated by this structural check",
+          "provenance": {
+            "kind": "derived",
+            "source": "core/routing:public-subnet-check:aws_subnet.public_b"
+          }
+        },
+        "rpo_feasible": {
+          "state": "not_assessable",
+          "reason": "recoverability not evaluated by this structural check",
+          "provenance": {
+            "kind": "derived",
+            "source": "core/routing:public-subnet-check:aws_subnet.public_b"
+          }
+        }
+      }
+    },
+    "evidence": [
+      {
+        "node_id": "aws_subnet.public_b",
+        "description": "effective route table has a 0.0.0.0/0 route to an internet gateway"
+      }
+    ],
+    "outcome": {
+      "state": "assessed",
+      "value": "consistent: declared public, and a real default route to an internet gateway confirms it",
+      "provenance": {
+        "kind": "derived",
+        "source": "core/routing:public-subnet-check:aws_subnet.public_b"
+      }
+    }
+  },
+  {
+    "id": "finding.routing.public-subnet-label.aws_subnet.public_c",
+    "title": "Declared-public subnet's route table actually routes to an internet gateway",
+    "dimensions": {
+      "trigger": "a subnet is tagged Tier=public but its effective route table has no default route to an internet gateway",
+      "affected_components": [
+        "aws_subnet.public_c"
+      ],
+      "detection": "modeled",
+      "impact": {
+        "state": "not_assessable",
+        "reason": "impact dimension not evaluated by this structural check",
+        "provenance": {
+          "kind": "derived",
+          "source": "core/routing:public-subnet-check:aws_subnet.public_c"
+        }
+      },
+      "likelihood": {
+        "state": "not_assessable",
+        "reason": "likelihood is not assessable from structural analysis alone — no frequency/probability data exists to assume from; an assumed guess here would be exactly the fabrication CLAUDE.md §10 warns against",
+        "provenance": {
+          "kind": "derived",
+          "source": "core/routing:public-subnet-check:aws_subnet.public_c"
+        }
+      },
+      "detectability": {
+        "state": "assessed",
+        "value": "high — this simulator models the failure directly",
+        "provenance": {
+          "kind": "derived",
+          "source": "core/routing:public-subnet-check:aws_subnet.public_c"
+        }
+      },
+      "recoverability": {
+        "failover_path_exists": {
+          "state": "not_assessable",
+          "reason": "recoverability not evaluated by this structural check",
+          "provenance": {
+            "kind": "derived",
+            "source": "core/routing:public-subnet-check:aws_subnet.public_c"
+          }
+        },
+        "rpo_feasible": {
+          "state": "not_assessable",
+          "reason": "recoverability not evaluated by this structural check",
+          "provenance": {
+            "kind": "derived",
+            "source": "core/routing:public-subnet-check:aws_subnet.public_c"
+          }
+        }
+      }
+    },
+    "evidence": [
+      {
+        "node_id": "aws_subnet.public_c",
+        "description": "effective route table has a 0.0.0.0/0 route to an internet gateway"
+      }
+    ],
+    "outcome": {
+      "state": "assessed",
+      "value": "consistent: declared public, and a real default route to an internet gateway confirms it",
+      "provenance": {
+        "kind": "derived",
+        "source": "core/routing:public-subnet-check:aws_subnet.public_c"
+      }
+    }
   }
 ]

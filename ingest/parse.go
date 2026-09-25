@@ -76,8 +76,30 @@ type ParsedResource struct {
 	// References list alone cannot answer.
 	AttributeReferences map[string][]ResourceRef
 
+	// NestedBlocks is PC-111's addition: every occurrence of every nested block type,
+	// keyed by block type name, one map of {attribute name -> literal value / resource
+	// reference} per occurrence — e.g. NestedBlocks["route"] for an aws_route_table
+	// with multiple `route { ... }` blocks. This exists alongside (not replacing) the
+	// single-flattened-dotted-key walk below (Attributes["vpc_config.endpoint_..."]):
+	// that walk silently keeps only the LAST occurrence when a block type repeats,
+	// which is invisible and wrong for anything (like route tables) where the SAME
+	// resource can legitimately declare the same nested block type more than once.
+	// Every value here is either a literal (captured the same way top-level Attributes
+	// are) or, for an attribute that is itself a resource reference (e.g. a route's
+	// gateway_id = aws_internet_gateway.x.id), the resolved ResourceRef — ingest/
+	// build.go's route-building logic needs the reference target, not just whichever
+	// literal values happen to be present alongside it.
+	NestedBlocks map[string][]NestedBlock
+
 	SourceFile string
 	SourceLine int
+}
+
+// NestedBlock is one occurrence of a repeated nested block (see ParsedResource.
+// NestedBlocks above).
+type NestedBlock struct {
+	Attributes map[string]any
+	References map[string]ResourceRef
 }
 
 func (r ParsedResource) Key() string { return r.Type + "." + r.Name }
@@ -155,22 +177,37 @@ func parseResourceBlock(block *hclsyntax.Block, sourceFile string) ParsedResourc
 		}
 	}
 
+	if r.NestedBlocks == nil {
+		r.NestedBlocks = map[string][]NestedBlock{}
+	}
 	for _, nested := range block.Body.Blocks {
 		if nested.Type == "dynamic" {
 			r.HasDynamicBlock = true
 			continue
 		}
+		nb := NestedBlock{Attributes: map[string]any{}, References: map[string]ResourceRef{}}
 		// Nested config blocks (vpc_config, scaling_config, ingress, ...) are walked
 		// one level for references and literals too, under a dotted key
 		// ("vpc_config.endpoint_public_access") — this is exactly the dotted
-		// source_attribute path providers/aws's mapping YAML already uses.
+		// source_attribute path providers/aws's mapping YAML already uses. Alongside
+		// that flattened view (which silently keeps only the LAST occurrence of a
+		// repeated block type), every occurrence is also recorded in full under
+		// r.NestedBlocks[nested.Type] — see that field's own doc comment for why.
 		for name, attr := range nested.Body.Attributes {
 			collectReferences(attr.Expr, &r.References)
 			collectAttributeReferences(attr.Expr, name, r.AttributeReferences)
 			if v, ok := literalValue(attr.Expr); ok {
 				r.Attributes[nested.Type+"."+name] = v
+				nb.Attributes[name] = v
+			}
+			for _, trav := range attr.Expr.Variables() {
+				if ref, ok := resourceRefFromTraversal(trav); ok {
+					nb.References[name] = ref
+					break
+				}
 			}
 		}
+		r.NestedBlocks[nested.Type] = append(r.NestedBlocks[nested.Type], nb)
 	}
 
 	return r
