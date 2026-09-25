@@ -1,0 +1,25 @@
+name: AWS conformance citation links
+
+# PC-119's own acceptance criterion, verbatim: "a doc-link checker (can be a periodic
+# job, not per-commit) flags citation URLs that stop resolving, since AWS docs move."
+# Deliberately NOT triggered on push/pull_request — see cmd/check-conformance-links's
+# own doc comment for why a real external dependency this project doesn't control
+# (whether an AWS doc page still resolves) must never fail an unrelated commit's CI.
+# Runs weekly and can be triggered manually.
+on:
+  schedule:
+    - cron: "0 6 * * 1" # Mondays, 06:00 UTC
+  workflow_dispatch:
+
+jobs:
+  check-links:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+
+      - name: check conformance citation links
+        run: go run ./cmd/check-conformance-links
