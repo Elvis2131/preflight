@@ -43,6 +43,12 @@ func BuildFindings(ir *IR, workload Workload) []Finding {
 			"AZ loss: eu-west-1a data subnet"),
 		natGatewayRedundancyFinding(ir, containmentEdges),
 	}
+	// PC-129: a real, route-based check (does more than one route table's own
+	// default route share the SAME NAT gateway) — distinct from
+	// natGatewayRedundancyFinding above (PC-28's own containment-blast-radius-based
+	// coverage check, hardcoded to golden's own public subnet IDs); this one is
+	// generic (any IR, any route table) and answers PC-78's real open question.
+	findings = append(findings, BuildNATSharedAcrossAZsFindings(ir)...)
 
 	for _, node := range ir.Nodes {
 		if node.Type != NodeTypeManagedDatabase {

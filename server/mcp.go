@@ -49,8 +49,19 @@ func NewMCPServer(store *Store) *mcp.Server {
 		OutputSchema: reflectSchema(AssessResponse{}),
 	}, assessTool(store))
 	mcp.AddTool(s, &mcp.Tool{
-		Name:         "simulate",
-		Description:  "Declare a single fault (region_loss or node_loss) against an already-assessed version and get back severed paths, cascade, surviving capacity, and a verdict — without re-running the full /assess pipeline. PC-82, PC-88.",
+		Name:        "simulate",
+		Description: "Declare a single fault (region_loss, node_loss, nat_gateway_loss, or route_removal) against an already-assessed version and get back severed paths, cascade, surviving capacity, per-journey structural flow, and a verdict — without re-running the full /assess pipeline. PC-82, PC-88, PC-129.",
+		// InputSchema is supplied explicitly (PC-129) — core.Fault's own new
+		// DestinationCIDR field carries a long, prose-style jsonschema description
+		// that trips the MCP SDK's default reflection the exact same way PC-93 (see
+		// this file's own top doc comment) already found and fixed for
+		// AssessCanvasRequest: google/jsonschema-go's tag parser rejects free-form
+		// prose containing certain characters as if it were a second, malformed
+		// key=value directive. Reflecting via the SAME invopop-based reflectSchema
+		// every other schema in this codebase already uses sidesteps that parser
+		// entirely, rather than rewording the field's own honest documentation to
+		// dodge an unrelated library's parsing quirk.
+		InputSchema:  reflectSchema(SimulateRequest{}),
 		OutputSchema: reflectSchema(core.SimulateResponse{}),
 	}, simulateTool(store))
 	mcp.AddTool(s, &mcp.Tool{

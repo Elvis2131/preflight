@@ -12,6 +12,12 @@ import (
 type Fault struct {
 	Type   string `json:"type" validate:"required" jsonschema:"required"`
 	Target string `json:"target" validate:"required" jsonschema:"required"`
+
+	// DestinationCIDR is PC-129's own addition — required only for "route_removal":
+	// the specific route's own destination_cidr on the named route table (Target).
+	// Empty for every other fault type. Not part of any of the six frozen contracts
+	// (contracts/CHANGELOG.md), so this is a plain additive field, no version bump.
+	DestinationCIDR string `json:"destination_cidr,omitempty" jsonschema:"description=Required only for route_removal — the destination_cidr of the specific route to remove from Target (a route table ID). Empty for every other fault type."`
 }
 
 // Journey is one entry-point-to-stateful-node path's fate under the declared faults —
@@ -35,6 +41,14 @@ type SimulateResponse struct {
 	SeveredPaths []string           `json:"severed_paths"`
 	Cascade      []string           `json:"cascade"`
 	Verdict      AssessmentEnvelope `json:"verdict"`
+
+	// FlowDetail is PC-125/PC-129's own real, per-declared-journey structural flow
+	// (core.ComputeAllJourneyFlows) against the fault-mutated IR — strictly more
+	// precise than Journeys above (which only sees generic graph connectivity, not a
+	// real SG/NACL/route decision). Empty (never nil, same "no null in JSON"
+	// discipline as Journeys/SeveredPaths/Cascade) when the workload declares no
+	// journeys at all.
+	FlowDetail []JourneyFlowResult `json:"flow_detail"`
 }
 
 // Simulate applies a declared fault set against an IR + Workload, reusing PC-14's
@@ -67,16 +81,36 @@ type SimulateResponse struct {
 // reachability or capacity is computed from that set, so this is genuinely "the same
 // engine, a different entry point," not new simulation logic layered on top of it.
 //
+// "nat_gateway_loss" (PC-129): kills the named NAT gateway node — a real, distinct IR
+// node, so this reuses the identical node_loss mechanism (a NAT gateway failing is
+// honestly "this node is gone," the same fact node_loss already expresses), not a new
+// kind of kill.
+//
+// "route_removal" (PC-129): Target names a route table, DestinationCIDR names the
+// specific route on it — this is an EDGE mutation, not a node kill, so it cannot be
+// expressed via the killed-node-set mechanism at all. core.WithRouteRemoved produces
+// a mutated COPY of ir (the specific route retargeted to a sentinel that resolves to
+// nothing — see that function's own doc comment for why retargeting, not deletion);
+// Simulate runs its entire pipeline against that mutated copy instead of the original.
+//
+// Both new fault types additionally populate FlowDetail (PC-125's real per-journey
+// structural flow, itself built on PC-114's request engine) — this is computed for
+// EVERY fault type, not specially cased, since it is strictly more precise than the
+// pre-existing entryPoint×statefulNode Journey cross-product (which only sees generic
+// graph connectivity, not real SG/NACL/route decisions).
+//
 // Any other fault type, a region_loss target that doesn't match the workload's own
-// declared region(s), or a node_loss target that doesn't exist in the IR, returns
+// declared region(s), a node_loss/nat_gateway_loss target that doesn't exist in the
+// IR, or a route_removal target route table that doesn't exist, returns
 // not_assessable with a stated reason rather than guessing — never a fabricated
 // partial result.
 func Simulate(ir *IR, workload Workload, faults []Fault, prov Provenance) SimulateResponse {
-	killed, ok, reason := killedNodesForFaults(ir, workload, faults)
+	mutatedIR, killed, ok, reason := resolveFaults(ir, workload, faults)
 	if !ok {
 		na := NotAssessable[any](reason, prov).ToEnvelope()
-		return SimulateResponse{Capacity: na, Verdict: na}
+		return SimulateResponse{Journeys: make([]Journey, 0), SeveredPaths: make([]string, 0), Cascade: make([]string, 0), FlowDetail: make([]JourneyFlowResult, 0), Capacity: na, Verdict: na}
 	}
+	ir = mutatedIR
 
 	var allEdges []DirectedEdge
 	for _, e := range ir.Edges {
@@ -156,13 +190,47 @@ func Simulate(ir *IR, workload Workload, faults []Fault, prov Provenance) Simula
 
 	verdict := deriveVerdict(len(entryPoints), len(statefulNodes), len(severedPaths), prov)
 
+	// FlowDetail (PC-125/PC-129): real, per-declared-journey structural flow against
+	// the (possibly fault-mutated) IR — always computed when the workload declares
+	// journeys, for every fault type, not specially cased to the two new ones.
+	flowDetail := make([]JourneyFlowResult, 0)
+	if len(workload.Journeys) > 0 {
+		flowDetail = ComputeAllJourneyFlows(ir, workload, killed)
+	}
+
 	return SimulateResponse{
 		Journeys:     journeys,
 		Capacity:     capacity,
 		SeveredPaths: severedPaths,
 		Cascade:      cascade,
 		Verdict:      verdict,
+		FlowDetail:   flowDetail,
 	}
+}
+
+// resolveFaults is killedNodesForFaults, extended (PC-129) to also produce a mutated
+// IR copy for edge-level faults (route_removal) that cannot be expressed as a killed
+// node set at all. Every pre-existing fault type's own behavior is unchanged — this
+// only adds two new cases and threads the (possibly mutated) IR through.
+func resolveFaults(ir *IR, workload Workload, faults []Fault) (mutatedIR *IR, killed map[string]bool, ok bool, reason string) {
+	mutatedIR = ir
+	for _, f := range faults {
+		switch f.Type {
+		case "route_removal":
+			if !nodeExists(mutatedIR, f.Target) {
+				return nil, nil, false, "route_removal target \"" + f.Target + "\" (a route table) does not exist in this IR — refusing to guess which route table was meant"
+			}
+			if f.DestinationCIDR == "" {
+				return nil, nil, false, "route_removal requires destination_cidr — refusing to guess which route on \"" + f.Target + "\" was meant"
+			}
+			mutatedIR = WithRouteRemoved(mutatedIR, f.Target, f.DestinationCIDR)
+		}
+	}
+	killed, ok, reason = killedNodesForFaults(mutatedIR, workload, faults)
+	if !ok {
+		return nil, nil, false, reason
+	}
+	return mutatedIR, killed, true, ""
 }
 
 // killedNodesForFaults resolves a fault list into the concrete set of killed node
@@ -184,8 +252,17 @@ func killedNodesForFaults(ir *IR, workload Workload, faults []Fault) (killed map
 				return nil, false, "node_loss target \"" + f.Target + "\" does not exist in this IR — refusing to guess which node was meant"
 			}
 			killed[f.Target] = true
+		case "nat_gateway_loss":
+			if !nodeExists(ir, f.Target) {
+				return nil, false, "nat_gateway_loss target \"" + f.Target + "\" does not exist in this IR — refusing to guess which NAT gateway was meant"
+			}
+			killed[f.Target] = true
+		case "route_removal":
+			// Already applied as an IR mutation by resolveFaults, before ir (this
+			// function's own parameter) was even built — nothing to add to the
+			// killed-node set for this fault type; ir already reflects it.
 		default:
-			return nil, false, "fault type \"" + f.Type + "\" is not implemented — only region_loss and node_loss are hand-verified in this version (PC-82, PC-88)"
+			return nil, false, "fault type \"" + f.Type + "\" is not implemented — only region_loss, node_loss, nat_gateway_loss, and route_removal are hand-verified in this version (PC-82, PC-88, PC-129)"
 		}
 	}
 	return killed, true, ""
