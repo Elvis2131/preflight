@@ -41,6 +41,7 @@ func main() {
 	mux.HandleFunc("POST /sessions/{id}/canvas", server.AssessCanvasHandler(store))
 	mux.HandleFunc("GET /sessions/{id}/versions", server.ListVersionsHandler(store))
 	mux.HandleFunc("GET /sessions/{id}/versions/{n}", server.GetVersionHandler(store))
+	mux.HandleFunc("POST /sessions/{id}/trace", server.TraceHandler(store))
 	mux.HandleFunc("/openapi.json", server.OpenAPISpecHandler())
 	mux.HandleFunc("/swagger", server.SwaggerUIHandler())
 

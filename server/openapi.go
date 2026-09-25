@@ -267,6 +267,53 @@ func buildOpenAPISpec() map[string]any {
 					},
 				},
 			},
+			"/sessions/{id}/trace": map[string]any{
+				"post": map[string]any{
+					"summary":     "Trace one request's path through an already-assessed architecture (PC-114)",
+					"description": "Runs route selection, Network ACLs at each subnet boundary, Security Groups at the destination, and a structural target-health check against an already-stored version's IR — an ordered, provenance-tagged, explainable step list plus a concise allow/deny/not_assessable verdict. destination is a required IR node ID; source is an IR node ID too, or omit it (with source_cidr set, e.g. \"0.0.0.0/0\") to mean an internet-originated request. A service type not yet modelled for request simulation produces a real not_assessable step naming it, never a guessed result.",
+					"parameters": []any{
+						map[string]any{
+							"name": "id", "in": "path", "required": true,
+							"schema":      map[string]any{"type": "string"},
+							"description": "Session ID.",
+						},
+					},
+					"requestBody": map[string]any{
+						"required": true,
+						"content": map[string]any{
+							"application/json": map[string]any{
+								"schema": reflectSchema(TraceRequest{}),
+							},
+						},
+					},
+					"responses": map[string]any{
+						"200": map[string]any{
+							"description": "The trace was built — see its own Allowed field for the verdict; a denied or not_assessable outcome is still a 200, not an error",
+							"content": map[string]any{
+								"application/json": map[string]any{
+									"schema": reflectSchema(core.Trace{}),
+								},
+							},
+						},
+						"400": map[string]any{
+							"description": "Missing session_id, version_number, destination, or protocol (error_code: invalid_request_body)",
+							"content": map[string]any{
+								"application/json": map[string]any{
+									"schema": reflectSchema(errorBody{}),
+								},
+							},
+						},
+						"404": map[string]any{
+							"description": "No such session at all (error_code: session_not_found), or the session exists but not that version_number (error_code: version_not_found)",
+							"content": map[string]any{
+								"application/json": map[string]any{
+									"schema": reflectSchema(errorBody{}),
+								},
+							},
+						},
+					},
+				},
+			},
 		},
 	}
 }

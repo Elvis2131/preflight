@@ -59,6 +59,12 @@ func NewMCPServer(store *Store) *mcp.Server {
 		InputSchema:  reflectSchema(AssessCanvasRequest{}),
 		OutputSchema: reflectSchema(AssessResponse{}),
 	}, assessCanvasTool(store))
+	mcp.AddTool(s, &mcp.Tool{
+		Name:         "trace",
+		Description:  "Trace one request's path through an already-assessed architecture — route selection, Network ACLs at each subnet boundary, Security Groups at the destination, and a structural target-health check — returning an ordered, provenance-tagged, explainable step list plus a concise allow/deny verdict. PC-114.",
+		InputSchema:  reflectSchema(TraceRequest{}),
+		OutputSchema: reflectSchema(core.Trace{}),
+	}, traceTool(store))
 	return s
 }
 
@@ -115,6 +121,27 @@ func assessCanvasTool(store *Store) mcp.ToolHandlerFor[AssessCanvasRequest, Asse
 		buf, err := json.Marshal(resp)
 		if err != nil {
 			return nil, AssessResponse{}, err
+		}
+		return &mcp.CallToolResult{
+			Content:           []mcp.Content{&mcp.TextContent{Text: string(buf)}},
+			StructuredContent: resp,
+		}, resp, nil
+	}
+}
+
+// traceTool is /sessions/{id}/trace's MCP counterpart (PC-114) — same thin-wrapper
+// discipline as assessCanvasTool: no URL path here either, so a real caller supplies
+// SessionID directly in the tool arguments.
+func traceTool(store *Store) mcp.ToolHandlerFor[TraceRequest, core.Trace] {
+	return func(_ context.Context, _ *mcp.CallToolRequest, input TraceRequest) (*mcp.CallToolResult, core.Trace, error) {
+		resp, err := Trace(store, input)
+		if err != nil {
+			return nil, core.Trace{}, err
+		}
+
+		buf, err := json.Marshal(resp)
+		if err != nil {
+			return nil, core.Trace{}, err
 		}
 		return &mcp.CallToolResult{
 			Content:           []mcp.Content{&mcp.TextContent{Text: string(buf)}},
