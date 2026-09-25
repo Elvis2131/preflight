@@ -104,6 +104,13 @@ func TestP1AndP2HaveZeroCloudSDKOrValidateImports(t *testing.T) {
 			if dep == "preflight/validate" || strings.HasPrefix(dep, "preflight/validate/") {
 				t.Errorf("%s transitively imports %s — validate/ is P3's own designated home (cmd/runnerd/main.go's own comment); P1/P2 must never depend on it", pkg, dep)
 			}
+			// PC-116/ADR-006: the real AWS Bulk Price List API fetcher is P3-only —
+			// this is already structurally impossible (Go's own internal/ rule), but
+			// checked here too for the same "live, CI-enforced fact" reason as the
+			// checks above, not merely relying on the compiler error being noticed.
+			if dep == "preflight/cmd/runnerd/internal/pricingfetch" {
+				t.Errorf("%s transitively imports %s — the pricing fetcher is P3-only (ADR-006 §2); P1/P2 must never depend on it", pkg, dep)
+			}
 		}
 	}
 }

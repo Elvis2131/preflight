@@ -12,6 +12,7 @@ than as a routine implementation choice.
 | [003](ADR-003-deployment-three-processes.md) | Deployment: three processes, split by failure domain | Accepted |
 | [004](ADR-004-implementation-language-go-supersedes-adr-001.md) | Implementation language: Go 1.26+ | Accepted |
 | [005](ADR-005-llm-provider-nvidia-direct-http-not-sdk.md) | LLM provider: NVIDIA API, direct `net/http`, no SDK | Accepted |
+| [006](ADR-006-pricing-source-and-snapshot-model.md) | Pricing source: AWS Bulk Price List API, dated snapshots via `cmd/runnerd` | Accepted |
 
 Superseded ADRs stay in the log. Deleting one destroys the record of what was known when,
 which is the only thing that makes a later reversal auditable rather than arbitrary.

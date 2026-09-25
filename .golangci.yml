@@ -104,4 +104,4 @@ linters:
       # checked for anyway) — this list errs toward that direction, not the reverse.
       - linters:
           - forbidigo
-        path: "^(cmd|contracts_test|exporters|ingest|providers|reason|server|ui|validate)/"
+        path: "^(cmd|contracts_test|exporters|ingest|pricing|providers|reason|server|ui|validate)/"

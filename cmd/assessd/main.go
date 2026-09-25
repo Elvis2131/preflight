@@ -18,6 +18,7 @@ import (
 
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 
+	"preflight/pricing"
 	"preflight/server"
 )
 
@@ -32,6 +33,19 @@ func main() {
 	}
 	defer store.Close()
 
+	// PC-116/ADR-006: pricing.Store has zero network capability of its own
+	// (pricing/boundary_test.go) — assessd only ever reads snapshots cmd/runnerd's
+	// separate `-fetch-pricing` subcommand already wrote, never fetches from AWS.
+	pricingDBPath := os.Getenv("PREFLIGHT_PRICING_DB_PATH")
+	if pricingDBPath == "" {
+		pricingDBPath = "pricing.db"
+	}
+	pricingStore, err := pricing.OpenStore(pricingDBPath)
+	if err != nil {
+		log.Fatalf("assessd: open pricing store: %v", err)
+	}
+	defer pricingStore.Close()
+
 	mux := http.NewServeMux()
 	mux.HandleFunc("/healthz", func(w http.ResponseWriter, r *http.Request) {
 		fmt.Fprintln(w, "assessd (P1): ok — no credentials held, no external calls made")
@@ -42,6 +56,9 @@ func main() {
 	mux.HandleFunc("GET /sessions/{id}/versions", server.ListVersionsHandler(store))
 	mux.HandleFunc("GET /sessions/{id}/versions/{n}", server.GetVersionHandler(store))
 	mux.HandleFunc("POST /sessions/{id}/trace", server.TraceHandler(store))
+	mux.HandleFunc("GET /pricing/snapshots", server.ListPricingSnapshotsHandler(pricingStore))
+	mux.HandleFunc("GET /pricing/snapshots/{id}", server.GetPricingSnapshotHandler(pricingStore))
+	mux.HandleFunc("POST /pricing/snapshots/{id}/activate", server.ActivatePricingSnapshotHandler(pricingStore))
 	mux.HandleFunc("/openapi.json", server.OpenAPISpecHandler())
 	mux.HandleFunc("/swagger", server.SwaggerUIHandler())
 
