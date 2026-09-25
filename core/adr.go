@@ -1,5 +1,7 @@
 package core
 
+import "time"
+
 // ADR is a decision record, one of PRD §4's two first-class lifecycle objects:
 // "versioning records what changed; ADRs record why — decision, reason, trade-offs,
 // controls satisfied, failure modes addressed (linked by ID)." This is Preflight's own
@@ -32,8 +34,11 @@ func (a ADR) Validate() error {
 // Waiver is PRD §4's second lifecycle object: "an evidence object: who accepted which
 // finding, when, why, against which version, with optional expiry." PRD §4 is explicit
 // about scope: "v1 defines the schema and displays waived findings as accepted;
-// enforcement (auto-expiry on material change) is P2" — ExpiresAt existing on this
-// struct is that schema definition; nothing in this codebase acts on it yet.
+// enforcement (auto-expiry on material change) is P2" — this ticket (PC-20) builds
+// exactly that v1 half, via Applies/ApplyWaivers below; the P2 half (auto-invalidating
+// a waiver when the finding it names has materially changed since AgainstVersion,
+// which needs a real "did this finding change" diff engine — a separate, larger piece
+// of work) is not built here.
 type Waiver struct {
 	AcceptedBy string `json:"accepted_by" validate:"required" jsonschema:"required,minLength=1"`
 	FindingID  string `json:"finding_id" validate:"required" jsonschema:"required,minLength=1,description=Linked by ID, per PRD §4 — not an embedded Finding copy."`
@@ -41,9 +46,18 @@ type Waiver struct {
 	Reason     string `json:"reason" validate:"required" jsonschema:"required,minLength=1"`
 
 	// AgainstVersion is the IR VersionNumber this waiver was accepted against — PRD §4:
-	// "against which version". A waiver accepted against Version 3 says nothing about
-	// Version 4; auto-expiry-on-material-change (P2, not yet enforced) is what would
-	// eventually act on that mismatch.
+	// "against which version" — recorded so a later reviewer can see exactly what the
+	// finding looked like when someone signed off on it. It is a FLOOR for display, not
+	// an exact-match gate: Applies treats the waiver as still in effect for any later
+	// version too (versionNumber >= AgainstVersion), because the engineer's whole
+	// stated reason for wanting this object ("stops reappearing as noise on every
+	// iteration") would otherwise be defeated the moment the very next /assess call
+	// bumped VersionNumber by one, as it does on every iteration of this project's own
+	// author/evaluate/modify/re-evaluate loop. What a same-version-only reading would
+	// actually buy — catching a waiver that's gone stale because the finding changed
+	// underneath it — is precisely P2's auto-expiry-on-material-change job, not this
+	// field's; until that engine exists, only ExpiresAt (below) or a fresh waiver
+	// record can end a waiver early.
 	AgainstVersion int `json:"against_version" validate:"gte=1" jsonschema:"required,minimum=1"`
 
 	// ExpiresAt is optional (PRD §4: "with optional expiry"). A nil value means no
@@ -57,4 +71,24 @@ type Waiver struct {
 // generated from (Design §5: ADR & waiver share one file, adr.schema.json).
 func (w Waiver) Validate() error {
 	return validate.Struct(w)
+}
+
+// Applies reports whether this waiver is in effect at versionNumber and now — the
+// exact rule ApplyWaivers (core/scorecard.go) uses to decide which scorecard entries
+// display as "accepted". See AgainstVersion's own doc comment above for why this is
+// versionNumber >= AgainstVersion rather than an exact match. An ExpiresAt that fails
+// to parse as RFC3339 is treated as expired, not as "no expiry" — a stated-but-
+// unreadable expiry is not an honest basis for "still valid."
+func (w Waiver) Applies(versionNumber int, now time.Time) bool {
+	if versionNumber < w.AgainstVersion {
+		return false
+	}
+	if w.ExpiresAt == nil {
+		return true
+	}
+	expires, err := time.Parse(time.RFC3339, *w.ExpiresAt)
+	if err != nil {
+		return false
+	}
+	return now.Before(expires)
 }

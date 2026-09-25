@@ -1,6 +1,10 @@
 package core
 
-import "preflight/core/internal/analyse"
+import (
+	"time"
+
+	"preflight/core/internal/analyse"
+)
 
 // ScorecardEntry is one control/finding's status within a single version's scorecard.
 type ScorecardEntry struct {
@@ -103,6 +107,34 @@ func BuildScorecard(findings []Finding, versionNumber int) Scorecard {
 		})
 	}
 	return sc
+}
+
+// ApplyWaivers is PC-20's second acceptance criterion, verbatim: "a waived finding
+// displays as accepted in the scorecard, not hidden entirely." Entries whose finding
+// has an applicable waiver (Waiver.Applies) get Status rewritten to "accepted" — every
+// entry stays present either way, only Status changes, so a waived finding is never
+// dropped from the list the way BuildScorecard's own PC-83 fix already refused to drop
+// not_assessable findings. Runs as a separate pass over an already-built Scorecard,
+// not folded into BuildScorecard itself, since BuildScorecard's job (finding -> raw
+// status) and this one (raw status -> displayed status, given accepted risk) are
+// genuinely different questions — the first is a plain projection, the second needs
+// waivers and a clock BuildScorecard's callers don't always have in hand.
+func ApplyWaivers(sc Scorecard, waivers []Waiver, now time.Time) Scorecard {
+	applicable := make(map[string]bool, len(waivers))
+	for _, w := range waivers {
+		if w.Applies(sc.VersionNumber, now) {
+			applicable[w.FindingID] = true
+		}
+	}
+
+	out := Scorecard{VersionNumber: sc.VersionNumber, Entries: make([]ScorecardEntry, len(sc.Entries))}
+	for i, e := range sc.Entries {
+		if applicable[e.FindingID] {
+			e.Status = "accepted"
+		}
+		out.Entries[i] = e
+	}
+	return out
 }
 
 // StatusMap extracts a plain finding-ID -> status map from a Scorecard, the shape
