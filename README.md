@@ -33,7 +33,7 @@ exist yet.
 |---|---|
 | Decision log (`docs/adr/`) | ADR-001…005 ratified |
 | Golden reference architecture (`golden/`) | AWS side authored, `terraform validate` passing (PC-15) |
-| Go module + 3-process skeleton | scaffolded: `cmd/assessd` (P1), `cmd/reasond` (P2), `cmd/runnerd` (P3) all build and run (PC-10) |
+| Go module + 3-process skeleton | scaffolded: `cmd/assessd` (P1), `cmd/reasond` (P2), `cmd/runnerd` (P3) all build and run (PC-10). Credential boundary is now structural, not just aspirational: `cmd/runnerd/internal/creds` (empty — no real credential-loading code exists yet, PC-25) is compiler-enforced importable only from `cmd/runnerd/`, proven the same synthesize-and-build way `core/boundary_test.go` proves I1; a second live check (`go list -deps`) confirms `cmd/assessd`/`cmd/reasond` currently import zero real cloud SDKs and no dependency on `validate/` itself — closing PC-10's last open criterion, previously an honestly-recorded ADR-003 gap ("needs a check, not just discipline") |
 | Invariants I2, I4 | type-level enforcement + tests in `core/` (`Provenance`/`Tagged[T]`, `Assessment[T]`) (PC-6) |
 | Invariant I1 (structural half) | `core/internal/{ir,analyse,simulate}` compiler-enforced private; proven by `core/boundary_test.go`, not just asserted |
 | IR design (`core/ir.go`, `docs/IR_DESIGN_NOTE.md`) | canonical/capability boundary resolved for all 8 golden node types + WAF's edge case; resolution-state propagation structurally enforced via `core/internal/analyse.AssessNode`/`AssessEdge` (PC-11) |

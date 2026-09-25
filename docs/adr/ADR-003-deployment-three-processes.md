@@ -62,13 +62,29 @@ because three is a nice number of services.
   stubs (PC-10 acceptance criteria).
 - Credentials are configured for P3 only. No other process reads cloud credentials.
 
-## Enforcement — an open gap
+## Enforcement — resolved
 
-PC-10 records this honestly: I1's purity has a compile-time enforcement path (Go's
-`internal/` package placement, per ADR-004), but **nothing currently enforces P3 being
-the only credential holder.** PC-10 states this "needs a check, not just discipline."
+PC-10 originally recorded this honestly as an open gap: I1's purity has a compile-time
+enforcement path (Go's `internal/` package placement, per ADR-004), but nothing
+enforced P3 being the only credential holder. PC-10 stated this "needs a check, not
+just discipline."
 
-That check is not yet designed. It is a named gap, not an oversight.
+That check now exists: `cmd/runnerd/internal/creds` — the same `internal/` mechanism
+this ADR already uses for I1, applied to the P1/P2/P3 boundary itself. A package
+outside `cmd/runnerd/` cannot import it (compiler-enforced, proven by
+`cmd/runnerd/internal/creds/boundary_test.go`'s own synthesize-and-build test, the same
+technique `core/boundary_test.go` already established for I1). Nothing lives in
+`creds` yet — no real cloud-credential-loading code has been written (Rung 2/3 of
+`validate/`, PC-25, aren't built) — the point, per `cmd/runnerd/main.go`'s own comment,
+is standing the boundary up structurally before there is content inside it worth
+protecting, exactly as this ADR's own topology was stood up before P1/P2's real logic
+existed.
+
+A second, live check (`TestP1AndP2HaveZeroCloudSDKOrValidateImports`, same file) proves
+today's actual dependency graph: `go list -deps` on `cmd/assessd` and `cmd/reasond`
+contains no real cloud SDK module (AWS/Azure/GCP) and no dependency on `validate/`
+itself (P3's own designated home) — an active, CI-enforced guard against the moment
+either boundary is first crossed, not merely "not violated because not built."
 
 Note also that PC-10's acceptance criteria say P1 purity is "verified by import-linter".
 `import-linter` is a Python tool and predates ADR-004; the Go mechanism is `internal/`
