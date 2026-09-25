@@ -40,7 +40,7 @@ func main() {
 	outDir := filepath.Join(root, "contracts")
 
 	contracts := []contract{
-		{"ir.schema.json", core.IR{}, "1.1.0"},
+		{"ir.schema.json", core.IR{}, "1.2.0"},
 		{"provenance.schema.json", core.TaggedEnvelope{}, "1.0.0"},
 		{"workload.schema.json", core.Workload{}, "1.0.0"},
 		{"finding.schema.json", core.Finding{}, "1.2.0"}, // PC-18: EvidenceRef.Attribute added — see CHANGELOG.md

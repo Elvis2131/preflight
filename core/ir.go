@@ -67,6 +67,45 @@ type CapabilityModel struct {
 	MaintenanceBehaviour  *string `json:"maintenance_behaviour,omitempty"`
 }
 
+// Sizing is PC-115's own, justified, recorded extension: the IR deliberately never
+// carried sizing before this (scenario-driven minimalism — no failure scenario needed
+// it), but the cost engine (PC-116/117) does, so this is added now rather than
+// invented as scope creep. Every field is a pointer, same discipline as
+// CapabilityModel: absence is "not known", never a default — PC-115's own acceptance
+// criterion, "missing sizing yields cost_unknown, never a default."
+//
+// Count is a sizing fact (e.g. a desired task/instance count as declared in
+// Terraform) and must never be read as a CAPACITY fact — Workload.Capacity (PRD §4's
+// own capacity semantics) is the only source of truth for capacity, a structurally
+// separate, workload-declared map; nothing in this codebase's capacity/simulate code
+// reads Sizing at all (proven by core/sizing_test.go's own structural check).
+//
+// One flat struct across every costable component type, not one struct per NodeType:
+// each field belongs to a different subset of node types (InstanceType to
+// compute/container_workload, InstanceClass to managed_database, CacheNodeType to
+// cache, LoadBalancerType to load_balancer) and simply stays nil for types it doesn't
+// apply to — the same "one shape, many optional fields" discipline CapabilityModel
+// already uses, rather than a NodeType-keyed union this codebase has no precedent for.
+//
+// Region is deliberately NOT a field here: Workload.Regions already declares it
+// (core/workload.go) — this ticket's own Card says as much ("region: already present
+// on containers; reuse"), though the accurate description is "present on the
+// workload," not on any per-node container; no per-node region attribute exists
+// anywhere in the IR (core/simulate.go's own region_loss doc comment already states
+// this directly). Recorded here as a correction rather than silently reproducing the
+// Card's imprecise wording.
+type Sizing struct {
+	InstanceType       *string `json:"instance_type,omitempty" jsonschema:"description=e.g. an EC2 instance type (compute) — mutually relevant with TaskCPU/TaskMemory, never both populated for the same node."`
+	TaskCPU            *string `json:"task_cpu,omitempty" jsonschema:"description=Container task vCPU allocation (container_workload) — e.g. ECS task_definition cpu."`
+	TaskMemory         *string `json:"task_memory,omitempty" jsonschema:"description=Container task memory allocation (container_workload) — e.g. ECS task_definition memory."`
+	Count              *int    `json:"count,omitempty" jsonschema:"description=A declared instance/task/node count — a SIZING fact only, never a capacity fact (PRD capacity semantics; Workload.Capacity is the only capacity source of truth)."`
+	InstanceClass      *string `json:"instance_class,omitempty" jsonschema:"description=Managed database instance class (managed_database) — e.g. RDS instance_class. Multi-AZ is NOT duplicated here — see CapabilityModel.MultiAZImplementation."`
+	AllocatedStorageGB *int    `json:"allocated_storage_gb,omitempty" jsonschema:"description=Allocated storage, in GB (managed_database)."`
+	StorageType        *string `json:"storage_type,omitempty" jsonschema:"description=Storage type (managed_database) — e.g. RDS storage_type (gp3, io1, ...)."`
+	CacheNodeType      *string `json:"cache_node_type,omitempty" jsonschema:"description=Cache node type (cache) — e.g. ElastiCache node_type."`
+	LoadBalancerType   *string `json:"load_balancer_type,omitempty" jsonschema:"description=Load balancer type (load_balancer) — ALB or NLB. Usage-based charges (data processed) are not_assessable until traffic inputs exist (PC-124)."`
+}
+
 // Node is one element of the IR's canonical semantic model, carrying its provider
 // capability model alongside it (the two-level model, PRD §4).
 //
@@ -83,6 +122,11 @@ type Node struct {
 	Type       NodeType         `json:"type" validate:"required,oneof=compute container_workload managed_database cache load_balancer queue/stream object_store dns network_boundary identity external_dependency" jsonschema:"required"`
 	Resolution ResolutionState  `json:"resolution" validate:"required,oneof=known inferred unresolved" jsonschema:"required,enum=known,enum=inferred,enum=unresolved"`
 	Capability *CapabilityModel `json:"capability,omitempty" jsonschema:"description=Present only when Resolution is known or inferred enough to populate it; a node with capability entirely nil is not a claim of no capabilities, only that none are known yet."`
+
+	// Sizing is PC-115's addition — see Sizing's own doc comment. Nil (not a
+	// zero-valued struct) means no sizing is known for this node at all, distinct
+	// from a Sizing struct whose individual fields are each independently nil.
+	Sizing *Sizing `json:"sizing,omitempty" jsonschema:"description=Present only when at least one sizing fact is known for this node; absent entirely means cost_unknown for every costable dimension, never a default."`
 
 	// RawAttributes retains provider-specific attributes verbatim (PRD §4: "raw
 	// provider attributes are additionally retained for attribute-level compliance

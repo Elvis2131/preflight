@@ -1,7 +1,7 @@
 {
-  "schema_version": "1.1.0",
+  "schema_version": "1.2.0",
   "version_number": 1,
-  "version_hash": "sha256:8f76bbbb827124635e962ebe214cbec12e256cc9557f730b0a8824cb256554e7",
+  "version_hash": "sha256:8425f3a515b78094e2007fc868eff3036b10472d78c5bd68805ac757d683fb07",
   "nodes": [
     {
       "id": "aws_db_instance.payments",
@@ -13,6 +13,11 @@
         "backup_semantics": "14",
         "encryption_mechanism": "true",
         "multi_az_implementation": "true"
+      },
+      "sizing": {
+        "instance_class": "db.r6g.xlarge",
+        "allocated_storage_gb": 200,
+        "storage_type": "gp3"
       },
       "raw_attributes": {
         "allocated_storage": 200,
@@ -72,6 +77,10 @@
       "type": "container_workload",
       "resolution": "known",
       "capability": {},
+      "sizing": {
+        "instance_type": "m6i.large",
+        "count": 3
+      },
       "raw_attributes": {
         "capability_level": "REQUEST_SIMULATION",
         "encryption_config.resources": [
@@ -101,6 +110,10 @@
         "failover_mechanism": "automatic promotion of a replica to primary on primary failure",
         "encryption_mechanism": "true",
         "multi_az_implementation": "true"
+      },
+      "sizing": {
+        "count": 3,
+        "cache_node_type": "cache.r6g.large"
       },
       "raw_attributes": {
         "at_rest_encryption_enabled": true,
@@ -217,6 +230,9 @@
       "type": "load_balancer",
       "resolution": "known",
       "capability": {},
+      "sizing": {
+        "load_balancer_type": "application"
+      },
       "raw_attributes": {
         "capability_level": "REQUEST_SIMULATION",
         "drop_invalid_header_fields": true,

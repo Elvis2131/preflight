@@ -135,12 +135,13 @@ func Ingest(dir string, registry providers.Registry, versionNumber int) (Result,
 	edges = append(edges, routeEdges...)
 	mergeSecurityGroupRules(nodes, parsed)
 	mergeNetworkACLRules(nodes, parsed)
+	mergeEKSNodeGroupSizing(nodes, parsed)
 
 	sort.Slice(nodes, func(i, j int) bool { return nodes[i].ID < nodes[j].ID })
 	sort.Slice(edges, func(i, j int) bool { return edges[i].ID < edges[j].ID })
 
 	ir := &core.IR{
-		SchemaVersion: "1.1.0",
+		SchemaVersion: "1.2.0",
 		VersionNumber: versionNumber,
 		VersionHash:   contentHash(nodes, edges),
 		Nodes:         nodes,
@@ -215,6 +216,7 @@ func buildNode(r ParsedResource, mapping providers.ResourceMapping) core.Node {
 		Type:          mapping.NodeType,
 		Resolution:    resolution,
 		Capability:    buildCapability(r, mapping),
+		Sizing:        buildSizing(r.Attributes),
 		RawAttributes: withCapabilityLevel(r.Attributes, mapping.CapabilityLevel),
 		Provenance:    prov,
 	}

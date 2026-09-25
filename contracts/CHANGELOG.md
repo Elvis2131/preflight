@@ -10,6 +10,47 @@ Each generated `contracts/*.schema.json` carries its own version in `x-schema-ve
 stamped by `cmd/gen-contracts` — check that field against this file, not the other way
 around, since a schema file is regenerated output, not hand-edited.
 
+## ir.schema.json 1.2.0 — 2026-09-25 (PC-115: Node.Sizing added)
+
+**Additive change to `ir.schema.json` only** — the other five schemas are untouched
+and remain at their current versions (`canvas.schema.json` deliberately not bumped;
+same reasoning as PC-111's own entry below — sizing authoring in the canvas UI is
+separate, not-yet-built work).
+
+`core.Node` gains one new, optional field: `sizing` (a new `Sizing` struct, entirely
+`omitempty` at both the field and the struct-field level — mirroring
+`CapabilityModel`'s own "every field a pointer, absence means not known, never a
+default" discipline). A caller holding a pre-1.2.0 IR document is unaffected: every
+node that existed before this ticket simply carries no `sizing`, exactly as if the
+field had always been absent-and-optional.
+
+**Why this was necessary, not scope creep:** the IR deliberately never carried sizing
+before this — no failure scenario needed it (scenario-driven minimalism, CLAUDE.md §8).
+The cost engine (PC-116/117) does: computing a real per-component cost estimate needs
+to know what an architect actually declared (instance type/class, count, storage),
+never a "typical" assumed size. `Node.RawAttributes` could not honestly serve this
+role — it is a provider-specific, verbatim, untyped bag; `Sizing` is canonical,
+cross-provider vocabulary the same way `CapabilityModel` already is.
+
+**Region is deliberately NOT part of `Sizing`**: `Workload.Regions` (unversioned,
+`workload.schema.json`, unchanged) already declares it — no per-node region field
+exists anywhere in the IR (`core/simulate.go`'s own `region_loss` doc comment already
+states this), so adding one to `Sizing` would duplicate, not reuse, the real source of
+truth.
+
+**Count is a sizing fact, not a capacity fact** — `Workload.Capacity` (PRD §4's own
+capacity semantics) remains the only source of truth for capacity; `core/sizing_test.go`
+structurally proves nothing in `core/simulate.go`'s capacity-handling code reads
+`Sizing` at all.
+
+Terraform ingest populates `Sizing` from real resource attributes on the golden
+AWS bundle: `instance_class`/`allocated_storage`/`storage_type` (RDS),
+`node_type`/`num_cache_clusters` (ElastiCache), `load_balancer_type` (ALB), and
+`instance_types[0]`/`scaling_config.desired_size` merged from a companion
+`aws_eks_node_group` resource onto its owning EKS cluster node (`ingest/sizing.go`).
+Golden fixtures regenerated; diff is `sizing` additions plus `version_hash` and
+`schema_version` only, hand-verified.
+
 ## ir.schema.json 1.1.0 — 2026-09-25 (PC-111: routes, IGW, NAT — Edge.RawAttributes added)
 
 **Additive change to `ir.schema.json` only** — the other five schemas are untouched

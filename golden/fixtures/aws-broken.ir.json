@@ -1,7 +1,7 @@
 {
-  "schema_version": "1.1.0",
+  "schema_version": "1.2.0",
   "version_number": 1,
-  "version_hash": "sha256:0c098d9f05ef25ef9834845358506c7538e9cfdbd4a39b73e45d339dd7fa9950",
+  "version_hash": "sha256:fb3424d40a4972cadf18b6a72ebb851d7e599d9f04e5fb2207d7623cab834835",
   "nodes": [
     {
       "id": "aws_db_instance.payments",
@@ -13,6 +13,11 @@
         "backup_semantics": "1",
         "encryption_mechanism": "false",
         "multi_az_implementation": "false"
+      },
+      "sizing": {
+        "instance_class": "db.r6g.xlarge",
+        "allocated_storage_gb": 200,
+        "storage_type": "gp3"
       },
       "raw_attributes": {
         "allocated_storage": 200,
@@ -72,6 +77,10 @@
       "type": "container_workload",
       "resolution": "known",
       "capability": {},
+      "sizing": {
+        "instance_type": "m6i.large",
+        "count": 1
+      },
       "raw_attributes": {
         "capability_level": "REQUEST_SIMULATION",
         "name": "payments-eks",
@@ -98,6 +107,10 @@
         "failover_mechanism": "none",
         "encryption_mechanism": "false",
         "multi_az_implementation": "false"
+      },
+      "sizing": {
+        "count": 1,
+        "cache_node_type": "cache.r6g.large"
       },
       "raw_attributes": {
         "at_rest_encryption_enabled": false,
@@ -214,6 +227,9 @@
       "type": "load_balancer",
       "resolution": "known",
       "capability": {},
+      "sizing": {
+        "load_balancer_type": "application"
+      },
       "raw_attributes": {
         "capability_level": "REQUEST_SIMULATION",
         "drop_invalid_header_fields": true,

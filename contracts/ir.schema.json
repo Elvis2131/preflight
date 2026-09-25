@@ -93,6 +93,10 @@
           "$ref": "#/$defs/CapabilityModel",
           "description": "Present only when Resolution is known or inferred enough to populate it; a node with capability entirely nil is not a claim of no capabilities"
         },
+        "sizing": {
+          "$ref": "#/$defs/Sizing",
+          "description": "Present only when at least one sizing fact is known for this node; absent entirely means cost_unknown for every costable dimension"
+        },
         "raw_attributes": {
           "type": "object"
         },
@@ -152,6 +156,48 @@
         "kind",
         "source"
       ]
+    },
+    "Sizing": {
+      "properties": {
+        "instance_type": {
+          "type": "string",
+          "description": "e.g. an EC2 instance type (compute) — mutually relevant with TaskCPU/TaskMemory"
+        },
+        "task_cpu": {
+          "type": "string",
+          "description": "Container task vCPU allocation (container_workload) — e.g. ECS task_definition cpu."
+        },
+        "task_memory": {
+          "type": "string",
+          "description": "Container task memory allocation (container_workload) — e.g. ECS task_definition memory."
+        },
+        "count": {
+          "type": "integer",
+          "description": "A declared instance/task/node count — a SIZING fact only"
+        },
+        "instance_class": {
+          "type": "string",
+          "description": "Managed database instance class (managed_database) — e.g. RDS instance_class. Multi-AZ is NOT duplicated here — see CapabilityModel.MultiAZImplementation."
+        },
+        "allocated_storage_gb": {
+          "type": "integer",
+          "description": "Allocated storage"
+        },
+        "storage_type": {
+          "type": "string",
+          "description": "Storage type (managed_database) — e.g. RDS storage_type (gp3"
+        },
+        "cache_node_type": {
+          "type": "string",
+          "description": "Cache node type (cache) — e.g. ElastiCache node_type."
+        },
+        "load_balancer_type": {
+          "type": "string",
+          "description": "Load balancer type (load_balancer) — ALB or NLB. Usage-based charges (data processed) are not_assessable until traffic inputs exist (PC-124)."
+        }
+      },
+      "additionalProperties": false,
+      "type": "object"
     }
   },
   "properties": {
@@ -190,5 +236,5 @@
     "edges"
   ],
   "x-changelog": "contracts/CHANGELOG.md",
-  "x-schema-version": "1.1.0"
+  "x-schema-version": "1.2.0"
 }
