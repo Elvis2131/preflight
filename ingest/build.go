@@ -99,6 +99,38 @@ func Ingest(dir string, registry providers.Registry, versionNumber int) (Result,
 			edgeOnly = append(edgeOnly, EdgeOnlyResource{ResourceType: r.Type, ResourceName: r.Name, Produced: hasOwner && len(owner) > 0})
 			continue
 		}
+		if r.Type == "aws_iam_role_policy" {
+			// PC-133: same reasoning — an inline identity policy merged onto its
+			// owning role node by mergeIAMPolicies.
+			owner, hasOwner := r.AttributeReferences["role"]
+			edgeOnly = append(edgeOnly, EdgeOnlyResource{ResourceType: r.Type, ResourceName: r.Name, Produced: hasOwner && len(owner) > 0})
+			continue
+		}
+		if r.Type == "aws_iam_policy" {
+			// PC-133: a standalone, reusable managed policy DOCUMENT — produces no
+			// node/edge of its own; merged onto whichever role(s)
+			// aws_iam_role_policy_attachment names, by mergeIAMPolicies.
+			edgeOnly = append(edgeOnly, EdgeOnlyResource{ResourceType: r.Type, ResourceName: r.Name, Produced: true})
+			continue
+		}
+		if r.Type == "aws_iam_role_policy_attachment" {
+			// PC-133: an association resource (role <-> managed policy) — merged by
+			// mergeIAMPolicies, same as aws_wafv2_web_acl_association's own
+			// association-only shape but via merge rather than a generic mapped edge
+			// (the target may be an AWS-managed policy ARN with no resource of its
+			// own in this bundle at all).
+			roleRef, hasRole := r.AttributeReferences["role"]
+			policyRef, hasPolicy := r.AttributeReferences["policy_arn"]
+			edgeOnly = append(edgeOnly, EdgeOnlyResource{ResourceType: r.Type, ResourceName: r.Name, Produced: hasRole && len(roleRef) > 0 && hasPolicy && len(policyRef) > 0})
+			continue
+		}
+		if r.Type == "aws_s3_bucket_policy" {
+			// PC-133: a resource-based policy, merged onto its owning bucket node by
+			// mergeIAMPolicies.
+			owner, hasOwner := r.AttributeReferences["bucket"]
+			edgeOnly = append(edgeOnly, EdgeOnlyResource{ResourceType: r.Type, ResourceName: r.Name, Produced: hasOwner && len(owner) > 0})
+			continue
+		}
 		mapping, ok := registry.Lookup(r.Type)
 		if !ok {
 			oov = append(oov, OutOfVocabularyResource{
@@ -136,12 +168,13 @@ func Ingest(dir string, registry providers.Registry, versionNumber int) (Result,
 	mergeSecurityGroupRules(nodes, parsed)
 	mergeNetworkACLRules(nodes, parsed)
 	mergeEKSNodeGroupSizing(nodes, parsed)
+	mergeIAMPolicies(nodes, parsed)
 
 	sort.Slice(nodes, func(i, j int) bool { return nodes[i].ID < nodes[j].ID })
 	sort.Slice(edges, func(i, j int) bool { return edges[i].ID < edges[j].ID })
 
 	ir := &core.IR{
-		SchemaVersion: "1.2.0",
+		SchemaVersion: "1.3.0",
 		VersionNumber: versionNumber,
 		VersionHash:   contentHash(nodes, edges),
 		Nodes:         nodes,
@@ -212,14 +245,33 @@ func buildNode(r ParsedResource, mapping providers.ResourceMapping) core.Node {
 	}
 
 	return core.Node{
-		ID:            r.Key(),
-		Type:          mapping.NodeType,
-		Resolution:    resolution,
-		Capability:    buildCapability(r, mapping),
-		Sizing:        buildSizing(r.Attributes),
-		RawAttributes: withCapabilityLevel(r.Attributes, mapping.CapabilityLevel),
-		Provenance:    prov,
+		ID:             r.Key(),
+		Type:           mapping.NodeType,
+		Resolution:     resolution,
+		Capability:     buildCapability(r, mapping),
+		Sizing:         buildSizing(r.Attributes),
+		IAMTrustPolicy: buildTrustPolicy(r, prov),
+		RawAttributes:  withCapabilityLevel(r.Attributes, mapping.CapabilityLevel),
+		Provenance:     prov,
 	}
+}
+
+// buildTrustPolicy is PC-133's own addition: an aws_iam_role's own real
+// assume_role_policy attribute is a literal JSON document string (Terraform's
+// jsonencode()/heredoc), already captured verbatim in r.Attributes like any other
+// literal attribute — parsed here into a real core.PolicyDocument, never left as an
+// opaque raw string. Returns nil for any resource without this attribute (everything
+// except aws_iam_role) — never a guessed or empty policy.
+func buildTrustPolicy(r ParsedResource, prov core.Provenance) *core.PolicyDocument {
+	raw, ok := r.Attributes["assume_role_policy"].(string)
+	if !ok || raw == "" {
+		return nil
+	}
+	doc, err := parsePolicyDocument(r.Key(), raw, prov)
+	if err != nil {
+		return nil // malformed policy JSON is a real, rare Terraform-authoring error; not this ingest's job to fail the whole bundle over
+	}
+	return &doc
 }
 
 // withCapabilityLevel stamps PC-107's own registry entry onto the node's

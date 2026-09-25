@@ -128,6 +128,18 @@ type Node struct {
 	// from a Sizing struct whose individual fields are each independently nil.
 	Sizing *Sizing `json:"sizing,omitempty" jsonschema:"description=Present only when at least one sizing fact is known for this node; absent entirely means cost_unknown for every costable dimension, never a default."`
 
+	// IAMIdentityPolicies/IAMTrustPolicy/IAMResourcePolicy are PC-133's addition — see
+	// core/iam.go's own doc comment for the full modelled-scope statement.
+	// IAMIdentityPolicies is only ever populated on an identity node (a role) — its
+	// own inline and managed policies. IAMTrustPolicy is only ever populated on an
+	// identity node — who may assume it. IAMResourcePolicy is only ever populated on
+	// the RESOURCE a policy is declared on directly (e.g. an S3 bucket policy),
+	// never an identity node — the two are mutually exclusive by construction (no
+	// node in this codebase is both an identity and a resource-policy target).
+	IAMIdentityPolicies []PolicyDocument `json:"iam_identity_policies,omitempty" validate:"dive"`
+	IAMTrustPolicy      *PolicyDocument  `json:"iam_trust_policy,omitempty"`
+	IAMResourcePolicy   *PolicyDocument  `json:"iam_resource_policy,omitempty"`
+
 	// RawAttributes retains provider-specific attributes verbatim (PRD §4: "raw
 	// provider attributes are additionally retained for attribute-level compliance
 	// checks") — e.g. an AWS-specific field the canonical CapabilityModel has no slot

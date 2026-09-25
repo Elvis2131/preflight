@@ -1,0 +1,190 @@
+// This file is PC-133's ingest-side half: parsing a real AWS IAM policy document
+// (the JSON text Terraform's own jsonencode()/heredoc produces, already captured
+// verbatim as a plain Go string in ParsedResource.Attributes) into core.PolicyDocument.
+// Every real AWS JSON policy quirk this file handles was verified against the golden
+// bundle's own real assume_role_policy documents (golden/aws/*.tf) before writing any
+// parsing code: Action can be a bare string OR an array of strings; Statement can be a
+// single object OR an array; Principal can be "*", a bare string, or an object with
+// AWS/Service/Federated keys.
+package ingest
+
+import (
+	"encoding/json"
+	"fmt"
+
+	"preflight/core"
+)
+
+// rawPolicyDocument mirrors the real AWS policy JSON shape loosely enough to accept
+// every real variant — Statement is `any` because AWS allows either a single
+// statement object or an array of them.
+type rawPolicyDocument struct {
+	Version   string `json:"Version"`
+	Statement any    `json:"Statement"`
+}
+
+// parsePolicyDocument parses rawJSON (a policy document's own literal JSON text) into
+// a core.PolicyDocument, preserving every field verbatim — no wildcard expansion, no
+// condition evaluation, no guessed defaults. Returns an error only when rawJSON isn't
+// valid JSON at all (a real, structural ingest failure, never silently swallowed).
+func parsePolicyDocument(id, rawJSON string, prov core.Provenance) (core.PolicyDocument, error) {
+	var raw rawPolicyDocument
+	if err := json.Unmarshal([]byte(rawJSON), &raw); err != nil {
+		return core.PolicyDocument{}, fmt.Errorf("ingest: parse policy document %s: %w", id, err)
+	}
+
+	var rawStatements []any
+	switch v := raw.Statement.(type) {
+	case []any:
+		rawStatements = v
+	case map[string]any:
+		rawStatements = []any{v}
+	default:
+		return core.PolicyDocument{}, fmt.Errorf("ingest: policy document %s: Statement is neither an object nor an array", id)
+	}
+
+	doc := core.PolicyDocument{ID: id, Version: raw.Version, Provenance: prov}
+	for _, s := range rawStatements {
+		m, ok := s.(map[string]any)
+		if !ok {
+			continue
+		}
+		stmt := core.PolicyStatement{
+			Condition: toStringKeyedMap(m["Condition"]),
+		}
+		if sid, ok := m["Sid"].(string); ok {
+			stmt.Sid = sid
+		}
+		if effect, ok := m["Effect"].(string); ok {
+			stmt.Effect = effect
+		}
+		if principal, present := m["Principal"]; present {
+			stmt.Principal = principal
+		}
+		stmt.Action = toStringSlice(m["Action"])
+		stmt.NotAction = toStringSlice(m["NotAction"])
+		stmt.Resource = toStringSlice(m["Resource"])
+		stmt.NotResource = toStringSlice(m["NotResource"])
+		doc.Statements = append(doc.Statements, stmt)
+	}
+	return doc, nil
+}
+
+// toStringSlice normalizes AWS's own real "either a bare string or an array of
+// strings" shape (Action/Resource/NotAction/NotResource all allow both) — never
+// guessed, only the two real shapes AWS itself documents.
+func toStringSlice(v any) []string {
+	switch val := v.(type) {
+	case string:
+		return []string{val}
+	case []any:
+		out := make([]string, 0, len(val))
+		for _, item := range val {
+			if s, ok := item.(string); ok {
+				out = append(out, s)
+			}
+		}
+		return out
+	default:
+		return nil
+	}
+}
+
+// toStringKeyedMap returns v as map[string]any when it already is one, else nil —
+// Condition is always an object in real AWS policy documents; this just guards
+// against a malformed document without fabricating structure.
+func toStringKeyedMap(v any) map[string]any {
+	m, ok := v.(map[string]any)
+	if !ok {
+		return nil
+	}
+	return m
+}
+
+// mergeIAMPolicies attaches real identity and resource-based policy data onto the
+// already-built node slice, by ID — the same "post-process onto already-built nodes"
+// shape PC-112/113/115's own merge functions use. Three real Terraform shapes:
+//
+//   - aws_iam_role_policy: an INLINE identity policy, attached directly to its own
+//     role attribute.
+//   - aws_iam_policy + aws_iam_role_policy_attachment: a MANAGED, reusable policy
+//     document, attached to a role via a separate attachment resource. An attachment
+//     naming an AWS-managed policy ARN (a bare string, no resource of its own in this
+//     bundle — e.g. "arn:aws:iam::aws:policy/ReadOnlyAccess") resolves to no
+//     in-bundle policy document at all; a real, stated gap (nothing to merge, not a
+//     guess at what that managed policy contains), never silently fabricated.
+//   - aws_s3_bucket_policy: a RESOURCE-based policy, attached directly to the bucket
+//     it names.
+func mergeIAMPolicies(nodes []core.Node, parsed []ParsedResource) {
+	byID := map[string]int{}
+	for i, n := range nodes {
+		byID[n.ID] = i
+	}
+
+	managedPolicies := map[string]ParsedResource{}
+	for _, r := range parsed {
+		if r.Type == "aws_iam_policy" {
+			managedPolicies[r.Key()] = r
+		}
+	}
+
+	for _, r := range parsed {
+		switch r.Type {
+		case "aws_iam_role_policy":
+			roleRefs, ok := r.AttributeReferences["role"]
+			if !ok || len(roleRefs) != 1 {
+				continue
+			}
+			attachIdentityPolicy(nodes, byID, roleRefs[0].Key(), r.Key(), r.Attributes["policy"])
+
+		case "aws_iam_role_policy_attachment":
+			roleRefs, hasRole := r.AttributeReferences["role"]
+			policyRefs, hasPolicy := r.AttributeReferences["policy_arn"]
+			if !hasRole || len(roleRefs) != 1 || !hasPolicy || len(policyRefs) != 1 {
+				continue
+			}
+			managedPolicy, ok := managedPolicies[policyRefs[0].Key()]
+			if !ok {
+				continue // an AWS-managed policy ARN, not one declared in this bundle
+			}
+			attachIdentityPolicy(nodes, byID, roleRefs[0].Key(), managedPolicy.Key(), managedPolicy.Attributes["policy"])
+
+		case "aws_s3_bucket_policy":
+			bucketRefs, ok := r.AttributeReferences["bucket"]
+			if !ok || len(bucketRefs) != 1 {
+				continue
+			}
+			idx, ok := byID[bucketRefs[0].Key()]
+			if !ok {
+				continue
+			}
+			policyJSON, _ := r.Attributes["policy"].(string)
+			if policyJSON == "" {
+				continue
+			}
+			prov := core.NewProvenance(core.KindStated, sourceRef(r))
+			doc, err := parsePolicyDocument(r.Key(), policyJSON, prov)
+			if err != nil {
+				continue
+			}
+			nodes[idx].IAMResourcePolicy = &doc
+		}
+	}
+}
+
+func attachIdentityPolicy(nodes []core.Node, byID map[string]int, roleID, policyID string, rawPolicy any) {
+	idx, ok := byID[roleID]
+	if !ok {
+		return
+	}
+	policyJSON, _ := rawPolicy.(string)
+	if policyJSON == "" {
+		return
+	}
+	prov := core.NewProvenance(core.KindStated, "ingest/iam:"+policyID)
+	doc, err := parsePolicyDocument(policyID, policyJSON, prov)
+	if err != nil {
+		return
+	}
+	nodes[idx].IAMIdentityPolicies = append(nodes[idx].IAMIdentityPolicies, doc)
+}

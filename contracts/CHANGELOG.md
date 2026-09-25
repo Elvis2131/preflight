@@ -61,6 +61,54 @@ without `peak_rps`/`steady_rps` — a real, checked `not_assessable` case, the s
 "golden fixtures include a checked not_assessable case" discipline PC-15's own
 findings fixtures already established.
 
+## ir.schema.json 1.3.0 — 2026-09-25 (PC-133: IAM policy model added)
+
+**Additive change to `ir.schema.json` only** — the other five schemas are untouched
+and remain at their current versions.
+
+`core.Node` gains three new, optional fields: `iam_identity_policies` (a new
+`PolicyDocument` array), `iam_trust_policy`, and `iam_resource_policy` (both single,
+optional `PolicyDocument`s). `PolicyDocument` is a new type: `{id, version, statements,
+provenance}`, where each `PolicyStatement` is `{sid, effect, principal, action,
+not_action, resource, not_resource, condition}` — the real AWS IAM policy JSON shape,
+field for field. `principal` and `condition` are untyped (`any`/free-form object):
+AWS's own real JSON allows several genuinely different shapes for each (a bare
+string, `"*"`, or an object with `AWS`/`Service`/`Federated` keys for `principal`; an
+arbitrarily nested object for `condition`) — normalizing them into one fixed shape
+would mean silently discarding whichever shape didn't fit, exactly what "wildcards
+and conditions must be represented faithfully" (this ticket's own acceptance
+criterion) forbids.
+
+A caller holding a pre-1.3.0 IR document is unaffected: all three fields are
+`omitempty`, so a document without them parses exactly as before.
+
+**Why this was necessary, not scope creep:** identity nodes (`NodeTypeIdentity`) have
+existed since PC-13/78, but only as a structural fact ("this role exists") — no
+engine could answer "can this role read this bucket/table/secret" without the actual
+policy documents in hand. PC-134 (policy evaluation) and PC-135 (integration into
+traces/failure-lab/compliance) both need this data to exist in the IR first.
+
+**Modelled scope**, stated directly (this ticket's own acceptance criterion): a
+principal (role, already modelled), identity policies (inline `aws_iam_role_policy`
+and managed `aws_iam_policy` + `aws_iam_role_policy_attachment`), a trust policy
+(`aws_iam_role`'s own `assume_role_policy`), and a resource-based policy (e.g.
+`aws_s3_bucket_policy`). **Not modelled**: policy variables (`${aws:username}`),
+permission boundaries, service control policies (org-level, outside any single
+Terraform bundle), IAM Access Analyzer findings, and condition *evaluation* beyond
+verbatim storage (PC-134's own job — every condition key is preserved here regardless
+of whether PC-134 ever learns to evaluate it, so that engine can report an
+unsupported one as `not_assessable` rather than silently ignoring it).
+
+Terraform ingest populates this from real resource attributes: `assume_role_policy`
+(hand-verified against the golden AWS bundle's own real trust policies — 3 real
+roles, `golden/aws/iam.tf`), and a new, dedicated synthetic fixture
+(`ingest/testdata/iam-fixture/`, since golden/aws has none of the other three
+resource types at all) for inline/managed identity policies and a resource-based
+bucket policy — real JSON heredoc strings (never `jsonencode()`, a Terraform function
+call this project's own static-literal ingest scope, CLAUDE.md §15, cannot capture at
+all), exercising both the bare-string and array shapes of `Action`/`Resource` AWS
+itself allows.
+
 ## ir.schema.json 1.2.0 — 2026-09-25 (PC-115: Node.Sizing added)
 
 **Additive change to `ir.schema.json` only** — the other five schemas are untouched

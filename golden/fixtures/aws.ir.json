@@ -1,7 +1,7 @@
 {
-  "schema_version": "1.2.0",
+  "schema_version": "1.3.0",
   "version_number": 1,
-  "version_hash": "sha256:8425f3a515b78094e2007fc868eff3036b10472d78c5bd68805ac757d683fb07",
+  "version_hash": "sha256:00c0b13a259deb67493855d42042aa9242f63befc330e3a9e13f17ef153a09eb",
   "nodes": [
     {
       "id": "aws_db_instance.payments",
@@ -160,6 +160,25 @@
       "type": "identity",
       "resolution": "known",
       "capability": {},
+      "iam_trust_policy": {
+        "id": "aws_iam_role.eks_cluster",
+        "version": "2012-10-17",
+        "statements": [
+          {
+            "effect": "Allow",
+            "principal": {
+              "Service": "eks.amazonaws.com"
+            },
+            "action": [
+              "sts:AssumeRole"
+            ]
+          }
+        ],
+        "provenance": {
+          "kind": "stated",
+          "source": "/Users/larteyelvis/Documents/Developer/preflight/golden/aws/iam.tf:7:aws_iam_role.eks_cluster"
+        }
+      },
       "raw_attributes": {
         "assume_role_policy": "{\n  \"Version\": \"2012-10-17\",\n  \"Statement\": [\n    {\n      \"Effect\": \"Allow\",\n      \"Principal\": { \"Service\": \"eks.amazonaws.com\" },\n      \"Action\": \"sts:AssumeRole\"\n    }\n  ]\n}\n",
         "capability_level": "CONFIGURATION",
@@ -178,6 +197,25 @@
       "type": "identity",
       "resolution": "known",
       "capability": {},
+      "iam_trust_policy": {
+        "id": "aws_iam_role.eks_node",
+        "version": "2012-10-17",
+        "statements": [
+          {
+            "effect": "Allow",
+            "principal": {
+              "Service": "ec2.amazonaws.com"
+            },
+            "action": [
+              "sts:AssumeRole"
+            ]
+          }
+        ],
+        "provenance": {
+          "kind": "stated",
+          "source": "/Users/larteyelvis/Documents/Developer/preflight/golden/aws/iam.tf:33:aws_iam_role.eks_node"
+        }
+      },
       "raw_attributes": {
         "assume_role_policy": "{\n  \"Version\": \"2012-10-17\",\n  \"Statement\": [\n    {\n      \"Effect\": \"Allow\",\n      \"Principal\": { \"Service\": \"ec2.amazonaws.com\" },\n      \"Action\": \"sts:AssumeRole\"\n    }\n  ]\n}\n",
         "capability_level": "CONFIGURATION",
@@ -196,6 +234,26 @@
       "type": "identity",
       "resolution": "known",
       "capability": {},
+      "iam_trust_policy": {
+        "id": "aws_iam_role.payments_app",
+        "version": "2012-10-17",
+        "statements": [
+          {
+            "effect": "Allow",
+            "principal": {
+              "Service": "pods.eks.amazonaws.com"
+            },
+            "action": [
+              "sts:AssumeRole",
+              "sts:TagSession"
+            ]
+          }
+        ],
+        "provenance": {
+          "kind": "stated",
+          "source": "/Users/larteyelvis/Documents/Developer/preflight/golden/aws/iam.tf:73:aws_iam_role.payments_app"
+        }
+      },
       "raw_attributes": {
         "assume_role_policy": "{\n  \"Version\": \"2012-10-17\",\n  \"Statement\": [\n    {\n      \"Effect\": \"Allow\",\n      \"Principal\": { \"Service\": \"pods.eks.amazonaws.com\" },\n      \"Action\": [\"sts:AssumeRole\", \"sts:TagSession\"]\n    }\n  ]\n}\n",
         "capability_level": "CONFIGURATION",

@@ -97,6 +97,18 @@
           "$ref": "#/$defs/Sizing",
           "description": "Present only when at least one sizing fact is known for this node; absent entirely means cost_unknown for every costable dimension"
         },
+        "iam_identity_policies": {
+          "items": {
+            "$ref": "#/$defs/PolicyDocument"
+          },
+          "type": "array"
+        },
+        "iam_trust_policy": {
+          "$ref": "#/$defs/PolicyDocument"
+        },
+        "iam_resource_policy": {
+          "$ref": "#/$defs/PolicyDocument"
+        },
         "raw_attributes": {
           "type": "object"
         },
@@ -111,6 +123,86 @@
         "type",
         "resolution",
         "provenance"
+      ]
+    },
+    "PolicyDocument": {
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1,
+          "description": "The originating Terraform resource's own key (e.g. aws_iam_role_policy.app_secrets"
+        },
+        "version": {
+          "type": "string",
+          "description": "The policy document's own declared Version (e.g. \"2012-10-17\")"
+        },
+        "statements": {
+          "items": {
+            "$ref": "#/$defs/PolicyStatement"
+          },
+          "type": "array"
+        },
+        "provenance": {
+          "$ref": "#/$defs/Provenance"
+        }
+      },
+      "additionalProperties": false,
+      "type": "object",
+      "required": [
+        "id",
+        "statements",
+        "provenance"
+      ]
+    },
+    "PolicyStatement": {
+      "properties": {
+        "sid": {
+          "type": "string"
+        },
+        "effect": {
+          "type": "string",
+          "enum": [
+            "Allow",
+            "Deny"
+          ]
+        },
+        "principal": {
+          "description": "Preserved exactly as declared — a string"
+        },
+        "action": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array",
+          "description": "Preserved verbatim"
+        },
+        "not_action": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "resource": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array",
+          "description": "Preserved verbatim"
+        },
+        "not_resource": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "condition": {
+          "type": "object"
+        }
+      },
+      "additionalProperties": false,
+      "type": "object",
+      "required": [
+        "effect"
       ]
     },
     "Provenance": {
@@ -236,5 +328,5 @@
     "edges"
   ],
   "x-changelog": "contracts/CHANGELOG.md",
-  "x-schema-version": "1.2.0"
+  "x-schema-version": "1.3.0"
 }
