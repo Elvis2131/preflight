@@ -52,14 +52,12 @@
 // this function changing at all.
 package analyse
 
-// SGRule is one security group's ingress ALLOW rule, restricted to the SG-to-SG
-// source-reference shape this file evaluates (see the scope decision above). SourceSG
-// is the security group ID this rule permits inbound traffic from — both
-// golden/aws/security.tf's aws_security_group_rule.source_security_group_id and an
-// inline ingress block's security_groups list resolve to this same shape.
-type SGRule struct {
-	SourceSG string
-}
+// PC-112 UPDATE: SGRule now lives in securitygroup2.go, widened to the real engine's
+// full shape (Direction, Protocol, FromPort/ToPort, CIDRs, SourceSG) — PC-79's own
+// call sites below and their tests construct it with only SourceSG set (named-field
+// literals), which still compiles unchanged against the wider type; sgPermits below
+// fills in the implicit "ingress, any protocol/port" meaning those bare literals
+// always had, before delegating to the real evaluator.
 
 // FilterEdgesBySGRules keeps only the edges whose destination's attached security
 // groups actually permit inbound traffic from the edge's source, per sgOf (resource ID
@@ -87,20 +85,31 @@ func FilterEdgesBySGRules(edges []DirectedEdge, sgOf map[string][]string, sgRule
 	return out
 }
 
+// sgPermits is PC-112's own reconciliation note, made real: "Re-implement
+// FilterEdgesBySGRules's internal sgPermits as a call to the PC-112 evaluator, so SPOF
+// prefiltering and request traces use one path." PC-79's own rules never set
+// Direction/Protocol/FromPort/ToPort (they only ever meant "an ingress rule allowing
+// this SG, any protocol/port") — that implicit meaning is filled in explicitly here
+// before handing off to EvaluateDirectional, so PC-79's existing tests (which
+// construct bare SGRule{SourceSG: "..."} literals) keep passing unchanged, exactly as
+// PC-112's reconciliation note requires, while the actual decision is now made by the
+// one real engine, not a second, narrower implementation.
 func sgPermits(from, to string, sgOf map[string][]string, sgRules map[string][]SGRule) bool {
 	toSGs, ok := sgOf[to]
 	if !ok || len(toSGs) == 0 {
 		return true
 	}
-	fromSGs := sgOf[from]
+	profile := SGProfile{SGIDs: toSGs}
 	for _, sg := range toSGs {
-		for _, rule := range sgRules[sg] {
-			for _, fromSG := range fromSGs {
-				if rule.SourceSG == fromSG {
-					return true
-				}
+		for _, r := range sgRules[sg] {
+			rule := r
+			rule.Direction = "ingress"
+			if rule.Protocol == "" {
+				rule.Protocol = "-1"
 			}
+			profile.Rules = append(profile.Rules, rule)
 		}
 	}
-	return false
+	decision := EvaluateDirectional(profile, "ingress", "", sgOf[from], "-1", 0)
+	return decision.Allowed
 }

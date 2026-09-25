@@ -1,7 +1,7 @@
 {
   "schema_version": "1.1.0",
   "version_number": 1,
-  "version_hash": "sha256:bb82aa53d3c1ba9b017992849f1092f47803540f2a5c8f4c8b66a8e18a6d4b0a",
+  "version_hash": "sha256:938cc882bd8336c4250e16f1464ca35516de726d988fb9a7c1d33f59f94f76da",
   "nodes": [
     {
       "id": "aws_db_instance.payments",
@@ -360,6 +360,24 @@
         "ingress.protocol": "tcp",
         "ingress.to_port": 443,
         "name": "payments-alb-sg",
+        "security_group_rules": [
+          {
+            "cidr_blocks": [
+              "0.0.0.0/0"
+            ],
+            "direction": "ingress",
+            "from_port": 443,
+            "protocol": "tcp",
+            "to_port": 443
+          },
+          {
+            "direction": "egress",
+            "from_port": 8080,
+            "protocol": "tcp",
+            "source_security_group": "aws_security_group.workload",
+            "to_port": 8080
+          }
+        ],
         "tags": {
           "Name": "payments-alb-sg"
         }
@@ -380,6 +398,15 @@
         "ingress.protocol": "tcp",
         "ingress.to_port": 6379,
         "name": "payments-cache-sg",
+        "security_group_rules": [
+          {
+            "direction": "ingress",
+            "from_port": 6379,
+            "protocol": "tcp",
+            "source_security_group": "aws_security_group.workload",
+            "to_port": 6379
+          }
+        ],
         "tags": {
           "Name": "payments-cache-sg"
         }
@@ -400,6 +427,15 @@
         "ingress.protocol": "tcp",
         "ingress.to_port": 5432,
         "name": "payments-database-sg",
+        "security_group_rules": [
+          {
+            "direction": "ingress",
+            "from_port": 5432,
+            "protocol": "tcp",
+            "source_security_group": "aws_security_group.workload",
+            "to_port": 5432
+          }
+        ],
         "tags": {
           "Name": "payments-database-sg"
         }
@@ -423,6 +459,38 @@
         "egress.protocol": "tcp",
         "egress.to_port": 443,
         "name": "payments-workload-sg",
+        "security_group_rules": [
+          {
+            "cidr_blocks": [
+              "0.0.0.0/0"
+            ],
+            "direction": "egress",
+            "from_port": 443,
+            "protocol": "tcp",
+            "to_port": 443
+          },
+          {
+            "direction": "ingress",
+            "from_port": 8080,
+            "protocol": "tcp",
+            "source_security_group": "aws_security_group.alb",
+            "to_port": 8080
+          },
+          {
+            "direction": "egress",
+            "from_port": 5432,
+            "protocol": "tcp",
+            "source_security_group": "aws_security_group.database",
+            "to_port": 5432
+          },
+          {
+            "direction": "egress",
+            "from_port": 6379,
+            "protocol": "tcp",
+            "source_security_group": "aws_security_group.cache",
+            "to_port": 6379
+          }
+        ],
         "tags": {
           "Name": "payments-workload-sg"
         }
