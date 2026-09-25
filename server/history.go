@@ -46,6 +46,8 @@ func GetStoredVersion(store *Store, sessionID string, versionNumber int) (Assess
 	}
 
 	var delta []core.DeltaEntry
+	var costDelta []core.CostDeltaEntry
+	var costSnapshotChanged bool
 	if versionNumber > 1 {
 		prev, prevOK, err := store.GetVersion(sessionID, versionNumber-1)
 		if err != nil {
@@ -54,6 +56,9 @@ func GetStoredVersion(store *Store, sessionID string, versionNumber int) (Assess
 		if prevOK {
 			prov := core.NewProvenance(core.KindDerived, "server:history:assurance-delta")
 			delta = core.ComputeDelta(prev.Scorecard.StatusMap(), stored.Scorecard.StatusMap(), prov)
+
+			costProv := core.NewProvenance(core.KindDerived, "server:history:cost-delta")
+			costDelta, costSnapshotChanged = core.ComputeCostDelta(prev.Cost, stored.Cost, costProv)
 		}
 	}
 
@@ -75,8 +80,10 @@ func GetStoredVersion(store *Store, sessionID string, versionNumber int) (Assess
 		// ComputeDurationMS measures the actual store read (real, if tiny — a SQLite
 		// row fetch, not an ingest/analyse pipeline), never a fabricated 0 standing
 		// in for "not applicable": this genuinely IS the time this call took.
-		ComputeDurationMS: time.Since(start).Milliseconds(),
-		Cost:              stored.Cost,
+		ComputeDurationMS:   time.Since(start).Milliseconds(),
+		Cost:                stored.Cost,
+		CostDelta:           costDelta,
+		CostSnapshotChanged: costSnapshotChanged,
 	}, nil
 }
 

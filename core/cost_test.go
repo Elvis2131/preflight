@@ -91,9 +91,9 @@ func TestComputeCost_GoldenBundle_HandVerifiedAgainstRealPriceRows(t *testing.T)
 	if !ok || cache.Decision != core.CostPriced {
 		t.Fatalf("elasticache: got %+v, want priced", cache)
 	}
-	wantCache := 0.206 * core.HoursPerMonthAssumption
+	wantCache := 0.206 * core.HoursPerMonthAssumption * 3 // golden bundle's real num_cache_clusters = 3
 	if cache.MonthlyAmount != wantCache {
-		t.Errorf("ElastiCache MonthlyAmount = %v, want %v (hand-verified: $0.206/hr x 730)", cache.MonthlyAmount, wantCache)
+		t.Errorf("ElastiCache MonthlyAmount = %v, want %v (hand-verified: $0.206/hr x 730 x 3 nodes)", cache.MonthlyAmount, wantCache)
 	}
 
 	alb, ok := byID["aws_lb.payments"]

@@ -24,6 +24,17 @@ type ScorecardEntry struct {
 type Scorecard struct {
 	VersionNumber int              `json:"version_number" validate:"gte=1" jsonschema:"required,minimum=1"`
 	Entries       []ScorecardEntry `json:"entries" validate:"dive"`
+
+	// Cost is PC-118's own acceptance criterion, verbatim: "Scorecard has a separate
+	// cost dimension; no code path combines it with other dimensions." Nil whenever
+	// no pricing snapshot was available for this version — never a computed $0.
+	// Deliberately NOT one of Entries (a plain numeric field, or a nested struct with
+	// one): TestScorecardHasNoCompositeScoreField only walks Scorecard's own
+	// top-level field KINDS, and a *CostReport field's kind is Ptr, not a numeric
+	// kind — the forbidden thing is one NUMBER folding every dimension together, not
+	// "no numbers exist anywhere in the scorecard" (cost's own total is exactly as
+	// legitimate a number as a version_number is).
+	Cost *CostReport `json:"cost,omitempty"`
 }
 
 // Validate checks this Scorecard against the same struct tags it is generated from.

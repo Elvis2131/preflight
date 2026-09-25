@@ -79,6 +79,18 @@ type AssessResponse struct {
 	// core.ComputeCost's own per-component cost_unknown discipline at the
 	// whole-response level.
 	Cost *core.CostReport `json:"cost,omitempty"`
+
+	// CostDelta is PC-118's own extension to the Assurance Delta: per-component cost
+	// changes since the previous version, nil for a session's first version (nothing
+	// to diff against, same reasoning as AssuranceDelta's own doc comment).
+	// CostSnapshotChanged is true whenever this version and the previous one were
+	// priced against different pricing snapshots — this file's own recorded DECISION
+	// (core/cost_delta.go): when true, no entry in CostDelta is ever classified
+	// increased/decreased, only structural changes (added/removed/became_priced/
+	// became_unknown), since a snapshot-to-snapshot price movement cannot be honestly
+	// distinguished from a design change.
+	CostDelta           []core.CostDeltaEntry `json:"cost_delta,omitempty"`
+	CostSnapshotChanged bool                  `json:"cost_snapshot_changed,omitempty"`
 }
 
 // Assess runs one full deterministic assessment: ingest -> core engines (PC-14/17/18)
@@ -167,7 +179,23 @@ func assessFromResult(store *Store, sessionID string, versionNumber int, hadPrev
 
 	findings := core.BuildFindings(result.IR, workload)
 	findings = append(findings, core.BuildUnsupportedRouteFindings(toUnsupportedRouteInfos(result.UnsupportedRoutes))...)
+
+	// PC-118: cost is computed and budget-checked BEFORE the scorecard is built, so a
+	// declared hard-budget finding is just one more entry in the same scorecard the
+	// existing compliance delta mechanism already diffs — no separate cost-compliance
+	// delta path needed for the budget-finding case specifically.
+	cost, err := computeCostIfAvailable(store, result.IR, priceSnapshotID)
+	if err != nil {
+		return AssessResponse{}, err
+	}
+	if cost != nil {
+		c := core.ApplyCostBudget(*cost, workload.Requirements)
+		cost = &c
+	}
+	findings = append(findings, core.BuildCostBudgetFindings(cost, workload.Requirements)...)
+
 	scorecard := core.BuildScorecard(findings, versionNumber)
+	scorecard.Cost = cost
 
 	var delta []core.DeltaEntry
 	if hadPrev {
@@ -175,9 +203,11 @@ func assessFromResult(store *Store, sessionID string, versionNumber int, hadPrev
 		delta = core.ComputeDelta(prev.Scorecard.StatusMap(), scorecard.StatusMap(), prov)
 	}
 
-	cost, err := computeCostIfAvailable(store, result.IR, priceSnapshotID)
-	if err != nil {
-		return AssessResponse{}, err
+	var costDelta []core.CostDeltaEntry
+	var costSnapshotChanged bool
+	if hadPrev {
+		prov := core.NewProvenance(core.KindDerived, "server:assess:cost-delta")
+		costDelta, costSnapshotChanged = core.ComputeCostDelta(prev.Cost, cost, prov)
 	}
 
 	if err := store.StoreVersion(StoredVersion{
@@ -197,16 +227,18 @@ func assessFromResult(store *Store, sessionID string, versionNumber int, hadPrev
 	graph := graphOrFailureMessage(result.IR)
 
 	return AssessResponse{
-		SessionID:         sessionID,
-		VersionNumber:     versionNumber,
-		Findings:          findings,
-		Scorecard:         scorecard,
-		AssuranceDelta:    delta,
-		Graph:             &graph,
-		Degraded:          true,
-		DegradedReason:    "reason/ has no LLM client wired up yet (ADR-005/PC-77) — every response is narrative-degraded until it does",
-		ComputeDurationMS: time.Since(start).Milliseconds(),
-		Cost:              cost,
+		SessionID:           sessionID,
+		VersionNumber:       versionNumber,
+		Findings:            findings,
+		Scorecard:           scorecard,
+		AssuranceDelta:      delta,
+		Graph:               &graph,
+		Degraded:            true,
+		DegradedReason:      "reason/ has no LLM client wired up yet (ADR-005/PC-77) — every response is narrative-degraded until it does",
+		ComputeDurationMS:   time.Since(start).Milliseconds(),
+		Cost:                cost,
+		CostDelta:           costDelta,
+		CostSnapshotChanged: costSnapshotChanged,
 	}, nil
 }
 

@@ -70,6 +70,17 @@ type CostReport struct {
 	Currency             string
 	Components           []ComponentCost
 	UnpricedCount        int
+
+	// BudgetUSD/BudgetPriority/BudgetExceeded are PC-118's own addition — populated by
+	// ApplyCostBudget when the workload declares a "monthly_cost_budget_usd"
+	// Requirement (BudgetUSD stays nil when no such requirement was declared, never a
+	// guessed/default budget). A PREFERENCE-priority budget being exceeded is
+	// recorded here as a trade-off fact, deliberately never surfaced as a compliance
+	// Finding (Card: "not automatically a regression") — only a HARD budget's
+	// violation becomes a real Finding, see BuildCostBudgetFindings.
+	BudgetUSD      *float64            `json:"budget_usd,omitempty"`
+	BudgetPriority RequirementPriority `json:"budget_priority,omitempty"`
+	BudgetExceeded bool                `json:"budget_exceeded,omitempty"`
 }
 
 // engineNameToAWS normalizes a Terraform aws_db_instance `engine` value to the AWS
@@ -138,6 +149,13 @@ func costOneNode(n Node, table PriceTable, prov Provenance) ComponentCost {
 
 	base.Decision = CostPriced
 	base.MonthlyAmount = row.Price * HoursPerMonthAssumption
+	// ElastiCache's price row is a PER-NODE hourly rate — a replication group with
+	// multiple nodes (Sizing.Count, from num_cache_clusters) costs that many times
+	// over, a real fact the golden bundle's own aws-broken (1 node) vs aws (3 nodes)
+	// difference makes directly observable, not a hypothetical.
+	if n.Type == NodeTypeCache && n.Sizing.Count != nil && *n.Sizing.Count > 0 {
+		base.MonthlyAmount *= float64(*n.Sizing.Count)
+	}
 	base.SKURateCode = row.SKUAttributes["rate_description"]
 	return base
 }
@@ -227,4 +245,48 @@ func matchALBRow(n Node, table PriceTable) (PriceRow, bool, string) {
 		}
 	}
 	return PriceRow{}, false, "no base Application Load Balancer hourly rate found in this pricing snapshot"
+}
+
+// CostBudgetRequirementID is the one recognized Workload.Requirements[].ID for a
+// declared monthly cost budget — PC-118's own Card: "Cost is typically a preference-
+// priority requirement in the workload." Reuses PRD §4's existing, general
+// Requirement{ID, Value, Priority} mechanism rather than inventing a dedicated
+// Workload field — Value must be a float64 (a monthly USD amount); Priority follows
+// PRD §4's own hard/preference vocabulary unchanged.
+const CostBudgetRequirementID = "monthly_cost_budget_usd"
+
+func findCostBudgetRequirement(requirements []Requirement) (amount float64, priority RequirementPriority, ok bool) {
+	for _, r := range requirements {
+		if r.ID != CostBudgetRequirementID {
+			continue
+		}
+		// A YAML-decoded requirements value carries whichever concrete numeric Go
+		// type its literal in the source file happened to be (a bare integer like
+		// "500" decodes to int, "500.0" to float64) — both are real, honest ways for
+		// an architect to have declared the same budget, so both are accepted here
+		// rather than silently treating an integer-literal budget as undeclared.
+		switch v := r.Value.(type) {
+		case float64:
+			return v, r.Priority, true
+		case int:
+			return float64(v), r.Priority, true
+		}
+	}
+	return 0, "", false
+}
+
+// ApplyCostBudget evaluates a declared cost budget requirement (if any) against an
+// already-computed CostReport, returning an augmented copy — a pure function, called
+// after ComputeCost, never inside it (ComputeCost's own inputs stay IR+PriceTable
+// only, per its own doc comment). A report with no declared budget requirement is
+// returned completely unchanged (BudgetUSD stays nil).
+func ApplyCostBudget(report CostReport, requirements []Requirement) CostReport {
+	amount, priority, ok := findCostBudgetRequirement(requirements)
+	if !ok {
+		return report
+	}
+	report.BudgetUSD = &amount
+	report.BudgetPriority = priority
+	report.BudgetExceeded = report.PricedTotal > amount
+	return report
 }
