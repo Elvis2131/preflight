@@ -4,7 +4,7 @@
 
 **Project name:** Preflight
 **Working category:** Architecture assurance control loop for AI-authored infrastructure
-**Purpose:** A server engineers — or their AI agents — call during architecture authoring. Each call takes the current IaC state plus a declared workload (NFRs) and returns a versioned assessment: compliance with evidence, a rendered architecture graph, and failure-mode analysis with simulation.
+**Purpose:** an architecture assurance engine an architect designs against on a canvas (primary, as of PRD v6 / PC-103), or a server engineers — or their AI agents — call during architecture authoring (the original primary interface, still fully supported, §3). Each call takes the current IaC state or canvas design plus a declared workload (NFRs) and returns a versioned assessment: compliance with evidence, a rendered architecture graph, and failure-mode analysis with simulation.
 
 This is a **portfolio/credibility artifact for [[reppl-sh]]**, not a commercial product. Production-grade engineering judgment is the deliverable, not revenue.
 
@@ -50,26 +50,36 @@ docker compose up --build   # homelab dev environment
 
 ## 3. Product philosophy
 
+**PC-103 pivot (PRD v6), recorded here rather than silently overwritten:** the primary
+user changed. The original thesis (v1–v5) was the platform/SRE engineer authoring
+infrastructure with an AI agent, calling the API from an editor or agent loop. As of
+PRD v6, the primary user is **the architect designing on a canvas** (the Architect
+Workspace, PC-96/104) — the MCP/agent loop (PC-21, PC-28) stays exactly as built, as a
+fully supported second interface, not removed or demoted in capability. Everything
+below reflects that pivot. See `docs/architecture-assurance-prd.md` §3 for the full
+users table and PC-103's own Jira record for why the change happened.
+
 ### What this project IS
 
 An engine that:
-1. Ingests IaC (Terraform/OpenTofu, HCL subset) into a two-level, provenance-tagged intermediate representation.
+1. Ingests IaC — Terraform/OpenTofu HCL, **or a canvas design** (PC-84/86, the same IR-producer boundary as HCL ingestion, §21) — into a two-level, provenance-tagged intermediate representation.
 2. Evaluates that IR deterministically for compliance, structural failure modes, and SPOFs.
 3. Simulates faults (node/zone/region/dependency loss) against the IR and reports what survives.
 4. Adds LLM narrative *annotation* on top of the deterministic result — never in place of it.
-5. Versions every assessment and computes an Assurance Delta between iterations, so an agent can self-correct.
+5. Versions every assessment and computes an Assurance Delta between iterations, so an architect or an agent can self-correct.
 6. Validates its own predictions empirically, at the cheapest rung that answers the question (§13).
+7. Reports on traffic flow, cost, and a shareable per-version report (PC-97–101) — all of these are projections of results core already computes, never a new verdict source (§9's non-goals rule extends to every one of them).
 
 ### What this project IS NOT
 
 Do not turn this into:
 - an IaC generation platform ("AI writes your Terraform") — crowded, commoditised, and off-thesis. Export only happens *after* assurance, never instead of it.
-- a drawing/diagramming tool — the architecture graph is **derived from the IR, never hand-edited**. If a canvas is ever built (a deferred idea, see §21), it is an IR *producer* feeding the same unchanged pipeline, not a bypass of it.
-- a live cloud account scanner — P0 is static analysis only, no credentials, by design (NFR-15).
+- a freeform drawing/diagramming tool disconnected from a real IR. The canvas (§21 — built, not deferred, as of PC-84/86/96) **is** an IR producer, exactly like HCL ingestion, feeding the same unchanged `core` pipeline; the narrowing that matters is not "no canvas" but **"the assessment view — graph rendering, diffs, findings — stays derived and read-only, never hand-edited to force a verdict."** A canvas node's capability/sizing/compliance selections are real IR-producing input, tagged `stated` at ingestion (`ingest/canvas.go`) exactly like an HCL attribute; what's still forbidden is skipping the pipeline — painting a node "resilient" without the engine having said so, or hand-editing a diagram to fix a finding instead of fixing the design and re-assessing.
+- a live cloud account scanner — P0 is static analysis only, no credentials, by design (NFR-15). PC-100's pricing snapshots don't change this: the snapshot fetcher runs in P3 (credentialed) or a dedicated job, never in the P1 assessment path, and `core`'s own cost math reads only the snapshot, never a live API.
 - a general compliance-as-code platform — the compliance engine covers what the golden reference architecture needs, not an arbitrary control catalog.
 - a chaos-orchestration SaaS — Preflight *predicts* structurally and *exports* runnable experiments; it does not run chaos infrastructure itself beyond the validation ladder's own Rung 3.
 
-The value of this product is **provable, evidenced assurance**, not visual polish and not breadth of cloud-service coverage.
+The value of this product is **provable, evidenced assurance**, not visual polish and not breadth of cloud-service coverage. The canvas and the new epics (traffic, failure lab expansion, cost, report, IAM) widen the SURFACE the architect interacts with; they do not relax any of the five invariants (§4) that make the assurance itself trustworthy.
 
 ------------------------------------------------------------------------
 
@@ -364,14 +374,25 @@ What is not yet decided and should surface as a question, not a silent assumptio
 
 ------------------------------------------------------------------------
 
-## 21. Deferred: visual canvas (not in scope for v1)
+## 21. The canvas — built, not deferred (superseded by PC-84/86/96)
 
-A drag-and-drop canvas for authoring architectures (rather than writing Terraform) has been discussed and deliberately deferred, sequenced *after* the agent-iteration acceptance test (§17.4) proves the core loop works headlessly. If picked up later:
-- It is a new IR **producer** (`POST /sessions/{id}/canvas`), symmetric to `ingest/`, feeding the *same unchanged* `core` pipeline — never a second source of truth, never a way to hand-edit an assessment (§3).
-- The palette is restricted to the golden vocabulary's node types (§14) — not "every AWS/Azure service," which would recreate the exact crowded diagramming-tool category this project deliberately isn't.
-- A candidate reference for the canvas UI layer (React/`@xyflow`) and its AWS network-physics logic exists — see §5's caveats before using any of it.
+**Superseded, recorded rather than deleted (this section's original text described the
+canvas as a deferred idea "not in scope for v1"; PC-84/85/86 built it, PC-96/103/104
+then made it the primary interface — that is a materially different status, not a
+detail correction, so the change is named here rather than silently overwritten).**
 
-Do not start this before Phase 1-3 (§6, §20) are complete. A working canvas on top of a broken or absent assurance engine is a worse artifact than a headless engine that actually proves its claim.
+The canvas exists and, as of PRD v6 (PC-103), is the primary authoring surface — the
+Architect Workspace (PC-96/104), a mode-based UI (Design / Simulate / Failure Lab /
+Analyze / Report) built on top of it. What the original deferral got right, and what
+still holds:
+- It is an IR **producer** (`POST /sessions/{id}/assess_canvas`, PC-86/93), symmetric to `ingest/`, feeding the *same unchanged* `core` pipeline — never a second source of truth, never a way to hand-edit an assessment (§3's narrowed rule).
+- The palette is now intentionally wider than the original golden vocabulary (PC-96: "an expanded AWS palette governed by per-service capability levels") — the constraint that actually matters was never palette size, it was that every added service declares an honest capability level, and behaviour not modelled returns `not_assessable` (I4), never a silent pass. Recorded as a real widening of an earlier rule, not an unprincipled one.
+- The reference project named in the original deferral (`@xyflow` UI layer, AWS network-physics logic) is now formally the AWS Architecture Lab reference (`github.com/norbutlepcha25/aws-resilience-simulator`, cited across PC-96/97/99) — same ADR-004 caveat applies: port and verify against AWS's own documentation, never vendor its code or trust its logic unverified. It has shipped at least one known correctness bug (Multi-AZ recovery inferred without checking surviving capacity) — a concrete reason the "port and verify, don't vendor" rule is load-bearing here, not boilerplate caution.
+
+The workspace holds UI state only (PC-104's own restated rule): no mode computes a
+verdict, fault result, cost, or traffic result in the browser — every mode calls the
+server, same as the original canvas rule, restated because five modes make it easier
+to erode than one did.
 
 ------------------------------------------------------------------------
 
