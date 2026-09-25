@@ -1,6 +1,4 @@
-// Package cidr will hold AWS conformance tests for CIDR allocation, reserved
-// addresses, and overlap detection (CIDR-RESERVED-*) — PC-106. This directory exists
-// now (PC-119: the conformance harness and its layout) so that ticket writes directly
-// against the tests/aws-conformance/harness format from day one. No tests exist here
-// yet because the CIDR allocator doesn't.
+// Package cidr holds AWS conformance tests for CIDR allocation, reserved addresses,
+// and overlap detection (PC-106) — see cidr_test.go for the real allocator/validator
+// tests (core/internal/analyse/cidr.go).
 package cidr
