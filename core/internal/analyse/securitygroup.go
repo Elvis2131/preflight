@@ -6,6 +6,21 @@
 // Terraform doesn't encode application-level connectivity as a resource reference;
 // that connectivity lives in security-group ALLOW rules instead).
 //
+// CORRECTION, recorded rather than rewritten (this file's own established convention —
+// see core/finding.go's own DetectionState comment for the precedent): PC-79 was
+// closed against a stale ticket description. A comment already on PC-79 before this
+// file was written had resolved the "SG-only vs SG+NACL" question below as "both, as
+// separate engines" (PC-112 for Security Groups, PC-113 for NACLs) and said to leave
+// PC-79 open until PC-112 closes; that comment was missed. PC-79 has been reopened.
+// PC-112 owns the one real SG evaluation function (stateful, allow-only, CIDR + SG-
+// reference sources, multi-SG union, protocol/port, explainable decision) — this
+// file's own sgPermits is superseded scope (ingress-only, no CIDR, not stateful), not
+// the final SG semantics, and will be re-implemented as a call into PC-112's evaluator.
+// The tests below stay as a permanent regression check either way (PC-112's own
+// reconciliation note says so explicitly). The scope reasoning immediately below
+// remains accurate as a description of what THIS file does and why, at the time it was
+// written — it is simply no longer the last word on where SG evaluation ends up.
+//
 // SCOPE DECISION, recorded per PC-79's first acceptance criterion: SG-only for v1, not
 // SG+NACL. Reason: no aws_network_acl (or any NACL) resource exists anywhere in this
 // project — not in golden/aws, golden/aws-broken, golden/azure, golden/azure-broken,

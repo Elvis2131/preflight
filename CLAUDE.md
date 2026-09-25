@@ -334,17 +334,18 @@ A LocalStack round-trip result must never populate a field also used for real-cl
 
 ## 19. Development workflow for AI agents
 
-1. Read the relevant frozen contract in `contracts/` before writing code that touches it.
-2. Check whether the behaviour you're implementing is already decided in an ADR (§16) — don't re-litigate.
-3. For any cloud-specific behavioural rule, verify against primary AWS/Azure documentation (§5), not memory, and not the reference project's code unverified.
-4. State the intended rule in plain language before implementing it.
-5. Add or update a golden fixture or property test for the behaviour.
-6. Implement the smallest change that satisfies it.
-7. Run the full test suite (`go test ./...`), not just the new test.
-8. Confirm determinism: run the affected test twice, hashes must match.
-9. Confirm provenance: every new field you introduce has an explicit tag in the schema.
-10. If the change touches a frozen contract, bump its version and write the migration note.
-11. If the change reopens a settled decision (§16), that's an ADR, not a code comment — write it.
+1. Read the ENTIRE ticket before starting, not just the description — every comment, in order, top to bottom. Comments are this project's main channel for updated spec text after a ticket is filed (see PC-7, PC-18, PC-86, and the PC-79/PC-112 reconciliation this rule was written after). Where a later comment conflicts with the description or an earlier comment, the later comment wins. If it's ambiguous which of two comments is later, or whether a comment actually supersedes the description, stop and ask rather than guessing — a ticket built against stale scope is worse than a ticket not yet started.
+2. Read the relevant frozen contract in `contracts/` before writing code that touches it.
+3. Check whether the behaviour you're implementing is already decided in an ADR (§16) — don't re-litigate.
+4. For any cloud-specific behavioural rule, verify against primary AWS/Azure documentation (§5), not memory, and not the reference project's code unverified.
+5. State the intended rule in plain language before implementing it.
+6. Add or update a golden fixture or property test for the behaviour.
+7. Implement the smallest change that satisfies it.
+8. Run the full test suite (`go test ./...`), not just the new test.
+9. Confirm determinism: run the affected test twice, hashes must match.
+10. Confirm provenance: every new field you introduce has an explicit tag in the schema.
+11. If the change touches a frozen contract, bump its version and write the migration note.
+12. If the change reopens a settled decision (§16), that's an ADR, not a code comment — write it.
 
 ------------------------------------------------------------------------
 
