@@ -76,6 +76,7 @@ func GetStoredVersion(store *Store, sessionID string, versionNumber int) (Assess
 		// row fetch, not an ingest/analyse pipeline), never a fabricated 0 standing
 		// in for "not applicable": this genuinely IS the time this call took.
 		ComputeDurationMS: time.Since(start).Milliseconds(),
+		Cost:              stored.Cost,
 	}, nil
 }
 

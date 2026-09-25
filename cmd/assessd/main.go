@@ -45,6 +45,7 @@ func main() {
 		log.Fatalf("assessd: open pricing store: %v", err)
 	}
 	defer pricingStore.Close()
+	store.AttachPricingStore(pricingStore) // PC-117: /assess reads this via a local SQLite lookup, never a network call
 
 	mux := http.NewServeMux()
 	mux.HandleFunc("/healthz", func(w http.ResponseWriter, r *http.Request) {

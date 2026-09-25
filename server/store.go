@@ -19,6 +19,7 @@ import (
 	_ "modernc.org/sqlite" // pure-Go driver, registered under "sqlite" — no CGO, simpler cross-platform builds than mattn/go-sqlite3
 
 	"preflight/core"
+	"preflight/pricing"
 )
 
 // Store is a SQLite-backed (WAL mode, ADR-002) session/version store. A session is one
@@ -27,7 +28,22 @@ import (
 // server call against a session produces Version N").
 type Store struct {
 	db *sql.DB
+
+	// pricingStore is PC-117's own attachment point — nil unless AttachPricingStore
+	// is called (cmd/assessd/main.go, after opening both stores). A nil pricingStore
+	// means "no pricing configured," never an error: /assess must keep working for
+	// every existing caller/test that never wires one up at all (this field's own
+	// zero value, unchanged Store{db: db} construction everywhere else). pricing.Store
+	// itself has zero network capability (pricing/boundary_test.go), so holding a
+	// reference to it here adds no network capability to assessd (P1).
+	pricingStore *pricing.Store
 }
+
+// AttachPricingStore wires PC-117's cost computation into this Store — /assess reads
+// pricing.Store directly (a local SQLite read, never a network call) to resolve
+// either a caller-pinned or the active snapshot. Optional: a Store with none attached
+// behaves exactly as it did before PC-117 (Cost stays nil in every response).
+func (s *Store) AttachPricingStore(ps *pricing.Store) { s.pricingStore = ps }
 
 // OpenStore opens (creating if necessary) a SQLite database at path and ensures its
 // schema exists. path may be ":memory:" for an ephemeral, test-only store.
@@ -65,6 +81,7 @@ CREATE TABLE IF NOT EXISTS versions (
 	findings_json  TEXT NOT NULL,
 	scorecard_json TEXT NOT NULL,
 	workload_json  TEXT NOT NULL DEFAULT '{}',
+	cost_json      TEXT NOT NULL DEFAULT '',
 	created_at     TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now')),
 	PRIMARY KEY (session_id, version_number)
 );
@@ -79,6 +96,10 @@ CREATE TABLE IF NOT EXISTS versions (
 	// column added explicitly. Error ignored: SQLite errors if the column already
 	// exists, which is the expected, harmless case on every run after the first.
 	s.db.Exec(`ALTER TABLE versions ADD COLUMN workload_json TEXT NOT NULL DEFAULT '{}'`)
+	// PC-117: same reasoning, for cost_json — an empty string means "no cost was
+	// computed for this version" (no pricing store was attached at assess time),
+	// distinct from a real, marshaled core.CostReport.
+	s.db.Exec(`ALTER TABLE versions ADD COLUMN cost_json TEXT NOT NULL DEFAULT ''`)
 	return nil
 }
 
@@ -125,6 +146,12 @@ type StoredVersion struct {
 	// caller would need to re-supply workload_path just to re-derive
 	// region/capacity facts /assess already had when it built this version.
 	Workload core.Workload
+
+	// Cost is PC-117's own acceptance criterion made real: "Assessment records the
+	// snapshot ID used; the assess and read-back responses include it." Nil means no
+	// pricing store was attached when this version was assessed — not an error, and
+	// not the same thing as "priced at $0."
+	Cost *core.CostReport
 }
 
 // StoreVersion persists v. VersionNumber must be exactly one greater than the current
@@ -149,9 +176,17 @@ func (s *Store) StoreVersion(v StoredVersion) error {
 	if err != nil {
 		return fmt.Errorf("server: marshal workload: %w", err)
 	}
+	var costJSON string
+	if v.Cost != nil {
+		b, err := json.Marshal(v.Cost)
+		if err != nil {
+			return fmt.Errorf("server: marshal cost: %w", err)
+		}
+		costJSON = string(b)
+	}
 	_, err = s.db.Exec(
-		`INSERT INTO versions (session_id, version_number, ir_json, findings_json, scorecard_json, workload_json) VALUES (?, ?, ?, ?, ?, ?)`,
-		v.SessionID, v.VersionNumber, string(irJSON), string(findingsJSON), string(scorecardJSON), string(workloadJSON),
+		`INSERT INTO versions (session_id, version_number, ir_json, findings_json, scorecard_json, workload_json, cost_json) VALUES (?, ?, ?, ?, ?, ?, ?)`,
+		v.SessionID, v.VersionNumber, string(irJSON), string(findingsJSON), string(scorecardJSON), string(workloadJSON), costJSON,
 	)
 	if err != nil {
 		return fmt.Errorf("server: store version %d for session %s: %w", v.VersionNumber, v.SessionID, err)
@@ -164,7 +199,7 @@ func (s *Store) StoreVersion(v StoredVersion) error {
 // /assess call produces Version 1, with no prior version to diff against).
 func (s *Store) LatestVersion(sessionID string) (StoredVersion, bool, error) {
 	row := s.db.QueryRow(
-		`SELECT version_number, ir_json, findings_json, scorecard_json, workload_json FROM versions
+		`SELECT version_number, ir_json, findings_json, scorecard_json, workload_json, cost_json FROM versions
 		 WHERE session_id = ? ORDER BY version_number DESC LIMIT 1`,
 		sessionID,
 	)
@@ -174,7 +209,7 @@ func (s *Store) LatestVersion(sessionID string) (StoredVersion, bool, error) {
 // GetVersion returns a specific version by number.
 func (s *Store) GetVersion(sessionID string, versionNumber int) (StoredVersion, bool, error) {
 	row := s.db.QueryRow(
-		`SELECT version_number, ir_json, findings_json, scorecard_json, workload_json FROM versions
+		`SELECT version_number, ir_json, findings_json, scorecard_json, workload_json, cost_json FROM versions
 		 WHERE session_id = ? AND version_number = ?`,
 		sessionID, versionNumber,
 	)
@@ -183,10 +218,10 @@ func (s *Store) GetVersion(sessionID string, versionNumber int) (StoredVersion, 
 
 func scanVersion(row *sql.Row, sessionID string) (StoredVersion, bool, error) {
 	var (
-		versionNumber                                     int
-		irJSON, findingsJSON, scorecardJSON, workloadJSON string
+		versionNumber                                               int
+		irJSON, findingsJSON, scorecardJSON, workloadJSON, costJSON string
 	)
-	if err := row.Scan(&versionNumber, &irJSON, &findingsJSON, &scorecardJSON, &workloadJSON); err != nil {
+	if err := row.Scan(&versionNumber, &irJSON, &findingsJSON, &scorecardJSON, &workloadJSON, &costJSON); err != nil {
 		if err == sql.ErrNoRows {
 			return StoredVersion{}, false, nil
 		}
@@ -211,9 +246,17 @@ func scanVersion(row *sql.Row, sessionID string) (StoredVersion, bool, error) {
 			return StoredVersion{}, false, fmt.Errorf("server: unmarshal stored workload: %w", err)
 		}
 	}
+	var cost *core.CostReport
+	if costJSON != "" {
+		var c core.CostReport
+		if err := json.Unmarshal([]byte(costJSON), &c); err != nil {
+			return StoredVersion{}, false, fmt.Errorf("server: unmarshal stored cost: %w", err)
+		}
+		cost = &c
+	}
 
 	return StoredVersion{
 		SessionID: sessionID, VersionNumber: versionNumber,
-		IR: &ir, Findings: findings, Scorecard: scorecard, Workload: workload,
+		IR: &ir, Findings: findings, Scorecard: scorecard, Workload: workload, Cost: cost,
 	}, true, nil
 }

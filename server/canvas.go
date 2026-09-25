@@ -43,6 +43,10 @@ type AssessCanvasRequest struct {
 	// Workload wins — WorkloadPath remains for the Terraform-authored path (curl,
 	// existing tests) where no form exists to have produced an inline one.
 	Workload *core.Workload `json:"workload,omitempty"`
+
+	// PriceSnapshotID mirrors AssessRequest's own field (server/assess.go) — see its
+	// doc comment for the full resolution rule.
+	PriceSnapshotID string `json:"price_snapshot_id,omitempty"`
 }
 
 // AssessCanvas builds an IR directly from a posted canvas document
@@ -74,7 +78,7 @@ func AssessCanvas(store *Store, req AssessCanvasRequest) (AssessResponse, error)
 		return AssessResponse{}, fmt.Errorf("server: ingest canvas: %w", err)
 	}
 
-	return assessFromResult(store, req.SessionID, versionNumber, hadPrev, prev, workload, result, start)
+	return assessFromResult(store, req.SessionID, versionNumber, hadPrev, prev, workload, result, start, req.PriceSnapshotID)
 }
 
 // loadOrValidateWorkload resolves AssessCanvasRequest's two mutually-exclusive

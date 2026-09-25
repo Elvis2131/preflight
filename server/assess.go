@@ -10,6 +10,7 @@ import (
 
 	"preflight/core"
 	"preflight/ingest"
+	"preflight/pricing"
 	"preflight/providers"
 	awsprovider "preflight/providers/aws"
 	azureprovider "preflight/providers/azure"
@@ -33,6 +34,14 @@ type AssessRequest struct {
 
 	// WorkloadPath is the workload.yaml to load alongside BundleDir.
 	WorkloadPath string `json:"workload_path"`
+
+	// PriceSnapshotID is PC-117's own acceptance criterion: "Default = active
+	// snapshot; caller may pin a specific one." Empty means use whichever pricing
+	// snapshot is currently marked active (pricing.Store.ActiveSnapshot); if neither
+	// a pinned nor an active snapshot resolves, Cost stays nil in the response —
+	// never an assessment failure (pricing is additive, never load-bearing for the
+	// rest of the assessment).
+	PriceSnapshotID string `json:"price_snapshot_id,omitempty"`
 }
 
 // AssessResponse is /assess's full response shape (PRD §6, Design §2.1).
@@ -63,6 +72,13 @@ type AssessResponse struct {
 	// criterion is about a real measured latency, and a response that couldn't state
 	// its own duration would be asserting the criterion rather than demonstrating it.
 	ComputeDurationMS int64 `json:"compute_duration_ms"`
+
+	// Cost is PC-117: nil whenever no pricing store is attached to this Store, or
+	// neither a pinned nor an active snapshot could be resolved — never a computed
+	// $0, always a real distinguishable absence (Cost == nil), consistent with
+	// core.ComputeCost's own per-component cost_unknown discipline at the
+	// whole-response level.
+	Cost *core.CostReport `json:"cost,omitempty"`
 }
 
 // Assess runs one full deterministic assessment: ingest -> core engines (PC-14/17/18)
@@ -104,7 +120,7 @@ func Assess(store *Store, req AssessRequest) (AssessResponse, error) {
 		return AssessResponse{}, newAPIError(http.StatusUnprocessableEntity, "invalid_bundle", "server: ingest: %s", err)
 	}
 
-	return assessFromResult(store, req.SessionID, versionNumber, hadPrev, prev, workload, result, start)
+	return assessFromResult(store, req.SessionID, versionNumber, hadPrev, prev, workload, result, start, req.PriceSnapshotID)
 }
 
 // nextVersion is the session/version bookkeeping shared by every IR producer this
@@ -143,7 +159,7 @@ func toUnsupportedRouteInfos(routes []ingest.UnsupportedRoute) []core.Unsupporte
 	return infos
 }
 
-func assessFromResult(store *Store, sessionID string, versionNumber int, hadPrev bool, prev StoredVersion, workload core.Workload, result ingest.Result, start time.Time) (AssessResponse, error) {
+func assessFromResult(store *Store, sessionID string, versionNumber int, hadPrev bool, prev StoredVersion, workload core.Workload, result ingest.Result, start time.Time, priceSnapshotID string) (AssessResponse, error) {
 	if result.Insufficient != nil {
 		return AssessResponse{}, newAPIError(http.StatusUnprocessableEntity, "insufficient_model",
 			"server: bundle below the Minimum Viable Graph threshold: %+v", result.Insufficient)
@@ -159,9 +175,14 @@ func assessFromResult(store *Store, sessionID string, versionNumber int, hadPrev
 		delta = core.ComputeDelta(prev.Scorecard.StatusMap(), scorecard.StatusMap(), prov)
 	}
 
+	cost, err := computeCostIfAvailable(store, result.IR, priceSnapshotID)
+	if err != nil {
+		return AssessResponse{}, err
+	}
+
 	if err := store.StoreVersion(StoredVersion{
 		SessionID: sessionID, VersionNumber: versionNumber,
-		IR: result.IR, Findings: findings, Scorecard: scorecard, Workload: workload,
+		IR: result.IR, Findings: findings, Scorecard: scorecard, Workload: workload, Cost: cost,
 	}); err != nil {
 		return AssessResponse{}, err
 	}
@@ -185,7 +206,52 @@ func assessFromResult(store *Store, sessionID string, versionNumber int, hadPrev
 		Degraded:          true,
 		DegradedReason:    "reason/ has no LLM client wired up yet (ADR-005/PC-77) — every response is narrative-degraded until it does",
 		ComputeDurationMS: time.Since(start).Milliseconds(),
+		Cost:              cost,
 	}, nil
+}
+
+// computeCostIfAvailable is PC-117's own resolution rule: no pricing store attached ->
+// nil, nil (pricing is additive, never load-bearing for the rest of the assessment).
+// A pinned snapshot ID that doesn't resolve to a real, stored snapshot IS a real
+// caller error (they asked for something specific that doesn't exist) — surfaced as
+// an APIError, not silently ignored. No pin and no active snapshot either -> nil, nil
+// (nothing to price against yet, not an error: a fresh deployment may not have run
+// the pricing fetcher at all).
+func computeCostIfAvailable(store *Store, ir *core.IR, priceSnapshotID string) (*core.CostReport, error) {
+	if store.pricingStore == nil {
+		return nil, nil
+	}
+
+	var snap pricing.Snapshot
+	var ok bool
+	var err error
+	if priceSnapshotID != "" {
+		snap, ok, err = store.pricingStore.GetSnapshot(priceSnapshotID)
+		if err != nil {
+			return nil, err
+		}
+		if !ok {
+			return nil, newAPIError(http.StatusNotFound, "snapshot_not_found", "server: no pricing snapshot %s found", priceSnapshotID)
+		}
+	} else {
+		snap, ok, err = store.pricingStore.ActiveSnapshot()
+		if err != nil {
+			return nil, err
+		}
+		if !ok {
+			return nil, nil
+		}
+	}
+
+	table := core.PriceTable{SnapshotID: snap.ID}
+	for _, e := range snap.Entries {
+		table.Rows = append(table.Rows, core.PriceRow{
+			Service: e.Service, SKUAttributes: e.SKUAttributes, Unit: e.Unit, Price: e.Price, Currency: e.Currency,
+		})
+	}
+	prov := core.NewProvenance(core.KindDerived, "server:assess:cost").WithReason("snapshot " + snap.ID)
+	report := core.ComputeCost(ir, table, prov)
+	return &report, nil
 }
 
 // graphOrFailureMessage renders result.IR to SVG (PC-81) or, if that fails, returns a
