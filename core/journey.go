@@ -41,6 +41,12 @@ func EvaluateJourneyLoadReadiness(ir *IR, workload Workload, j DeclaredJourney, 
 	}
 
 	for _, nodeID := range j.Path {
+		if nodeID == JourneyInternetSentinel {
+			// Not a real IR node by design (core/journey_flow.go's own convention,
+			// mirroring BuildTrace's) — has no node type and needs no declared
+			// capacity of its own.
+			continue
+		}
 		node, ok := byID[nodeID]
 		if !ok {
 			return NotAssessable[any](fmt.Sprintf("journey %q references component %q, which does not exist in this IR", j.ID, nodeID), prov).ToEnvelope()

@@ -50,16 +50,19 @@ capacity:
 
 # Declared user journeys (PC-124) — the Card's own example, against real golden node
 # IDs. "checkout" is fully declared (every path component has a matching capacity
-# entry above) — a real, positive EvaluateJourneyLoadReadiness case. "settlement"
-# deliberately omits peak_rps/steady_rps — a real, checked not_assessable case
-# (structural flow, PC-125, still works for it; load results do not), the same
-# "golden fixtures include a checked not_assessable case" discipline PC-15's own
-# findings fixtures already established.
+# entry above) — a real, positive EvaluateJourneyLoadReadiness case. Path starts with
+# the literal "internet" sentinel (core.JourneyInternetSentinel, PC-125), matching the
+# Card's own example verbatim and BuildTrace's own real convention — a DNS record is
+# a name-resolution fact, not a network hop with its own subnet placement, so it is
+# not itself a path component. "settlement" deliberately omits peak_rps/steady_rps —
+# a real, checked not_assessable case (structural flow, PC-125, still works for it;
+# load results do not), the same "golden fixtures include a checked not_assessable
+# case" discipline PC-15's own findings fixtures already established.
 journeys:
   - id: checkout
     name: "Checkout: internet -> ALB -> EKS -> RDS"
     path:
-      - aws_route53_record.api
+      - internet
       - aws_lb.payments
       - aws_eks_cluster.payments
       - aws_db_instance.payments
