@@ -11,3 +11,5 @@
 # reserved for genuine placement (vpc.yaml/subnet.yaml's own established meaning).
 resource_type: aws_internet_gateway
 node_type: network_boundary
+
+capability_level: NETWORK_BEHAVIOR

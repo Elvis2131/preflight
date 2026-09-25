@@ -18,3 +18,5 @@ capabilities:
       producer/consumer polarity mismatch core.FailoverMechanismNone's own history
       already taught this project to check for explicitly. Verified against
       raw.githubusercontent.com/hashicorp/terraform-provider-azurerm (2026-09-21).
+
+capability_level: REQUEST_SIMULATION

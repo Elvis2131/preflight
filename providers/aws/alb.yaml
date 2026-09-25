@@ -30,3 +30,5 @@ capabilities:
       a real, load-bearing fact for a tier-1 workload's resilience posture, not a detail
       to leave silently unassumed. Verified against
       raw.githubusercontent.com/hashicorp/terraform-provider-aws (2026-09-20).
+
+capability_level: REQUEST_SIMULATION

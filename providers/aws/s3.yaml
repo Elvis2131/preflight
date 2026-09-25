@@ -1,0 +1,11 @@
+# S3 -> object_store. PC-107's own "expanded AWS palette": the first-ever mapping to
+# this NodeType (no golden scenario has used it before). Deliberately capped at
+# CONFIGURATION, not higher: this codebase has no dedicated engine that resolves S3's
+# own network placement (S3 isn't subnet/SG-placed the way EC2/RDS are — VPC endpoints
+# aside, out of scope here), replication (cross-region replication rules), or failure
+# behavior. Raising this requires shipping that engine first, not just adding this
+# entry — enforced structurally by core.MaxImplementedCapabilityLevel's own ceiling
+# for object_store.
+resource_type: aws_s3_bucket
+node_type: object_store
+capability_level: CONFIGURATION

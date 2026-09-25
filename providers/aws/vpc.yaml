@@ -8,3 +8,5 @@
 resource_type: aws_vpc
 node_type: network_boundary
 reference_edge_type: contained_in
+
+capability_level: NETWORK_BEHAVIOR

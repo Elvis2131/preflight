@@ -18,3 +18,5 @@ capabilities:
     source_attribute: default_action
     on_absent: not_assessable
     # Same reasoning as scope: required argument, no default to assume.
+
+capability_level: CONNECTIVITY

@@ -35,3 +35,5 @@
 resource_type: aws_db_subnet_group
 node_type: network_boundary
 reference_edge_type: contained_in
+
+capability_level: CONNECTIVITY

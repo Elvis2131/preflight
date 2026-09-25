@@ -9,3 +9,5 @@
 # subnet's traffic is filtered by this NACL's rules," not containment.
 resource_type: aws_network_acl
 node_type: network_boundary
+
+capability_level: NETWORK_BEHAVIOR

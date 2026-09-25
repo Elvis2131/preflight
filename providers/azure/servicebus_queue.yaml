@@ -27,3 +27,5 @@ capabilities:
       Queue has dead letter support when a message expires. Defaults to false."
       Verified against raw.githubusercontent.com/hashicorp/terraform-provider-azurerm
       (2026-09-21).
+
+capability_level: REQUEST_SIMULATION

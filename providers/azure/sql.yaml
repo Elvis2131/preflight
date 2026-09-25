@@ -46,3 +46,5 @@ failover:
       RPO=0 claim RPOFeasibility's "sync" classification requires.
       learn.microsoft.com/en-us/azure/azure-sql/database/high-availability-sla-local-zone-redundancy
       (verified 2026-09-21).
+
+capability_level: FAILURE_SIMULATION

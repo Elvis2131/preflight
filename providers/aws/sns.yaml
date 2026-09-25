@@ -1,0 +1,8 @@
+# SNS -> queue/stream. PC-107's own "expanded AWS palette". Capped at CONFIGURATION,
+# not REQUEST_SIMULATION like SQS: SQS's own level reflects a working, tested
+# ingest+trace path in this codebase already (golden bundle coverage, PC-114's own
+# server-level test against a real SQS node) — SNS has neither yet. Raising this to
+# match SQS is real future work, not automatic just because both are queue/stream.
+resource_type: aws_sns_topic
+node_type: queue/stream
+capability_level: CONFIGURATION

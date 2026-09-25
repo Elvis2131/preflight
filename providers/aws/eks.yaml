@@ -31,3 +31,5 @@ capabilities:
     # re-confirmed by direct doc fetch for this pass — left not_assessable rather than
     # asserted from recollection, per CLAUDE.md §5. Revisit with a direct source check
     # before promoting this to an assumed default.
+
+capability_level: REQUEST_SIMULATION

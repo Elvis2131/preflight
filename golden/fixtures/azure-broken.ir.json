@@ -1,7 +1,7 @@
 {
   "schema_version": "1.1.0",
   "version_number": 1,
-  "version_hash": "sha256:bdd24ca5dae315d0d2e8aeecf306af73367f53e5146d1c4487580f143cd77a55",
+  "version_hash": "sha256:d2427a4c18a9fadc19456feb32d9fc557799fcd04902ca439375b6b7e80ee7d0",
   "nodes": [
     {
       "id": "azurerm_application_gateway.payments",
@@ -14,6 +14,7 @@
         "backend_http_settings.port": 80,
         "backend_http_settings.protocol": "Http",
         "backend_http_settings.request_timeout": 30,
+        "capability_level": "REQUEST_SIMULATION",
         "frontend_ip_configuration.name": "payments-frontend-ip",
         "frontend_port.name": "http-port",
         "frontend_port.port": 80,
@@ -43,6 +44,7 @@
       "type": "dns",
       "resolution": "known",
       "raw_attributes": {
+        "capability_level": "REQUEST_SIMULATION",
         "name": "api",
         "ttl": 300
       },
@@ -57,6 +59,7 @@
       "resolution": "known",
       "capability": {},
       "raw_attributes": {
+        "capability_level": "REQUEST_SIMULATION",
         "default_node_pool.name": "default",
         "default_node_pool.node_count": 3,
         "default_node_pool.vm_size": "Standard_D2_v2",
@@ -80,6 +83,7 @@
         "encryption_mechanism": "false"
       },
       "raw_attributes": {
+        "capability_level": "FAILURE_SIMULATION",
         "name": "payments-db",
         "sku_name": "BC_Gen5_2",
         "transparent_data_encryption_enabled": false,
@@ -96,6 +100,7 @@
       "resolution": "known",
       "capability": {},
       "raw_attributes": {
+        "capability_level": "FAILURE_SIMULATION",
         "capacity": 1,
         "family": "P",
         "name": "payments-redis",
@@ -112,6 +117,7 @@
       "type": "identity",
       "resolution": "known",
       "raw_attributes": {
+        "capability_level": "CONFIGURATION",
         "role_definition_name": "Contributor"
       },
       "provenance": {
@@ -125,6 +131,7 @@
       "resolution": "known",
       "capability": {},
       "raw_attributes": {
+        "capability_level": "REQUEST_SIMULATION",
         "dead_lettering_on_message_expiration": true,
         "name": "settlement"
       },
@@ -139,6 +146,7 @@
       "resolution": "known",
       "capability": {},
       "raw_attributes": {
+        "capability_level": "CONNECTIVITY",
         "name": "payments-waf-policy",
         "policy_settings.enabled": true,
         "policy_settings.mode": "Prevention"

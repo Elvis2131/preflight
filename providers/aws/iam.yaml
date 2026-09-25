@@ -14,3 +14,5 @@ capabilities:
     on_absent: not_assessable
     # aws_iam_role has no meaningful "default" trust policy — a role with this omitted
     # is a configuration error for the validator to catch, not a fact to assume.
+
+capability_level: CONFIGURATION

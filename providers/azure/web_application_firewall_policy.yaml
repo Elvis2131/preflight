@@ -28,3 +28,5 @@ capabilities:
       policy_settings.enabled: "Describes if the policy is in enabled state or disabled
       state. Defaults to true." Verified against
       raw.githubusercontent.com/hashicorp/terraform-provider-azurerm (2026-09-21).
+
+capability_level: CONNECTIVITY

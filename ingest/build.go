@@ -215,9 +215,24 @@ func buildNode(r ParsedResource, mapping providers.ResourceMapping) core.Node {
 		Type:          mapping.NodeType,
 		Resolution:    resolution,
 		Capability:    buildCapability(r, mapping),
-		RawAttributes: r.Attributes,
+		RawAttributes: withCapabilityLevel(r.Attributes, mapping.CapabilityLevel),
 		Provenance:    prov,
 	}
+}
+
+// withCapabilityLevel stamps PC-107's own registry entry onto the node's
+// RawAttributes (the same untyped, no-schema-bump carrier PC-112/113 already used for
+// security_group_rules/nacl_rules) — copied, not mutated in place, since r.Attributes
+// may be read elsewhere. core/trace.go's capability gate reads this key back to decide
+// whether a node is eligible for a given pipeline step, never guessing from NodeType
+// alone.
+func withCapabilityLevel(attrs map[string]any, level core.CapabilityLevel) map[string]any {
+	out := make(map[string]any, len(attrs)+1)
+	for k, v := range attrs {
+		out[k] = v
+	}
+	out["capability_level"] = string(level)
+	return out
 }
 
 func unresolvedConstructReason(r ParsedResource) string {

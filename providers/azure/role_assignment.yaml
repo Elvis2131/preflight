@@ -18,3 +18,5 @@
 # usage, not literal values ingest's parser would capture as attributes.
 resource_type: azurerm_role_assignment
 node_type: identity
+
+capability_level: CONFIGURATION

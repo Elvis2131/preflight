@@ -19,3 +19,5 @@ capabilities:
     source_attribute: visibility_timeout_seconds
     on_absent: not_assessable
     # Not independently confirmed this pass.
+
+capability_level: REQUEST_SIMULATION

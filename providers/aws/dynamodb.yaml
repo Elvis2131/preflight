@@ -1,0 +1,10 @@
+# DynamoDB -> managed_database. PC-107's own "expanded AWS palette". Deliberately
+# capped at CONFIGURATION, not FAILURE_SIMULATION like RDS/ElastiCache: those two carry
+# a dedicated, cited FailoverMapping (a real, doc-verified Multi-AZ/automatic-failover
+# claim); DynamoDB has no such mapping here yet, and (unlike RDS/ElastiCache) is not
+# VPC/subnet-placed at all in the classic sense, so neither the routing/SG/NACL
+# engines nor the failover engine apply to it today. Raising this requires a real,
+# cited DynamoDB-specific claim, not an assumption borrowed from RDS's own semantics.
+resource_type: aws_dynamodb_table
+node_type: managed_database
+capability_level: CONFIGURATION

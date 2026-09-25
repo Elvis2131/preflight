@@ -19,6 +19,15 @@ func rt(id string, typ core.NodeType) core.Node {
 	return core.Node{ID: id, Type: typ, Resolution: core.ResolutionKnown, Provenance: syntheticProv()}
 }
 
+// rtCapable is rt plus a real registry-shaped capability_level (PC-107) — every
+// resource that can act as a trace source/destination in these tests needs one, the
+// same key ingest/build.go's withCapabilityLevel now stamps onto every real node.
+func rtCapable(id string, typ core.NodeType, level core.CapabilityLevel) core.Node {
+	n := rt(id, typ)
+	n.RawAttributes = map[string]any{"capability_level": string(level)}
+	return n
+}
+
 // buildTwoSubnetIR builds: app (compute, subnet A) -> db (managed_database, subnet B).
 // Each subnet has its own route table, NACL, and each resource its own SG. allowSG and
 // allowNACL control whether the dest-side rules actually permit tcp/5432 from subnet A.
@@ -30,8 +39,8 @@ func buildTwoSubnetIR(allowSG, allowNACL bool) *core.IR {
 	subnetB.RawAttributes = map[string]any{"cidr_block": "10.0.2.0/24"}
 
 	nodes := []core.Node{
-		rt("app", core.NodeTypeCompute),
-		rt("db", core.NodeTypeManagedDatabase),
+		rtCapable("app", core.NodeTypeCompute, core.CapabilityRequestSimulation),
+		rtCapable("db", core.NodeTypeManagedDatabase, core.CapabilityFailureSimulation),
 		subnetA,
 		subnetB,
 		rt("rtA", core.NodeTypeNetworkBoundary),
@@ -156,10 +165,11 @@ func TestBuildTrace_DestinationNotFound(t *testing.T) {
 
 func TestBuildTrace_CapabilityGate_NotAssessable(t *testing.T) {
 	ir := buildTwoSubnetIR(true, true)
-	// object_store is not in requestSimulationCapable's whitelist.
+	// A capability_level below REQUEST_SIMULATION (e.g. a service the registry only
+	// captures configuration for) must gate the pipeline, not guess.
 	for i := range ir.Nodes {
 		if ir.Nodes[i].ID == "db" {
-			ir.Nodes[i].Type = core.NodeTypeObjectStore
+			ir.Nodes[i].RawAttributes = map[string]any{"capability_level": string(core.CapabilityConfiguration)}
 		}
 	}
 	tr := core.BuildTrace(ir, "app", "db", "", "tcp", 5432)

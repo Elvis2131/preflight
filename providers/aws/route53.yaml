@@ -20,3 +20,5 @@ capabilities:
     # documentation — both were checked directly, not assumed from memory. Per
     # CLAUDE.md §5, an unconfirmed claim stays not_assessable rather than being
     # asserted as if it were.
+
+capability_level: REQUEST_SIMULATION

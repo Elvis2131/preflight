@@ -25,3 +25,5 @@
 # plain, ordinary reference — simpler here, not missing.
 resource_type: azurerm_application_gateway
 node_type: load_balancer
+
+capability_level: REQUEST_SIMULATION

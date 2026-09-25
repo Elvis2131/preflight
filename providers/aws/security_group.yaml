@@ -26,3 +26,5 @@
 # silently present.
 resource_type: aws_security_group
 node_type: network_boundary
+
+capability_level: NETWORK_BEHAVIOR

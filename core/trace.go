@@ -7,13 +7,13 @@
 // return rules; SG statefulness is automatic and produces no separate step, per
 // PC-112's own engine).
 //
-// SCOPE DECISION, recorded rather than left implicit: PC-107 (the service capability
-// registry this ticket's own Card says to gate the pipeline on) has not been built yet
-// — filed as a separate, not-yet-started story. Rather than block this ticket on it,
-// requestSimulationCapable below is a narrow, honestly-scoped placeholder answering
-// only the question THIS pipeline needs ("can a request into/out of this node type be
-// meaningfully traced at all"), not PC-107's fuller per-service capability matrix.
-// When PC-107 lands, this function is the seam to replace.
+// CAPABILITY GATE: PC-107 landed after this file was first written. The gate below
+// now reads a node's REAL, per-service capability_level (RawAttributes["capability_level"],
+// stamped by ingest/build.go from providers/*'s own registry entry — see
+// core/capability.go) rather than a static NodeType whitelist. A node with no
+// resolvable capability_level (a hand-built canvas/test IR that never went through a
+// registry, or a genuinely unmapped service) is honestly not_assessable, never
+// guessed capable.
 package core
 
 import "fmt"
@@ -54,16 +54,17 @@ type Trace struct {
 	Steps       []TraceStep `json:"steps"`
 }
 
-// requestSimulationCapable is this ticket's own scoped placeholder for PC-107's
-// eventual capability registry — see this file's own package doc comment.
-func requestSimulationCapable(t NodeType) bool {
-	switch t {
-	case NodeTypeCompute, NodeTypeContainerWorkload, NodeTypeManagedDatabase,
-		NodeTypeCache, NodeTypeQueueStream, NodeTypeLoadBalancer, NodeTypeDNS:
-		return true
-	default:
+// requestSimulationCapable reads a node's real, registry-declared capability_level
+// (PC-107) and reports whether it reaches CapabilityRequestSimulation. A node with no
+// resolvable capability_level (never ingested through a registry mapping at all) is
+// honestly reported not capable, never guessed either way — see this file's own
+// package doc comment.
+func requestSimulationCapable(n Node) bool {
+	raw, ok := n.RawAttributes["capability_level"].(string)
+	if !ok {
 		return false
 	}
+	return CapabilityLevel(raw).AtLeast(CapabilityRequestSimulation)
 }
 
 // resolveSubnetID finds the real subnet a resource is placed in by walking its own
@@ -163,15 +164,15 @@ func BuildTrace(ir *IR, sourceID, destID, sourceCIDR, protocol string, port int)
 		step("resolve_source", sourceID, "look up the source node in the IR", TraceAllow, "source node exists", "")
 	}
 
-	// 3. capability gate (PC-107 placeholder — see package doc comment)
-	if !requestSimulationCapable(destNode.Type) {
+	// 3. capability gate (PC-107: real per-service capability_level, not a NodeType whitelist)
+	if !requestSimulationCapable(destNode) {
 		step("capability_check", destID, "check whether this service supports request simulation", TraceNotAssessable,
-			fmt.Sprintf("service type %q is not yet modelled for request simulation (PC-107, pending)", destNode.Type), "")
+			fmt.Sprintf("service %s (capability_level %v) does not reach REQUEST_SIMULATION", destID, destNode.RawAttributes["capability_level"]), "")
 		return finalize(trace)
 	}
-	if sourceID != "" && !requestSimulationCapable(sourceNode.Type) {
+	if sourceID != "" && !requestSimulationCapable(sourceNode) {
 		step("capability_check", sourceID, "check whether this service supports request simulation", TraceNotAssessable,
-			fmt.Sprintf("service type %q is not yet modelled for request simulation (PC-107, pending)", sourceNode.Type), "")
+			fmt.Sprintf("service %s (capability_level %v) does not reach REQUEST_SIMULATION", sourceID, sourceNode.RawAttributes["capability_level"]), "")
 		return finalize(trace)
 	}
 	step("capability_check", destID, "check whether this service supports request simulation", TraceAllow, "service type is modelled for request simulation", "")

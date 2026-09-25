@@ -40,3 +40,5 @@ failover:
       across Availability Zones to a standby replica..."
       docs.aws.amazon.com/AmazonRDS/latest/UserGuide/Concepts.MultiAZSingleStandby.html
       (verified 2026-09-21).
+
+capability_level: FAILURE_SIMULATION

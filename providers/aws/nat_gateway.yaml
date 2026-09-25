@@ -6,3 +6,5 @@
 # correctly; this mapping is what lets that proof run against the real bundle.
 resource_type: aws_nat_gateway
 node_type: network_boundary
+
+capability_level: NETWORK_BEHAVIOR

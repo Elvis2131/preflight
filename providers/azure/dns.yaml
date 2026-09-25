@@ -25,3 +25,5 @@
 # health-evaluation flag documented anywhere on it.
 resource_type: azurerm_dns_a_record
 node_type: dns
+
+capability_level: REQUEST_SIMULATION

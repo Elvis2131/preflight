@@ -15,3 +15,5 @@
 # table's rules," not containment.
 resource_type: aws_route_table
 node_type: network_boundary
+
+capability_level: NETWORK_BEHAVIOR

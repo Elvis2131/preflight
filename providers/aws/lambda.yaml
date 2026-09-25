@@ -1,0 +1,8 @@
+# Lambda -> compute. PC-107's own "expanded AWS palette". Capped at CONFIGURATION: a
+# Lambda function CAN be VPC-attached (vpc_config), but no ingest logic here resolves
+# that placement into a real subnet/SG edge yet (unlike EC2/RDS/ElastiCache's own
+# subnet-group indirection), and no dedicated failure/network engine touches "compute"
+# at all in this codebase. Raising this requires that engine, not just this entry.
+resource_type: aws_lambda_function
+node_type: compute
+capability_level: CONFIGURATION

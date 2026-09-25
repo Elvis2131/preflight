@@ -119,6 +119,14 @@ type ResourceMapping struct {
 	// semantically correct one, not a new general mechanism this ticket invented — the
 	// edge type itself was already frozen by PC-7).
 	ReferenceEdgeType core.EdgeType `yaml:"reference_edge_type,omitempty"`
+
+	// CapabilityLevel is PC-107's own registry entry: how much of this specific AWS
+	// service Preflight can actually simulate, on core.CapabilityLevel's 9-rung
+	// ladder. Required for every node mapping (validated against
+	// core.MaxImplementedCapabilityLevel(NodeType) at Load() time — a mapping cannot
+	// claim more than its structural NodeType's real engines reach); forbidden for an
+	// edge mapping, which produces no node to have a capability level at all.
+	CapabilityLevel core.CapabilityLevel `yaml:"capability_level,omitempty"`
 }
 
 // IsEdgeMapping reports whether this mapping produces an edge rather than a node.
@@ -145,11 +153,23 @@ func (m ResourceMapping) validate() error {
 		if m.Edge.FromAttribute == "" || m.Edge.ToAttribute == "" {
 			return fmt.Errorf("mapping %s: edge.from_attribute and edge.to_attribute are both required", m.ResourceType)
 		}
+		if m.CapabilityLevel != "" {
+			return fmt.Errorf("mapping %s: capability_level is not permitted on an edge mapping — an edge produces no node to have a capability level", m.ResourceType)
+		}
 		return nil
 	}
 
 	if m.NodeType == "" {
 		return fmt.Errorf("mapping %s is missing node_type (and is not an edge mapping)", m.ResourceType)
+	}
+	if m.CapabilityLevel == "" {
+		return fmt.Errorf("mapping %s: capability_level is required (PC-107)", m.ResourceType)
+	}
+	if !m.CapabilityLevel.Valid() {
+		return fmt.Errorf("mapping %s: capability_level %q is not one of core.CapabilityLevel's 9 defined rungs", m.ResourceType, m.CapabilityLevel)
+	}
+	if ceiling := core.MaxImplementedCapabilityLevel(m.NodeType); !ceiling.AtLeast(m.CapabilityLevel) {
+		return fmt.Errorf("mapping %s: capability_level %q exceeds the real ceiling %q for node_type %q (core.MaxImplementedCapabilityLevel) — no engine in this codebase implements that much behaviour for this structural type yet", m.ResourceType, m.CapabilityLevel, ceiling, m.NodeType)
 	}
 	if m.ReferenceEdgeType != "" {
 		switch m.ReferenceEdgeType {

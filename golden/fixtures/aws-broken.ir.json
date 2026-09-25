@@ -1,7 +1,7 @@
 {
   "schema_version": "1.1.0",
   "version_number": 1,
-  "version_hash": "sha256:cad9fbcaea61ab973deea25e50f351922625873e5eeb09ea2cd88adf8d24d429",
+  "version_hash": "sha256:0c098d9f05ef25ef9834845358506c7538e9cfdbd4a39b73e45d339dd7fa9950",
   "nodes": [
     {
       "id": "aws_db_instance.payments",
@@ -19,6 +19,7 @@
         "auto_minor_version_upgrade": true,
         "backup_retention_period": 1,
         "backup_window": "02:00-03:00",
+        "capability_level": "FAILURE_SIMULATION",
         "copy_tags_to_snapshot": true,
         "db_name": "payments",
         "delete_automated_backups": false,
@@ -55,6 +56,7 @@
       "type": "network_boundary",
       "resolution": "known",
       "raw_attributes": {
+        "capability_level": "CONNECTIVITY",
         "name": "payments-db-subnets",
         "tags": {
           "Name": "payments-db-subnets"
@@ -71,6 +73,7 @@
       "resolution": "known",
       "capability": {},
       "raw_attributes": {
+        "capability_level": "REQUEST_SIMULATION",
         "name": "payments-eks",
         "tags": {
           "Compliance": "PCI",
@@ -99,6 +102,7 @@
       "raw_attributes": {
         "at_rest_encryption_enabled": false,
         "automatic_failover_enabled": false,
+        "capability_level": "FAILURE_SIMULATION",
         "description": "Session and idempotency-key cache for the payments API.",
         "engine": "redis",
         "engine_version": "7.1",
@@ -127,6 +131,7 @@
       "type": "network_boundary",
       "resolution": "known",
       "raw_attributes": {
+        "capability_level": "CONNECTIVITY",
         "name": "payments-cache-subnets"
       },
       "provenance": {
@@ -141,6 +146,7 @@
       "capability": {},
       "raw_attributes": {
         "assume_role_policy": "{\n  \"Version\": \"2012-10-17\",\n  \"Statement\": [\n    {\n      \"Effect\": \"Allow\",\n      \"Principal\": { \"Service\": \"eks.amazonaws.com\" },\n      \"Action\": \"sts:AssumeRole\"\n    }\n  ]\n}\n",
+        "capability_level": "CONFIGURATION",
         "name": "payments-eks-cluster-role",
         "tags": {
           "Name": "payments-eks-cluster-role"
@@ -158,6 +164,7 @@
       "capability": {},
       "raw_attributes": {
         "assume_role_policy": "{\n  \"Version\": \"2012-10-17\",\n  \"Statement\": [\n    {\n      \"Effect\": \"Allow\",\n      \"Principal\": { \"Service\": \"ec2.amazonaws.com\" },\n      \"Action\": \"sts:AssumeRole\"\n    }\n  ]\n}\n",
+        "capability_level": "CONFIGURATION",
         "name": "payments-eks-node-role",
         "tags": {
           "Name": "payments-eks-node-role"
@@ -175,6 +182,7 @@
       "capability": {},
       "raw_attributes": {
         "assume_role_policy": "{\n  \"Version\": \"2012-10-17\",\n  \"Statement\": [\n    {\n      \"Effect\": \"Allow\",\n      \"Principal\": { \"Service\": \"pods.eks.amazonaws.com\" },\n      \"Action\": [\"sts:AssumeRole\", \"sts:TagSession\"]\n    }\n  ]\n}\n",
+        "capability_level": "CONFIGURATION",
         "name": "payments-app-role",
         "tags": {
           "Compliance": "PCI",
@@ -191,6 +199,7 @@
       "type": "network_boundary",
       "resolution": "known",
       "raw_attributes": {
+        "capability_level": "NETWORK_BEHAVIOR",
         "tags": {
           "Name": "payments-igw"
         }
@@ -206,6 +215,7 @@
       "resolution": "known",
       "capability": {},
       "raw_attributes": {
+        "capability_level": "REQUEST_SIMULATION",
         "drop_invalid_header_fields": true,
         "enable_deletion_protection": true,
         "internal": false,
@@ -227,6 +237,7 @@
       "type": "network_boundary",
       "resolution": "known",
       "raw_attributes": {
+        "capability_level": "NETWORK_BEHAVIOR",
         "tags": {
           "Name": "payments-nat-a"
         }
@@ -243,6 +254,7 @@
       "capability": {},
       "raw_attributes": {
         "alias.evaluate_target_health": false,
+        "capability_level": "REQUEST_SIMULATION",
         "name": "api.payments.example.com",
         "type": "A"
       },
@@ -256,6 +268,7 @@
       "type": "network_boundary",
       "resolution": "known",
       "raw_attributes": {
+        "capability_level": "NETWORK_BEHAVIOR",
         "route.cidr_block": "0.0.0.0/0",
         "tags": {
           "Name": "payments-rt-private-a"
@@ -271,6 +284,7 @@
       "type": "network_boundary",
       "resolution": "known",
       "raw_attributes": {
+        "capability_level": "NETWORK_BEHAVIOR",
         "route.cidr_block": "0.0.0.0/0",
         "tags": {
           "Name": "payments-rt-private-b"
@@ -286,6 +300,7 @@
       "type": "network_boundary",
       "resolution": "known",
       "raw_attributes": {
+        "capability_level": "NETWORK_BEHAVIOR",
         "route.cidr_block": "0.0.0.0/0",
         "tags": {
           "Name": "payments-rt-private-c"
@@ -301,6 +316,7 @@
       "type": "network_boundary",
       "resolution": "known",
       "raw_attributes": {
+        "capability_level": "NETWORK_BEHAVIOR",
         "route.cidr_block": "0.0.0.0/0",
         "tags": {
           "Name": "payments-rt-public"
@@ -316,6 +332,7 @@
       "type": "network_boundary",
       "resolution": "known",
       "raw_attributes": {
+        "capability_level": "NETWORK_BEHAVIOR",
         "description": "Public ingress to the payments ALB. HTTPS only.",
         "egress.description": "To the EKS workload",
         "egress.from_port": 8080,
@@ -361,6 +378,7 @@
       "type": "network_boundary",
       "resolution": "known",
       "raw_attributes": {
+        "capability_level": "NETWORK_BEHAVIOR",
         "description": "Payments ElastiCache. Reachable only from the workload security group.",
         "ingress.description": "Redis from the EKS workload",
         "ingress.from_port": 6379,
@@ -390,6 +408,7 @@
       "type": "network_boundary",
       "resolution": "known",
       "raw_attributes": {
+        "capability_level": "NETWORK_BEHAVIOR",
         "description": "Payments RDS. Reachable only from the workload security group.",
         "ingress.description": "PostgreSQL from the EKS workload",
         "ingress.from_port": 5432,
@@ -419,6 +438,7 @@
       "type": "network_boundary",
       "resolution": "known",
       "raw_attributes": {
+        "capability_level": "NETWORK_BEHAVIOR",
         "description": "EKS payments workload.",
         "egress.cidr_blocks": [
           "0.0.0.0/0"
@@ -475,6 +495,7 @@
       "resolution": "known",
       "capability": {},
       "raw_attributes": {
+        "capability_level": "REQUEST_SIMULATION",
         "message_retention_seconds": 345600,
         "name": "payments-settlement",
         "receive_wait_time_seconds": 20,
@@ -495,6 +516,7 @@
       "type": "network_boundary",
       "resolution": "known",
       "raw_attributes": {
+        "capability_level": "NETWORK_BEHAVIOR",
         "cidr_block": "10.0.20.0/24",
         "tags": {
           "Name": "payments-data-a",
@@ -511,6 +533,7 @@
       "type": "network_boundary",
       "resolution": "known",
       "raw_attributes": {
+        "capability_level": "NETWORK_BEHAVIOR",
         "cidr_block": "10.0.21.0/24",
         "tags": {
           "Name": "payments-data-b",
@@ -527,6 +550,7 @@
       "type": "network_boundary",
       "resolution": "known",
       "raw_attributes": {
+        "capability_level": "NETWORK_BEHAVIOR",
         "cidr_block": "10.0.22.0/24",
         "tags": {
           "Name": "payments-data-c",
@@ -543,6 +567,7 @@
       "type": "network_boundary",
       "resolution": "known",
       "raw_attributes": {
+        "capability_level": "NETWORK_BEHAVIOR",
         "cidr_block": "10.0.10.0/24",
         "tags": {
           "Name": "payments-private-a",
@@ -559,6 +584,7 @@
       "type": "network_boundary",
       "resolution": "known",
       "raw_attributes": {
+        "capability_level": "NETWORK_BEHAVIOR",
         "cidr_block": "10.0.11.0/24",
         "tags": {
           "Name": "payments-private-b",
@@ -575,6 +601,7 @@
       "type": "network_boundary",
       "resolution": "known",
       "raw_attributes": {
+        "capability_level": "NETWORK_BEHAVIOR",
         "cidr_block": "10.0.12.0/24",
         "tags": {
           "Name": "payments-private-c",
@@ -591,6 +618,7 @@
       "type": "network_boundary",
       "resolution": "known",
       "raw_attributes": {
+        "capability_level": "NETWORK_BEHAVIOR",
         "cidr_block": "10.0.0.0/24",
         "map_public_ip_on_launch": false,
         "tags": {
@@ -608,6 +636,7 @@
       "type": "network_boundary",
       "resolution": "known",
       "raw_attributes": {
+        "capability_level": "NETWORK_BEHAVIOR",
         "cidr_block": "10.0.1.0/24",
         "map_public_ip_on_launch": false,
         "tags": {
@@ -625,6 +654,7 @@
       "type": "network_boundary",
       "resolution": "known",
       "raw_attributes": {
+        "capability_level": "NETWORK_BEHAVIOR",
         "cidr_block": "10.0.2.0/24",
         "map_public_ip_on_launch": false,
         "tags": {
@@ -642,6 +672,7 @@
       "type": "network_boundary",
       "resolution": "known",
       "raw_attributes": {
+        "capability_level": "NETWORK_BEHAVIOR",
         "enable_dns_hostnames": true,
         "enable_dns_support": true,
         "tags": {
@@ -662,6 +693,7 @@
       "resolution": "known",
       "capability": {},
       "raw_attributes": {
+        "capability_level": "CONNECTIVITY",
         "name": "payments-api-waf",
         "rule.name": "AWSManagedRulesCommonRuleSet",
         "rule.priority": 1,

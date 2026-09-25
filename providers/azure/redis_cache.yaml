@@ -36,3 +36,5 @@ capabilities:
       non-SSL port is disabled, i.e. TLS-only, transit encryption enforced). Verified
       against raw.githubusercontent.com/hashicorp/terraform-provider-azurerm
       (2026-09-21).
+
+capability_level: FAILURE_SIMULATION

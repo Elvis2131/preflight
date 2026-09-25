@@ -34,3 +34,5 @@ failover:
       promoted to primary" and "Valkey and Redis OSS replication is asynchronous."
       docs.aws.amazon.com/AmazonElastiCache/latest/red-ug/AutoFailover.html
       (verified 2026-09-21).
+
+capability_level: FAILURE_SIMULATION
