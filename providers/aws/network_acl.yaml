@@ -1,0 +1,11 @@
+# Network ACL -> network_boundary. PC-113: same reasoning as internet_gateway.yaml/
+# route_table.yaml/security_group.yaml — a NACL has no capability model of its own; it
+# is pure rule data, attached via ingest/nacl.go rather than expressed as declarative
+# YAML (a NACL can declare an arbitrary number of ingress/egress rule blocks, each with
+# its own per-rule data, which providers.ResourceMapping has no way to express).
+#
+# reference_edge_type is deliberately UNSET (defaults to depends_on): a subnet's
+# association with its NACL (aws_network_acl_association, mapped separately) is "this
+# subnet's traffic is filtered by this NACL's rules," not containment.
+resource_type: aws_network_acl
+node_type: network_boundary

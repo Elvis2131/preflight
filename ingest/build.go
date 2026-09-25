@@ -93,6 +93,12 @@ func Ingest(dir string, registry providers.Registry, versionNumber int) (Result,
 			edgeOnly = append(edgeOnly, EdgeOnlyResource{ResourceType: r.Type, ResourceName: r.Name, Produced: hasOwner && len(owner) > 0})
 			continue
 		}
+		if r.Type == "aws_network_acl_rule" {
+			// PC-113: same reasoning as aws_security_group_rule above.
+			owner, hasOwner := r.AttributeReferences["network_acl_id"]
+			edgeOnly = append(edgeOnly, EdgeOnlyResource{ResourceType: r.Type, ResourceName: r.Name, Produced: hasOwner && len(owner) > 0})
+			continue
+		}
 		mapping, ok := registry.Lookup(r.Type)
 		if !ok {
 			oov = append(oov, OutOfVocabularyResource{
@@ -128,6 +134,7 @@ func Ingest(dir string, registry providers.Registry, versionNumber int) (Result,
 	edges = append(edges, mappedEdges...)
 	edges = append(edges, routeEdges...)
 	mergeSecurityGroupRules(nodes, parsed)
+	mergeNetworkACLRules(nodes, parsed)
 
 	sort.Slice(nodes, func(i, j int) bool { return nodes[i].ID < nodes[j].ID })
 	sort.Slice(edges, func(i, j int) bool { return edges[i].ID < edges[j].ID })
