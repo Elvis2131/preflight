@@ -57,6 +57,44 @@ func TestNonObservedRejectsEvidenceTier(t *testing.T) {
 	}
 }
 
+// TestObservedEvidenceTierCannotExceedItsRung is I5's OTHER half (PC-24): only Rung 3
+// (a real ephemeral cloud experiment) may carry EvidenceTierPerformance/Resilience —
+// Rung 1 (a local topology replica, PC-24's own Toxiproxy harness) and Rung 2 (LocalStack
+// emulation) can only ever produce EvidenceTierFunctional. Before this test (and the
+// validator registration it exercises), nothing anywhere actually enforced this —
+// EvidenceTierPerformance/EvidenceTierResilience's own doc comments stated the rule in
+// prose only.
+func TestObservedEvidenceTierCannotExceedItsRung(t *testing.T) {
+	cases := []struct {
+		name    string
+		tier    core.EvidenceTier
+		rung    core.Rung
+		wantErr bool
+	}{
+		{"functional/rung1: allowed", core.EvidenceTierFunctional, core.Rung1TopologyReplica, false},
+		{"functional/rung2: allowed", core.EvidenceTierFunctional, core.Rung2Emulated, false},
+		{"functional/rung3: allowed", core.EvidenceTierFunctional, core.Rung3RealCloud, false},
+		{"performance/rung1: rejected — a topology replica cannot support a throughput/latency claim", core.EvidenceTierPerformance, core.Rung1TopologyReplica, true},
+		{"performance/rung2: rejected — LocalStack emulation cannot support a throughput/latency claim", core.EvidenceTierPerformance, core.Rung2Emulated, true},
+		{"performance/rung3: allowed", core.EvidenceTierPerformance, core.Rung3RealCloud, false},
+		{"resilience/rung1: rejected — a topology replica cannot support an RTO/RPO/failover-time claim", core.EvidenceTierResilience, core.Rung1TopologyReplica, true},
+		{"resilience/rung2: rejected — LocalStack emulation cannot support an RTO/RPO/failover-time claim", core.EvidenceTierResilience, core.Rung2Emulated, true},
+		{"resilience/rung3: allowed", core.EvidenceTierResilience, core.Rung3RealCloud, false},
+	}
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			p := core.NewProvenance(core.KindObserved, "validate/rungN:test").WithObserved(c.tier, c.rung)
+			err := p.Validate()
+			if c.wantErr && err == nil {
+				t.Fatalf("Validate() = nil, want an error (tier %s cannot be carried by rung %v)", c.tier, c.rung)
+			}
+			if !c.wantErr && err != nil {
+				t.Fatalf("Validate() = %v, want nil", err)
+			}
+		})
+	}
+}
+
 func TestAssessmentEnvelopeRoundTrip(t *testing.T) {
 	prov := core.NewProvenance(core.KindDerived, "core/analyse:spof-detector")
 

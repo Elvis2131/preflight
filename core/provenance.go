@@ -13,6 +13,37 @@ import "github.com/go-playground/validator/v10"
 // boundary and to generate contracts/*.schema.json via invopop/jsonschema).
 var validate = validator.New(validator.WithRequiredStructEnabled())
 
+func init() {
+	validate.RegisterStructValidation(validateProvenanceEvidenceTierRung, Provenance{})
+}
+
+// validateProvenanceEvidenceTierRung is I5's OTHER half, previously described only in
+// EvidenceTierPerformance/EvidenceTierResilience's own doc comments ("requires a real
+// or sufficiently faithful environment, never Rung 2", "requires Rung 3 ... no emulated
+// or replica environment can produce this tier") but never actually enforced anywhere
+// — PC-24's own acceptance criterion is exactly this gap: "observed results are
+// rejected by any performance field at the schema level ... tested against this
+// specific harness's output, not just assumed to work." validate.go's existing
+// required_if/excluded_unless tags only enforce that EvidenceTier+Rung are present
+// together when Kind is observed; they say nothing about which Rung may carry which
+// tier, which is the actual laundering PRD §5.6 names ("Rung-2 (emulated) results are
+// typed functional and structurally rejected by performance/resilience fields").
+//
+// Only Rung 3 (a real ephemeral cloud experiment) may carry EvidenceTierPerformance or
+// EvidenceTierResilience: Rung 1 (a local topology replica) and Rung 2 (LocalStack
+// emulation) can only ever produce EvidenceTierFunctional observations — that ceiling
+// is exactly what stops a Rung 1/2 result from ever backing a throughput/latency/RTO/
+// RPO claim it never earned.
+func validateProvenanceEvidenceTierRung(sl validator.StructLevel) {
+	p := sl.Current().Interface().(Provenance)
+	if p.Kind != KindObserved || p.EvidenceTier == nil || p.Rung == nil {
+		return
+	}
+	if *p.EvidenceTier != EvidenceTierFunctional && *p.Rung != Rung3RealCloud {
+		sl.ReportError(p.EvidenceTier, "EvidenceTier", "EvidenceTier", "tier_exceeds_rung", "")
+	}
+}
+
 // Kind is the five-value provenance enum — PRD §4's exact wording: "every field in every
 // response carries a source tag: stated (from the workload declaration or user input),
 // derived (deterministic computation over the IR), assumed (a declared default the user

@@ -70,7 +70,10 @@ jobs:
       # tests (core/boundary_test.go, core/provenance_test.go, core/assessment_test.go)
       # are ordinary Go tests with no special build tag, so `go test ./...` already
       # exercises them; singling them out here would just be a second, divergent list
-      # to keep in sync with the real one.
+      # to keep in sync with the real one. This also runs validate/rung1_test.go for
+      # real (PC-24): ubuntu-latest ships Docker + a docker-compose shim already, so
+      # that test's own docker/docker-compose availability check passes here rather
+      # than skipping — no separate CI step needed to stand up its stack.
       - name: go test
         run: go test ./...
 

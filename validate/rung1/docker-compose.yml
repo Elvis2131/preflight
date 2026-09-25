@@ -1,0 +1,41 @@
+networks:
+  rung1:
+    driver: bridge
+
+services:
+  # The one dependency edge this rung is narrowed to, per PC-24's own Card question
+  # ("which dependency edges get Toxiproxy injectors first — start narrow"): the app
+  # tier's dependency on its database, matching the golden "database
+  # failure" scenario (PRD's own six-scenario list) most directly of anything a single
+  # proxied TCP edge can honestly represent — not AZ/region loss (a placement fact, not
+  # a single edge) and not identity failure (not a network dependency edge at all).
+  database:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_PASSWORD: rung1
+      POSTGRES_DB: rung1
+    networks:
+      rung1:
+        aliases: [database]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 1s
+      timeout: 2s
+      retries: 30
+
+  # Toxiproxy sits between the (test-driven) app tier and the database, and is
+  # controlled entirely over its own HTTP API on 8474 — validate/rung1.go creates the
+  # proxy and injects/clears the fault at runtime rather than via a static config file,
+  # so one harness can drive different fault shapes (cut/latency/partition) without a
+  # different compose file per fault.
+  toxiproxy:
+    image: ghcr.io/shopify/toxiproxy:2.9.0
+    depends_on:
+      database:
+        condition: service_healthy
+    ports:
+      - "8474:8474"
+      - "15432:15432"
+    networks:
+      rung1:
+        aliases: [toxiproxy]
