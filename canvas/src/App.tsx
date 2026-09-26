@@ -27,6 +27,7 @@ import {
 import type { CanvasNodeData, CanvasEdgeData } from "./types";
 import { serialize } from "./serialize";
 import { GoldenNode } from "./GoldenNode";
+import { Inspector } from "./Inspector";
 import { assessCanvas, simulateNodeLoss, describeSimError, type SimulateResponse } from "./api";
 import { WorkloadForm, buildWorkload, emptyWorkloadFormValue, type WorkloadFormValue } from "./WorkloadForm";
 
@@ -214,6 +215,22 @@ function CanvasInner() {
     [nodes, selectedNodeID],
   );
 
+  const selectedNode = useMemo(
+    () => nodes.find((n) => n.id === selectedNodeID) ?? null,
+    [nodes, selectedNodeID],
+  );
+
+  // updateNodeSizing (PC-110) is the Inspector's own write path — mirrors every
+  // other node-data update in this file (setNodes with an immutable map), never a
+  // default substituted for a field the architect left blank (Inspector itself
+  // already deletes a key on blank input; this just stores whatever it hands back).
+  const updateNodeSizing = useCallback(
+    (nodeID: string, sizing: Record<string, string>) => {
+      setNodes((nds) => nds.map((n) => (n.id === nodeID ? { ...n, data: { ...n.data, sizing } } : n)));
+    },
+    [setNodes],
+  );
+
   const onConnect = useCallback(
     (connection: Connection) => {
       setEdges((eds) =>
@@ -385,6 +402,7 @@ function CanvasInner() {
           )}
         </div>
       </div>
+      {selectedNode && <Inspector node={selectedNode} onChange={updateNodeSizing} />}
     </div>
   );
 }

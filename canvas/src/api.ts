@@ -77,6 +77,57 @@ export function describeSimError(err: unknown): string {
   return err instanceof Error ? err.message : String(err);
 }
 
+// PriceEntry/PricingSnapshot mirror pricing.PriceEntry/pricing.Snapshot's own wire
+// shape (server/pricing.go, ADR-006 §4) field-for-field — cross-checked against that
+// Go source before typing, not guessed.
+export interface PriceEntry {
+  service: string;
+  region: string;
+  sku_attributes: Record<string, string>;
+  unit: string;
+  price: number;
+  currency: string;
+}
+
+export interface PricingSnapshot {
+  id: string;
+  fetched_at: string;
+  source: string;
+  disclaimer: string;
+  entries: PriceEntry[];
+  active: boolean;
+}
+
+async function getJSON<T>(url: string): Promise<T> {
+  const res = await fetch(url);
+  if (!res.ok) {
+    const text = await res.text();
+    try {
+      const parsed = JSON.parse(text) as { error_code?: string; message?: string };
+      if (parsed.error_code && parsed.message) {
+        throw new APIError(res.status, parsed.error_code, parsed.message);
+      }
+    } catch (parseErr) {
+      if (parseErr instanceof APIError) throw parseErr;
+    }
+    throw new Error(`${res.status} ${res.statusText}: ${text}`);
+  }
+  return res.json() as Promise<T>;
+}
+
+// listPricingSnapshots/getPricingSnapshot (PC-110) back the Design inspector's
+// instance-type picker: GET /pricing/snapshots (PC-116) lists what exists; a caller
+// picks the active one (or none, if the array is empty / nothing is marked active)
+// and fetches its full row set to filter instance-type choices by what a real
+// pinned snapshot can actually price. Read-only — this app never writes pricing data.
+export function listPricingSnapshots(baseURL: string = ASSESSD_BASE_URL): Promise<PricingSnapshot[]> {
+  return getJSON(`${baseURL}/pricing/snapshots`);
+}
+
+export function getPricingSnapshot(id: string, baseURL: string = ASSESSD_BASE_URL): Promise<PricingSnapshot> {
+  return getJSON(`${baseURL}/pricing/snapshots/${id}`);
+}
+
 async function postJSON<T>(url: string, body: unknown): Promise<T> {
   const res = await fetch(url, {
     method: "POST",

@@ -47,6 +47,13 @@
           },
           "type": "object",
           "description": "Free-form capability key/value pairs entered via the canvas UI. Untyped in this contract version — see CanvasNode's own doc comment."
+        },
+        "sizing": {
+          "additionalProperties": {
+            "type": "string"
+          },
+          "type": "object",
+          "description": "Free-form sizing key/value pairs entered via the canvas UI Design inspector (PC-110). Keys are core.Sizing's own canonical field names. Blank/absent means unknown"
         }
       },
       "additionalProperties": false,
@@ -80,5 +87,5 @@
     "edges"
   ],
   "x-changelog": "contracts/CHANGELOG.md",
-  "x-schema-version": "1.0.0"
+  "x-schema-version": "1.1.0"
 }

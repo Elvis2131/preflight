@@ -48,6 +48,46 @@ describe("serialize", () => {
     }
   });
 
+  it("includes sizing when the architect entered at least one value (PC-110)", () => {
+    const nodes: Node<CanvasNodeData>[] = [
+      {
+        id: "n1",
+        type: "golden",
+        position: { x: 0, y: 0 },
+        data: {
+          nodeType: "managed_database",
+          label: "DB",
+          capability: {},
+          sizing: { instance_class: "db.r6g.xlarge" },
+        },
+      },
+    ];
+    const doc = serialize(nodes, []);
+    expect(doc.nodes[0]).toEqual({
+      id: "n1",
+      type: "managed_database",
+      label: "DB",
+      capability: {},
+      sizing: { instance_class: "db.r6g.xlarge" },
+    });
+  });
+
+  it("omits sizing entirely when nothing was entered — never an empty object", () => {
+    const nodes: Node<CanvasNodeData>[] = [
+      { id: "n1", type: "golden", position: { x: 0, y: 0 }, data: { nodeType: "compute", label: "App", capability: {} } },
+    ];
+    const doc = serialize(nodes, []);
+    expect(Object.prototype.hasOwnProperty.call(doc.nodes[0], "sizing")).toBe(false);
+  });
+
+  it("omits sizing when present but empty", () => {
+    const nodes: Node<CanvasNodeData>[] = [
+      { id: "n1", type: "golden", position: { x: 0, y: 0 }, data: { nodeType: "compute", label: "App", capability: {}, sizing: {} } },
+    ];
+    const doc = serialize(nodes, []);
+    expect(Object.prototype.hasOwnProperty.call(doc.nodes[0], "sizing")).toBe(false);
+  });
+
   it("strips all UI-only fields from edges and maps source/target to from/to", () => {
     const edges: Edge<CanvasEdgeData>[] = [
       {

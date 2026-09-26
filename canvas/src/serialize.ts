@@ -6,8 +6,8 @@ import type { CanvasNodeData, CanvasEdgeData, CanvasDocument } from "./types";
 // it." React Flow's own Node/Edge carry position, selected, dragging, sourceHandle,
 // draggable, and more (verified directly against @xyflow/system's real NodeBase/
 // EdgeBase type declarations, not assumed) — every one of those is deliberately left
-// out below. Only id/type/label/capability (nodes) and id/type/from/to (edges) ever
-// cross into the serialized document.
+// out below. Only id/type/label/capability/sizing (nodes) and id/type/from/to (edges)
+// ever cross into the serialized document.
 export function serialize(
   nodes: Node<CanvasNodeData>[],
   edges: Edge<CanvasEdgeData>[],
@@ -18,6 +18,11 @@ export function serialize(
       type: n.data.nodeType,
       label: n.data.label,
       capability: n.data.capability,
+      // sizing (PC-110) is only included when the architect actually entered at
+      // least one value — an empty object would still be honest (buildCanvasSizing
+      // treats both the same), but omitting it keeps a node nobody ever sized
+      // looking identical to how it looked before this ticket.
+      ...(n.data.sizing && Object.keys(n.data.sizing).length > 0 ? { sizing: n.data.sizing } : {}),
     })),
     edges: edges.map((e) => ({
       id: e.id,

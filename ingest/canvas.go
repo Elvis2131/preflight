@@ -7,6 +7,8 @@
 package ingest
 
 import (
+	"strconv"
+
 	"preflight/core"
 )
 
@@ -56,6 +58,7 @@ func IngestCanvas(doc core.CanvasDocument, versionNumber int) (Result, error) {
 			Type:          n.Type,
 			Resolution:    core.ResolutionKnown,
 			Capability:    buildCanvasCapability(n.Capability),
+			Sizing:        buildCanvasSizing(n.Sizing),
 			RawAttributes: canvasCapabilityToRawAttributes(n.Capability),
 			Provenance:    prov,
 		})
@@ -110,6 +113,52 @@ func buildCanvasCapability(capability map[string]string) *core.CapabilityModel {
 		return nil
 	}
 	return cap
+}
+
+// buildCanvasSizing translates CanvasNode.Sizing's own canonical-field-named string
+// map into a typed core.Sizing — PC-110's own UI-side counterpart to
+// buildCanvasCapability above, same reasoning: canvas keys are already canonical
+// core.Sizing field names (instance_type, count, ...), never a Terraform attribute
+// name needing translation (that's ingest/sizing.go's own, separate job for
+// Terraform-sourced resources). A key absent or blank leaves that Sizing field nil —
+// cost_unknown for that dimension, never a guessed default (this ticket's own
+// explicit acceptance criterion).
+func buildCanvasSizing(sizing map[string]string) *core.Sizing {
+	if len(sizing) == 0 {
+		return nil
+	}
+	get := func(key string) *string {
+		if v, ok := sizing[key]; ok && v != "" {
+			return &v
+		}
+		return nil
+	}
+	getInt := func(key string) *int {
+		v, ok := sizing[key]
+		if !ok || v == "" {
+			return nil
+		}
+		n, err := strconv.Atoi(v)
+		if err != nil {
+			return nil
+		}
+		return &n
+	}
+	s := core.Sizing{
+		InstanceType:       get("instance_type"),
+		TaskCPU:            get("task_cpu"),
+		TaskMemory:         get("task_memory"),
+		Count:              getInt("count"),
+		InstanceClass:      get("instance_class"),
+		AllocatedStorageGB: getInt("allocated_storage_gb"),
+		StorageType:        get("storage_type"),
+		CacheNodeType:      get("cache_node_type"),
+		LoadBalancerType:   get("load_balancer_type"),
+	}
+	if s == (core.Sizing{}) {
+		return nil
+	}
+	return &s
 }
 
 // canvasCapabilityToRawAttributes retains the canvas's own declared capability

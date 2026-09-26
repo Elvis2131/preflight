@@ -31,6 +31,21 @@ type CanvasNode struct {
 	// contracts/CHANGELOG.md's own convention) is where that structure would land,
 	// not a silent, undocumented shape change.
 	Capability map[string]string `json:"capability" jsonschema:"description=Free-form capability key/value pairs entered via the canvas UI. Untyped in this contract version — see CanvasNode's own doc comment."`
+
+	// Sizing is PC-110's own addition — the Design inspector's sizing fields
+	// (instance type/class, count, storage), same free-form string-map shape as
+	// Capability above and for the same reason: this contract's current version
+	// keeps canvas-entered values untyped, with real structure/validation living in
+	// ingest/canvas.go's own translation into core.Sizing (PC-115's typed IR field).
+	// Keys are core.Sizing's own canonical field names (instance_type, count,
+	// instance_class, allocated_storage_gb, storage_type, cache_node_type,
+	// load_balancer_type, task_cpu, task_memory) — never a provider-specific
+	// Terraform attribute name, the same "the palette IS the golden vocabulary"
+	// reasoning CanvasNode.Type itself already follows. A blank/absent key means
+	// that sizing fact is unknown for this node, never a guessed default — the Cost
+	// Engine (PC-117) reports cost_unknown for it, exactly as it does for a
+	// Terraform-ingested node missing the same fact.
+	Sizing map[string]string `json:"sizing,omitempty" jsonschema:"description=Free-form sizing key/value pairs entered via the canvas UI Design inspector (PC-110). Keys are core.Sizing's own canonical field names. Blank/absent means unknown, never defaulted — the Cost Engine reports cost_unknown for that dimension."`
 }
 
 type CanvasEdge struct {

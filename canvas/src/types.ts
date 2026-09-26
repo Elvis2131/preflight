@@ -21,6 +21,13 @@ export interface CanvasNode {
   // per-node-type structure and validation against workload.schema.json's own
   // semantics; this ticket is shell only (its own Card: "no backend wiring").
   capability: Record<string, string>;
+  // sizing: PC-110's own addition — free-form key/value pairs entered via the Design
+  // inspector, same untyped-at-the-shell-stage shape as capability above. Keys are
+  // core.Sizing's own canonical field names (see sizingFields.ts) — real structure
+  // lives in ingest/canvas.go's buildCanvasSizing, not here. Omitted (not an empty
+  // object) when the architect has not opened the inspector for this node at all,
+  // matching capability's own "absence means nothing entered" convention.
+  sizing?: Record<string, string>;
 }
 
 export interface CanvasEdge {
@@ -53,6 +60,7 @@ export interface CanvasNodeData extends Record<string, unknown> {
   nodeType: NodeType;
   label: string;
   capability: Record<string, string>;
+  sizing?: Record<string, string>;
   simState?: SimState;
 }
 

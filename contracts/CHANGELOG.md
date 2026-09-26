@@ -10,6 +10,22 @@ Each generated `contracts/*.schema.json` carries its own version in `x-schema-ve
 stamped by `cmd/gen-contracts` — check that field against this file, not the other way
 around, since a schema file is regenerated output, not hand-edited.
 
+## canvas.schema.json 1.1.0 — 2026-09-26 (PC-110: CanvasNode.sizing added)
+
+**Additive change to `canvas.schema.json` only** — the other six schemas are
+untouched and remain at their current versions.
+
+`CanvasNode` gains one new, optional field: `sizing` (a free-form string map, same
+shape and "untyped at this contract version" discipline as the existing `capability`
+field). Keys are `core.Sizing`'s own canonical field names (`instance_type`, `count`,
+`instance_class`, `allocated_storage_gb`, `storage_type`, `cache_node_type`,
+`load_balancer_type`, `task_cpu`, `task_memory`) — never a Terraform attribute name.
+`ingest/canvas.go`'s new `buildCanvasSizing` translates it into a typed `core.Sizing`
+exactly the way `buildCanvasCapability` already translates `capability` into a typed
+`core.CapabilityModel`. A key absent or blank leaves that `Sizing` field nil —
+`cost_unknown` for that dimension, never a guessed default (PC-110's own explicit
+acceptance criterion).
+
 ## report.schema.json 1.1.0 — 2026-09-26 (PC-132: ReportCostSection.usage_based_charges added)
 
 **Additive change to `report.schema.json` only** — the other six schemas are

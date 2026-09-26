@@ -29,12 +29,33 @@ function emptyRequirementRow(): RequirementRow {
   return { id: "", value: "", priority: "hard", rankText: "" };
 }
 
+// IMPLEMENTED_FRAMEWORKS is PC-110's own explicit list — a framework selectable here
+// must have a real, implemented control catalog (core/compliance_*.go), never an
+// aspirational one. Identifiers are core.ComplianceFramework's own real string
+// values (core/compliance_catalog.go), not invented for this form, so a value
+// written here is directly usable by whatever future report/compliance consumer
+// filters by compliance_profiles. "comingSoon" entries are shown, visibly
+// non-selectable — the Card's own explicit instruction — rather than omitted, so an
+// architect knows a framework exists on the roadmap without being able to pick it
+// before this engine can actually assess it.
+interface FrameworkOption {
+  id: string;
+  label: string;
+  comingSoon?: string; // reason shown when disabled; absent means selectable
+}
+export const COMPLIANCE_FRAMEWORK_OPTIONS: FrameworkOption[] = [
+  { id: "cis_aws", label: "CIS AWS Foundations Benchmark" },
+  { id: "pci_dss_4", label: "PCI DSS v4.0" },
+  { id: "soc2", label: "SOC 2" },
+  { id: "hipaa", label: "HIPAA", comingSoon: "no control catalog implemented yet" },
+];
+
 export interface WorkloadFormValue {
   name: string;
   criticality: string;
   dataClassification: string;
   regionsText: string; // comma-separated
-  complianceProfilesText: string; // comma-separated
+  complianceProfiles: string[]; // PC-110: only IMPLEMENTED_FRAMEWORKS ids, never free text
   capacityRows: CapacityRow[];
   requirementRows: RequirementRow[];
 }
@@ -45,7 +66,7 @@ export function emptyWorkloadFormValue(): WorkloadFormValue {
     criticality: "",
     dataClassification: "",
     regionsText: "",
-    complianceProfilesText: "",
+    complianceProfiles: [],
     capacityRows: [{ key: "app_node_rps", valueText: "" }],
     requirementRows: [],
   };
@@ -91,7 +112,7 @@ export function buildWorkload(v: WorkloadFormValue): Workload {
     criticality: v.criticality.trim(),
     data_classification: v.dataClassification.trim(),
     regions: splitCommaList(v.regionsText),
-    compliance_profiles: splitCommaList(v.complianceProfilesText),
+    compliance_profiles: v.complianceProfiles,
     requirements,
     capacity: Object.keys(capacity).length > 0 ? capacity : undefined,
   };
@@ -162,13 +183,40 @@ export function WorkloadForm({
         placeholder="eu-west-1"
       />
 
-      <label style={{ ...labelStyle, marginTop: 8 }}>compliance_profiles (comma-separated)</label>
-      <input
-        style={inputStyle}
-        value={value.complianceProfilesText}
-        onChange={(e) => update({ complianceProfilesText: e.target.value })}
-        placeholder="PCI"
-      />
+      <label style={{ ...labelStyle, marginTop: 8 }}>compliance_profiles</label>
+      <p style={{ fontSize: 10, color: "#94a3b8", margin: "0 0 4px" }}>
+        Only frameworks with an implemented control catalog are selectable — never
+        offer one this engine cannot actually assess.
+      </p>
+      {COMPLIANCE_FRAMEWORK_OPTIONS.map((fw) => (
+        <label
+          key={fw.id}
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: 6,
+            fontSize: 11,
+            marginBottom: 2,
+            color: fw.comingSoon ? "#94a3b8" : "#0f172a",
+            cursor: fw.comingSoon ? "not-allowed" : "pointer",
+          }}
+        >
+          <input
+            type="checkbox"
+            disabled={!!fw.comingSoon}
+            checked={value.complianceProfiles.includes(fw.id)}
+            onChange={(e) =>
+              update({
+                complianceProfiles: e.target.checked
+                  ? [...value.complianceProfiles, fw.id]
+                  : value.complianceProfiles.filter((id) => id !== fw.id),
+              })
+            }
+          />
+          {fw.label}
+          {fw.comingSoon && <span style={{ fontStyle: "italic" }}> — coming soon ({fw.comingSoon})</span>}
+        </label>
+      ))}
 
       <h4 style={{ fontSize: 12, margin: "14px 0 4px" }}>Capacity</h4>
       <p style={{ fontSize: 10, color: "#94a3b8", margin: "0 0 6px" }}>
