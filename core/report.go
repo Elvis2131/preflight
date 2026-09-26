@@ -132,8 +132,20 @@ type ReportAssumption struct {
 
 // Report is PC-120's full contract type — report.schema.json's own root.
 type Report struct {
-	SessionID        string                             `json:"session_id" validate:"required" jsonschema:"required,minLength=1"`
-	VersionNumber    int                                `json:"version_number" validate:"gte=1" jsonschema:"required,minimum=1"`
+	SessionID     string `json:"session_id" validate:"required" jsonschema:"required,minLength=1"`
+	VersionNumber int    `json:"version_number" validate:"gte=1" jsonschema:"required,minimum=1"`
+	// Graph is PC-122's own addition — the PC-81 SVG diagram, embedded so the HTML/
+	// PDF renderer never re-lays it out (the Card's own explicit instruction: "Embeds
+	// the PC-81 SVG diagram directly"). Always populated with either the real SVG or
+	// a real, specific failure message (never a blank string standing in for one) —
+	// the exact same "never fabricate a diagram" discipline AssessResponse.Graph
+	// already established (server/assess.go's graphOrFailureMessage). Rendering
+	// itself needs subprocess I/O (render.SVG), which core/ can never do (I1) —
+	// BuildReport takes the already-rendered string from its own caller, the same
+	// "pure engine, I/O caller supplies the one fact it can't compute itself" split
+	// PC-115/117's own Sizing/PriceTable parameters already use.
+	Graph string `json:"graph" validate:"required" jsonschema:"required,minLength=1"`
+
 	ExecutiveSummary ReportExecutiveSummary             `json:"executive_summary" validate:"required" jsonschema:"required"`
 	Inventory        []ReportInventoryEntry             `json:"inventory"`
 	NFRConformance   []ReportNFREntry                   `json:"nfr_conformance"`
@@ -157,7 +169,7 @@ func (r Report) Validate() error {
 // (server/store.go) persisted for this version; delta is exactly what
 // GetStoredVersion already computed against the prior version, reused verbatim, not
 // recomputed here.
-func BuildReport(sessionID string, versionNumber int, ir *IR, workload Workload, findings []Finding, scorecard Scorecard, cost *CostReport, priceTable PriceTable, delta []DeltaEntry) Report {
+func BuildReport(sessionID string, versionNumber int, graphSVG string, ir *IR, workload Workload, findings []Finding, scorecard Scorecard, cost *CostReport, priceTable PriceTable, delta []DeltaEntry) Report {
 	prov := NewProvenance(KindDerived, "core/report")
 
 	// No null in JSON (this codebase's established discipline — see e.g.
@@ -235,7 +247,7 @@ func BuildReport(sessionID string, versionNumber int, ir *IR, workload Workload,
 	}
 
 	report := Report{
-		SessionID: sessionID, VersionNumber: versionNumber,
+		SessionID: sessionID, VersionNumber: versionNumber, Graph: graphSVG,
 		ExecutiveSummary: summary, Inventory: inventory, NFRConformance: nfr, Compliance: compliance,
 		FailureModes: failureModes, Traffic: traffic, Cost: costSection, Delta: delta,
 		Provenance: prov,

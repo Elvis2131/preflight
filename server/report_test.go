@@ -7,6 +7,7 @@ import (
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
+	"os/exec"
 	"path/filepath"
 	"testing"
 
@@ -110,6 +111,106 @@ func TestGetReport_WithPricingSnapshot_ReconstructsPriceTable(t *testing.T) {
 	if err := report.Validate(); err != nil {
 		t.Errorf("Validate() = %v, want nil", err)
 	}
+}
+
+// TestGetReportHandler_FormatHTML_ReturnsRenderedHTML is PC-122's own acceptance
+// criterion: "GET .../report?format=html|pdf returns rendered output; JSON remains
+// the default." Proves the actual registered handler, not just core.RenderReportHTML
+// in isolation.
+func TestGetReportHandler_FormatHTML_ReturnsRenderedHTML(t *testing.T) {
+	store, err := server.OpenStore(":memory:")
+	if err != nil {
+		t.Fatalf("OpenStore: %v", err)
+	}
+	defer store.Close()
+
+	bundleDir, err := filepath.Abs("../golden/aws")
+	if err != nil {
+		t.Fatal(err)
+	}
+	workloadPath, err := filepath.Abs("../golden/workload.yaml")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := server.Assess(store, server.AssessRequest{
+		SessionID: "report-html-format-test", BundleDir: bundleDir, WorkloadPath: workloadPath,
+	}); err != nil {
+		t.Fatalf("Assess: %v", err)
+	}
+
+	mux := http.NewServeMux()
+	mux.HandleFunc("GET /sessions/{id}/versions/{n}/report", server.GetReportHandler(store))
+
+	req := httptest.NewRequest(http.MethodGet, "/sessions/report-html-format-test/versions/1/report?format=html", nil)
+	rec := httptest.NewRecorder()
+	mux.ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusOK {
+		t.Fatalf("status = %d, want 200: %s", rec.Code, rec.Body.String())
+	}
+	if ct := rec.Header().Get("Content-Type"); ct != "text/html; charset=utf-8" {
+		t.Errorf("Content-Type = %q, want text/html; charset=utf-8", ct)
+	}
+	body := rec.Body.String()
+	if !bytesContains(body, "<!DOCTYPE html>") {
+		t.Error("response body does not look like an HTML document")
+	}
+	if !bytesContains(body, "Cost figures are estimates derived") {
+		t.Error("response body is missing the mandatory cost disclaimer")
+	}
+}
+
+// TestGetReportHandler_FormatPDF_MissingRenderer_RealError proves the format=pdf
+// path returns a real, classified error (never a silently-empty body) when the PDF
+// renderer isn't installed — exactly this development environment's own real state
+// today (see render/pdf.go's own doc comment).
+func TestGetReportHandler_FormatPDF_MissingRenderer_RealError(t *testing.T) {
+	if _, err := exec.LookPath("wkhtmltopdf"); err == nil {
+		t.Skip("wkhtmltopdf IS installed — this test only proves the not-found path")
+	}
+
+	store, err := server.OpenStore(":memory:")
+	if err != nil {
+		t.Fatalf("OpenStore: %v", err)
+	}
+	defer store.Close()
+
+	bundleDir, err := filepath.Abs("../golden/aws")
+	if err != nil {
+		t.Fatal(err)
+	}
+	workloadPath, err := filepath.Abs("../golden/workload.yaml")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := server.Assess(store, server.AssessRequest{
+		SessionID: "report-pdf-format-test", BundleDir: bundleDir, WorkloadPath: workloadPath,
+	}); err != nil {
+		t.Fatalf("Assess: %v", err)
+	}
+
+	mux := http.NewServeMux()
+	mux.HandleFunc("GET /sessions/{id}/versions/{n}/report", server.GetReportHandler(store))
+
+	req := httptest.NewRequest(http.MethodGet, "/sessions/report-pdf-format-test/versions/1/report?format=pdf", nil)
+	rec := httptest.NewRecorder()
+	mux.ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusInternalServerError {
+		t.Fatalf("status = %d, want 500 (render_failed) since wkhtmltopdf is not installed here: %s", rec.Code, rec.Body.String())
+	}
+	if !bytesContains(rec.Body.String(), "render_failed") {
+		t.Errorf("body does not name the render_failed error code: %s", rec.Body.String())
+	}
+}
+
+func bytesContains(s, substr string) bool {
+	for i := 0; i+len(substr) <= len(s); i++ {
+		if s[i:i+len(substr)] == substr {
+			return true
+		}
+	}
+	return false
 }
 
 func TestGetReportHandler_UnknownSession_404(t *testing.T) {

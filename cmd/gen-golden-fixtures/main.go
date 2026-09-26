@@ -29,6 +29,7 @@ import (
 	"preflight/providers"
 	awsprovider "preflight/providers/aws"
 	azureprovider "preflight/providers/azure"
+	"preflight/render"
 )
 
 func main() {
@@ -94,9 +95,24 @@ func main() {
 			// output here) — a real, honest "cost section unavailable" case, not a
 			// gap invented for test coverage.
 			scorecard := core.BuildScorecard(findings, 1)
-			report := core.BuildReport("golden", 1, result.IR, workload, findings, scorecard, nil, core.PriceTable{}, nil)
+			graphSVG, err := render.SVG(core.RenderDOT(result.IR))
+			if err != nil {
+				fail(fmt.Errorf("render golden report's own diagram: %w", err))
+			}
+			report := core.BuildReport("golden", 1, graphSVG, result.IR, workload, findings, scorecard, nil, core.PriceTable{}, nil)
 			writeJSON(outDir, "aws.report.json", report)
 			fmt.Printf("wrote %s\n", filepath.Join("golden", "fixtures", "aws.report.json"))
+
+			// PC-122: the same report, rendered to HTML — golden-fixture byte-compared
+			// in CI (core/report_html_golden_test.go).
+			html, err := core.RenderReportHTML(report)
+			if err != nil {
+				fail(fmt.Errorf("render golden report to HTML: %w", err))
+			}
+			if err := os.WriteFile(filepath.Join(outDir, "aws.report.html"), []byte(html), 0o644); err != nil {
+				fail(err)
+			}
+			fmt.Printf("wrote %s\n", filepath.Join("golden", "fixtures", "aws.report.html"))
 		}
 	}
 }

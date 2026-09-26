@@ -13,14 +13,28 @@ import (
 	"testing"
 
 	"preflight/core"
+	"preflight/render"
 )
+
+// goldenReportGraphSVG renders the real PC-81 diagram exactly as cmd/gen-golden-
+// fixtures does (PC-122: Report.Graph is now part of the byte-compared fixture, so
+// this test must feed it the same real, live-rendered SVG that generator used —
+// never a placeholder string, which would make this comparison meaningless).
+func goldenReportGraphSVG(t *testing.T, ir *core.IR) string {
+	t.Helper()
+	svg, err := render.SVG(core.RenderDOT(ir))
+	if err != nil {
+		t.Fatalf("render diagram: %v (is graphviz installed? \"dot -V\")", err)
+	}
+	return svg
+}
 
 func TestGoldenReport_ByteIdentical(t *testing.T) {
 	ir := realGoldenIR(t)
 	workload := loadGoldenWorkload(t)
 	findings := core.BuildFindings(ir, workload)
 	scorecard := core.BuildScorecard(findings, 1)
-	report := core.BuildReport("golden", 1, ir, workload, findings, scorecard, nil, core.PriceTable{}, nil)
+	report := core.BuildReport("golden", 1, goldenReportGraphSVG(t, ir), ir, workload, findings, scorecard, nil, core.PriceTable{}, nil)
 
 	got, err := json.MarshalIndent(report, "", "  ")
 	if err != nil {
@@ -48,7 +62,7 @@ func TestGoldenReport_ByteIdentical_NegativeControl(t *testing.T) {
 	workload := loadGoldenWorkload(t)
 	findings := core.BuildFindings(ir, workload)
 	scorecard := core.BuildScorecard(findings, 1)
-	report := core.BuildReport("deliberately-different-session-id", 1, ir, workload, findings, scorecard, nil, core.PriceTable{}, nil)
+	report := core.BuildReport("deliberately-different-session-id", 1, goldenReportGraphSVG(t, ir), ir, workload, findings, scorecard, nil, core.PriceTable{}, nil)
 
 	got, err := json.MarshalIndent(report, "", "  ")
 	if err != nil {

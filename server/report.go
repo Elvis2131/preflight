@@ -11,6 +11,7 @@ import (
 	"strconv"
 
 	"preflight/core"
+	"preflight/render"
 )
 
 // GetReport loads versionNumber's own stored IR/Workload/Findings/Scorecard/Cost and
@@ -64,7 +65,8 @@ func GetReport(store *Store, sessionID string, versionNumber int) (core.Report, 
 		}
 	}
 
-	return core.BuildReport(sessionID, versionNumber, stored.IR, stored.Workload, stored.Findings, stored.Scorecard, stored.Cost, priceTable, delta), nil
+	graphSVG := graphOrFailureMessage(stored.IR)
+	return core.BuildReport(sessionID, versionNumber, graphSVG, stored.IR, stored.Workload, stored.Findings, stored.Scorecard, stored.Cost, priceTable, delta), nil
 }
 
 // GetReportHandler serves GET /sessions/{id}/versions/{n}/report, registered with Go
@@ -85,7 +87,38 @@ func GetReportHandler(store *Store) http.HandlerFunc {
 			return
 		}
 
-		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(report)
+		// PC-122's own acceptance criterion, verbatim: "GET .../report?format=html|pdf
+		// returns rendered output; JSON remains the default." Rendering itself is a
+		// pure function of the already-built Report (core.RenderReportHTML) or a
+		// subprocess call isolated in render/ (RenderPDF) — this handler adds no
+		// content of its own, only picks which renderer to call.
+		switch r.URL.Query().Get("format") {
+		case "html":
+			html, err := core.RenderReportHTML(report)
+			if err != nil {
+				writeError(w, newAPIError(http.StatusInternalServerError, "render_failed", "server: render report HTML: %v", err))
+				return
+			}
+			w.Header().Set("Content-Type", "text/html; charset=utf-8")
+			w.Write([]byte(html))
+			return
+		case "pdf":
+			html, err := core.RenderReportHTML(report)
+			if err != nil {
+				writeError(w, newAPIError(http.StatusInternalServerError, "render_failed", "server: render report HTML: %v", err))
+				return
+			}
+			pdf, err := render.PDF(html)
+			if err != nil {
+				writeError(w, newAPIError(http.StatusInternalServerError, "render_failed", "server: render report PDF: %v", err))
+				return
+			}
+			w.Header().Set("Content-Type", "application/pdf")
+			w.Write(pdf)
+			return
+		default:
+			w.Header().Set("Content-Type", "application/json")
+			json.NewEncoder(w).Encode(report)
+		}
 	}
 }

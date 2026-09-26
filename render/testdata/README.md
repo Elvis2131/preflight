@@ -38,3 +38,19 @@ apart before regenerating anything:
   already established for IR/findings.
 
 Generated against Graphviz **16.1.0** (Homebrew, macOS arm64), 2026-09-25 (PC-111: regenerated after golden/aws's IR gained aws_route_table/aws_internet_gateway nodes and their routes_to/depends_on edges — same Graphviz version as the prior regeneration, so this update is content-only, not a version bump).
+
+## PC-122: the PDF renderer does NOT get a golden fixture here
+
+`render/pdf.go`'s `PDF` function shells out to `wkhtmltopdf` the same way `SVG` above
+shells out to `dot` — but unlike the SVG/DOT pair, its output is not golden-fixture
+tested, and that is a deliberate, recorded decision (see `render/pdf.go`'s own doc
+comment), not an oversight matching this directory's own pattern by omission.
+wkhtmltopdf embeds a real `CreationDate`/`ModDate` in the PDF's own `/Info` dictionary
+by default, and font subsetting can vary by whatever fonts are actually installed on
+the rendering machine — neither is stripped or normalized here. The HTML report
+(`core.RenderReportHTML`) IS golden-fixture tested and proven byte-identical
+(`golden/fixtures/aws.report.html`, `core/report_html_golden_test.go`); PDF
+correctness is instead checked by real-invocation tests only (`render/pdf_test.go`),
+which skip gracefully wherever `wkhtmltopdf` isn't installed (this project's own
+development environment as of PC-122, included) rather than failing the whole suite
+red on a brand-new, not-yet-universally-installed dependency.

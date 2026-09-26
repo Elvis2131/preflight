@@ -52,6 +52,19 @@ jobs:
           sudo apt-get install -y graphviz
           dot -V
 
+      # render/pdf.go's own PC-122 half: PDF export shells out to wkhtmltopdf, same
+      # "install it explicitly, print the exact version this run used" discipline as
+      # the graphviz step above. PDF output is NOT claimed byte-stable (render/pdf.go's
+      # own doc comment records why — embedded CreationDate metadata, font
+      # subsetting) — this step exists so render/pdf_test.go's real-invocation tests
+      # (currently skipped on any machine without wkhtmltopdf installed, including
+      # this project's own development environment as of this ticket) actually run in
+      # CI instead of silently skipping there too.
+      - name: install wkhtmltopdf
+        run: |
+          sudo apt-get install -y wkhtmltopdf
+          wkhtmltopdf --version
+
       - name: go build
         run: go build ./...
 

@@ -10,6 +10,21 @@ Each generated `contracts/*.schema.json` carries its own version in `x-schema-ve
 stamped by `cmd/gen-contracts` — check that field against this file, not the other way
 around, since a schema file is regenerated output, not hand-edited.
 
+## report.schema.json 1.2.0 — 2026-09-26 (PC-122: Report.graph added)
+
+**Additive change to `report.schema.json` only** — the other six schemas are
+untouched and remain at their current versions.
+
+`Report` gains one new, required field: `graph` (the PC-81 SVG diagram, or a real
+failure message — never fabricated, same discipline `AssessResponse.Graph` already
+established). Required because the HTML/PDF renderer (PC-122) embeds it directly,
+per the Card's own explicit instruction ("Embeds the PC-81 SVG diagram directly, no
+re-layout") — a report with no diagram string at all would leave that renderer with
+nothing to embed. `core.BuildReport`'s own signature gained a `graphSVG string`
+parameter (the caller renders it — core/ cannot do the subprocess I/O `render.SVG`
+needs, I1), mirroring how `priceTable PriceTable` already threads pricing data the
+pure engine cannot fetch itself into the same function.
+
 ## canvas.schema.json 1.1.0 — 2026-09-26 (PC-110: CanvasNode.sizing added)
 
 **Additive change to `canvas.schema.json` only** — the other six schemas are

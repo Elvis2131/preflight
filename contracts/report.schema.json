@@ -806,6 +806,10 @@
       "type": "integer",
       "minimum": 1
     },
+    "graph": {
+      "type": "string",
+      "minLength": 1
+    },
     "executive_summary": {
       "$ref": "#/$defs/ReportExecutiveSummary"
     },
@@ -857,6 +861,7 @@
   "required": [
     "session_id",
     "version_number",
+    "graph",
     "executive_summary",
     "inventory",
     "nfr_conformance",
@@ -869,5 +874,5 @@
     "provenance"
   ],
   "x-changelog": "contracts/CHANGELOG.md",
-  "x-schema-version": "1.1.0"
+  "x-schema-version": "1.2.0"
 }

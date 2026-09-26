@@ -153,3 +153,20 @@ Two real bugs were caught by hand-verification, not by tests written in advance:
 
 Both are exactly the value of "derive, then hand-verify" over trusting generated output
 by construction — see PC-12's and PC-14's Jira history for the full account of each.
+
+## `aws.report.json` / `aws.report.html` (PC-120/PC-122)
+
+Golden/aws only, deliberately — a projection over the same IR/findings this generator
+already produces above, not a second independent thing to keep four bundles' worth of
+in sync. `aws.report.json` is `core.BuildReport`'s own output (no pricing snapshot
+exists in this generator, so `cost.available` is honestly `false`); `aws.report.html`
+is that same report through `core.RenderReportHTML`, including the real, live-rendered
+PC-81 SVG diagram embedded directly (`Report.Graph`) — both byte-compared in CI
+(`core/report_golden_test.go`, `core/report_html_golden_test.go`), each with its own
+negative control. There is no `aws.report.pdf` fixture: PC-122's own PDF export
+(`render/pdf.go`) is explicitly NOT claimed byte-stable (wkhtmltopdf embeds a real
+CreationDate and can vary font subsetting by installed fonts) — see that file's own
+doc comment for the full determinism decision. Regenerating: same
+`go run ./cmd/gen-golden-fixtures` command as above; requires a real `dot` (Graphviz)
+on PATH to render the diagram, exactly like every other command that touches this
+directory already does via `render.SVG`.
