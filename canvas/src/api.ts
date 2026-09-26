@@ -128,6 +128,139 @@ export function getPricingSnapshot(id: string, baseURL: string = ASSESSD_BASE_UR
   return getJSON(`${baseURL}/pricing/snapshots/${id}`);
 }
 
+// listVersions (PC-123) backs the Report mode's own version picker — GET
+// /sessions/{id}/versions (PC-92) returns one AssessResponse-shaped entry per stored
+// version; only version_number is actually read by the picker today.
+export interface VersionSummary {
+  version_number: number;
+}
+export function listVersions(sessionID: string, baseURL: string = ASSESSD_BASE_URL): Promise<VersionSummary[]> {
+  return getJSON(`${baseURL}/sessions/${sessionID}/versions`);
+}
+
+// Report mirrors core.Report (preflight/core/report.go) field-for-field, cross-checked
+// against that Go source before typing, not guessed — PC-120's own seventh frozen
+// contract (report.schema.json). Nested value shapes the Report view never inspects
+// beyond "does it exist / what's its own display text" are typed loosely
+// (Record<string, unknown> / unknown[]) rather than fully mirrored, since a UI that
+// only ever displays server-provided fields verbatim (never computes from them) has
+// no need to know their full internal shape — the same "thin, computes nothing"
+// boundary this ticket's own Card requires.
+export interface ComplianceCatalogCounts {
+  Assessable: number;
+  Partial: number;
+  NotAssessable: number;
+}
+export interface ComplianceResultCounts {
+  Satisfied: number;
+  Applicable: number;
+  Partial: number;
+  Unsatisfied: number;
+  NotAssessable: number;
+}
+export interface ReportExecutiveSummary {
+  scorecard_status_counts: Record<string, number>;
+  compliance_catalog_counts: Record<string, ComplianceCatalogCounts>;
+  compliance_result_counts: Record<string, ComplianceResultCounts>;
+  nfr_evaluated_count: number;
+  nfr_not_evaluated_count: number;
+}
+export interface ReportNFREntry {
+  requirement_id: string;
+  priority: string;
+  value: unknown;
+  evaluated: boolean;
+  finding_ids?: string[];
+  reason?: string;
+}
+export interface ReportComplianceFrameworkSection {
+  framework: string;
+  catalog_counts: ComplianceCatalogCounts;
+  result_counts: ComplianceResultCounts;
+  controls: Array<{
+    ControlID: string;
+    RequirementID: string;
+    Title: string;
+    Classification: string;
+    NodeID?: string;
+    Result: { status: string; provenance: unknown };
+    Rationale: string;
+  }>;
+}
+export interface ReportFailureModesSection {
+  available: boolean;
+  unavailable_reason?: string;
+  findings?: Array<{ id: string; title: string; dimensions: Record<string, unknown>; outcome: { state: string; value?: unknown; reason?: string } }>;
+}
+export interface ReportTrafficSection {
+  available: boolean;
+  unavailable_reason?: string;
+  flows?: Array<{ JourneyID: string; Flows: boolean; BlockedAt?: string; BlockedReason?: string }>;
+  load?: unknown[];
+}
+export interface UsageBasedCostEntry {
+  JourneyID: string;
+  Kind: string;
+  Decision: string;
+  MonthlyAmount: number;
+  Currency: string;
+  Reason: string;
+}
+export interface ReportCostSection {
+  available: boolean;
+  unavailable_reason?: string;
+  disclaimer: string;
+  report?: {
+    SnapshotID: string;
+    PricedTotal: number;
+    Currency: string;
+    UnpricedCount: number;
+    Components: Array<{ NodeID: string; Decision: string; MonthlyAmount: number; Currency: string; Reason: string }>;
+  };
+  usage_based_charges: UsageBasedCostEntry[];
+}
+export interface DeltaEntry {
+  finding_id: string;
+  kind: string;
+  old_status?: string;
+  new_status?: string;
+  reason?: string;
+}
+export interface ReportAssumption {
+  kind: string;
+  source: string;
+  reason?: string;
+}
+export interface Report {
+  session_id: string;
+  version_number: number;
+  graph: string;
+  executive_summary: ReportExecutiveSummary;
+  inventory: Array<{ node_id: string; type: string; resolution: string }>;
+  nfr_conformance: ReportNFREntry[];
+  compliance: ReportComplianceFrameworkSection[];
+  failure_modes: ReportFailureModesSection;
+  traffic: ReportTrafficSection;
+  cost: ReportCostSection;
+  delta: DeltaEntry[];
+  assumptions: ReportAssumption[];
+}
+
+// getReport (PC-123) fetches the JSON report — the "generate and display" half of
+// Report mode. format is a thin passthrough to the same query param the server
+// already understands (PC-122); this function never renders anything itself.
+export function getReport(sessionID: string, versionNumber: number, baseURL: string = ASSESSD_BASE_URL): Promise<Report> {
+  return getJSON(`${baseURL}/sessions/${sessionID}/versions/${versionNumber}/report`);
+}
+
+// reportExportURL (PC-123) builds the URL for the HTML/PDF export links — a plain
+// string, not a fetch: the browser's own "open in new tab" / native download handling
+// is the export mechanism, this app performs no client-side rendering of either
+// format (that would duplicate PC-122's own server-side renderer).
+export function reportExportURL(sessionID: string, versionNumber: number, format: "html" | "pdf", baseURL: string = ASSESSD_BASE_URL): string {
+  return `${baseURL}/sessions/${sessionID}/versions/${versionNumber}/report?format=${format}`;
+}
+
 async function postJSON<T>(url: string, body: unknown): Promise<T> {
   const res = await fetch(url, {
     method: "POST",

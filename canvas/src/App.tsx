@@ -29,6 +29,7 @@ import { serialize } from "./serialize";
 import { GoldenNode } from "./GoldenNode";
 import { Inspector } from "./Inspector";
 import { assessCanvas, simulateNodeLoss, describeSimError, type SimulateResponse } from "./api";
+import { ReportView } from "./ReportView";
 import { WorkloadForm, buildWorkload, emptyWorkloadFormValue, type WorkloadFormValue } from "./WorkloadForm";
 
 const nodeTypes = { golden: GoldenNode };
@@ -87,6 +88,10 @@ function CanvasInner() {
   const sessionIDRef = useRef(crypto.randomUUID());
   const [workloadForm, setWorkloadForm] = useState<WorkloadFormValue>(emptyWorkloadFormValue());
   const [showWorkloadForm, setShowWorkloadForm] = useState(true);
+  // mode (PC-123): Design is this file's own pre-existing canvas; Report is a thin
+  // view over PC-120/122's own already-computed results — switching modes changes
+  // nothing about the canvas state underneath it.
+  const [mode, setMode] = useState<"design" | "report">("design");
   const [selectedNodeID, setSelectedNodeID] = useState<string | null>(null);
   const [simBusy, setSimBusy] = useState(false);
   const [simError, setSimError] = useState<string | null>(null);
@@ -210,6 +215,19 @@ function CanvasInner() {
     }
   }, [selectedNodeID, nodes, edges, workloadForm, applySimResult]);
 
+  // repriceCurrentDesign (PC-123) re-runs assessCanvas against the CURRENT canvas
+  // state, no explicit price_snapshot_id — the server's own already-documented
+  // resolution rule (server/assess.go) then prices against whatever snapshot is
+  // ACTIVE right now. This creates a brand new version; it never mutates any
+  // previously-stored report (server/report.go/GetReport only ever reads a version
+  // back, it has no update path at all).
+  const repriceCurrentDesign = useCallback(async (): Promise<number> => {
+    const doc = serialize(nodes, edges);
+    const workload = buildWorkload(workloadForm);
+    const assessed = await assessCanvas(sessionIDRef.current, doc, workload);
+    return assessed.version_number;
+  }, [nodes, edges, workloadForm]);
+
   const selectedNodeLabel = useMemo(
     () => nodes.find((n) => n.id === selectedNodeID)?.data.label,
     [nodes, selectedNodeID],
@@ -285,7 +303,25 @@ function CanvasInner() {
   );
 
   return (
-    <div style={{ display: "flex", height: "100vh", width: "100%" }}>
+    <div style={{ display: "flex", flexDirection: "column", height: "100vh", width: "100%" }}>
+      <div style={{ display: "flex", gap: 6, padding: "6px 12px", borderBottom: "1px solid #cbd5e1", background: "#f8fafc" }}>
+        <button
+          onClick={() => setMode("design")}
+          style={{ fontSize: 12, fontWeight: mode === "design" ? 700 : 400, background: mode === "design" ? "#e0e7ff" : undefined }}
+        >
+          Design
+        </button>
+        <button
+          onClick={() => setMode("report")}
+          style={{ fontSize: 12, fontWeight: mode === "report" ? 700 : 400, background: mode === "report" ? "#e0e7ff" : undefined }}
+        >
+          Report
+        </button>
+      </div>
+      {mode === "report" ? (
+        <ReportView sessionID={sessionIDRef.current} onReprice={repriceCurrentDesign} />
+      ) : (
+    <div style={{ display: "flex", flex: 1, minHeight: 0, width: "100%" }}>
       <Palette />
       {showWorkloadForm && (
         <div style={{ width: 300, borderRight: "1px solid #e2e8f0", overflowY: "auto" }}>
@@ -403,6 +439,8 @@ function CanvasInner() {
         </div>
       </div>
       {selectedNode && <Inspector node={selectedNode} onChange={updateNodeSizing} />}
+    </div>
+      )}
     </div>
   );
 }
