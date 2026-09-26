@@ -32,18 +32,23 @@ export interface Journey {
 
 // JourneyHopFlow/JourneyFlowResult mirror core.JourneyHopFlow/core.JourneyFlowResult
 // (core/journey_flow.go, PC-125) — no json tags on the Go structs, so field names are
-// the default Go-encoding/json PascalCase, not guessed or snake_cased.
+// the default Go-encoding/json PascalCase, not guessed or snake_cased. GroupIndex/
+// ReachedByGroup (PC-125/126's own follow-up) expose "|"-separated parallel Path
+// groups: GroupIndex is the destination's own position in Path; ReachedByGroup[i] is
+// the sorted list of Path[i]'s own declared members actually reached.
 export interface JourneyHopFlow {
   From: string;
   To: string;
   Allowed: boolean;
   Reason: string;
+  GroupIndex: number;
 }
 
 export interface JourneyFlowResult {
   JourneyID: string;
   Flows: boolean;
   Hops: JourneyHopFlow[];
+  ReachedByGroup: string[][];
   BlockedAt: string;
   BlockedReason: string;
 }
@@ -51,6 +56,8 @@ export interface JourneyFlowResult {
 // ComponentLoad mirrors core.ComponentLoad (core/load.go, PC-126) — again no json
 // tags, so PascalCase. Capacity/Utilization are nullable exactly as the Go doc
 // comment states: nil means undeclared/not_assessable, never a guessed default.
+// LoadDivisionNote (PC-126's own follow-up) is non-empty only for a component that is
+// actually a member of a currently-reached parallel group of more than one.
 export interface ComponentLoad {
   NodeID: string;
   NodeType: string;
@@ -59,6 +66,7 @@ export interface ComponentLoad {
   Capacity: number | null;
   Utilization: number | null;
   NotAssessableReason: string;
+  LoadDivisionNote: string;
 }
 
 export interface SimulateResponse {

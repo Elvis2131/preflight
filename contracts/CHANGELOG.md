@@ -10,6 +10,26 @@ Each generated `contracts/*.schema.json` carries its own version in `x-schema-ve
 stamped by `cmd/gen-contracts` — check that field against this file, not the other way
 around, since a schema file is regenerated output, not hand-edited.
 
+## report.schema.json 1.3.0 — 2026-09-26 (PC-125/126: parallel-path fields added)
+
+**Additive change to `report.schema.json` only** — the other six schemas are
+untouched and remain at their current versions.
+
+Filed after PC-136 surfaced that PC-125/126's own stated "parallel paths" scope gap
+blocked the Card's own named example ("2 of 3 app nodes lost, survivors at 150% of
+declared capacity") from ever being built or tested. `core/journey_flow.go` gained
+support for a `DeclaredJourney.Path` element naming more than one node ID, joined by
+`"|"` — deliberately NOT a `workload.schema.json` change (`Path` stays `[]string`,
+no version bump needed there; a `Path` with no `"|"` behaves identically to before).
+`JourneyFlowResult` gains `ReachedByGroup` (which of each `Path` position's own
+declared members were actually reached, position-for-position) and `JourneyHopFlow`
+gains `GroupIndex` (the destination's own position) — together letting a caller see
+which parallel members carried a journey and which didn't, under a fault. `ComponentLoad`
+gains `LoadDivisionNote`, populated with the real even-split assumption text ONLY for
+a component that is actually a member of a currently-reached parallel group of more
+than one — PC-126's own "even-split rule tagged assumed and visible in output"
+criterion, now genuinely exercised rather than recorded-but-dormant.
+
 ## canvas.schema.json 1.2.0 — 2026-09-26 (PC-136: CanvasNode.service_id added)
 
 **Additive change to `canvas.schema.json` only** — the other six schemas are

@@ -235,6 +235,23 @@ reachability" above for any journey the architect wants evaluated at request-gra
 the dependency PC-98's own Card names. Traffic & Capacity's flow/bottleneck computation
 is a consumer of this same simulation flow, not a parallel one.
 
+**Parallel paths (PC-125/126 follow-up):** a `DeclaredJourney.Path` element may name
+more than one node ID joined by `"|"` (`core.JourneyParallelSeparator`) — e.g.
+`{"internet", "alb", "app1|app2|app3", "db"}` — declaring known-redundant components
+as parallel members of one journey position. `ComputeJourneyFlow` evaluates every
+reached member of one position against every declared member of the next (a real
+cross-product, not a shortcut) and only reports the journey stopped once an entire
+position's group has zero reached members — a fault that kills some but not all
+members reroutes onto the survivors instead. `ComputeComponentLoad` then divides that
+position's declared load evenly across however many members are currently reached
+(`core.LoadDivisionAssumption`), so a fault that removes 1 of 3 replicas correctly
+raises the two survivors' own utilisation rather than silently keeping their offered
+load unchanged. This does not require ingest to model a real multi-AZ Terraform
+resource as multiple IR nodes (still one open, separate, larger limitation) — it lets
+an architect who has explicitly modelled redundant components (or an
+already-multi-node golden/synthetic fixture) get real reroute/utilisation results
+today.
+
 ### 2.4 Validation ladder flow (Phase 3)
 
 ```

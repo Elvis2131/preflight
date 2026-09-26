@@ -201,6 +201,9 @@
         },
         "NotAssessableReason": {
           "type": "string"
+        },
+        "LoadDivisionNote": {
+          "type": "string"
         }
       },
       "additionalProperties": false,
@@ -212,7 +215,8 @@
         "CapacityKey",
         "Capacity",
         "Utilization",
-        "NotAssessableReason"
+        "NotAssessableReason",
+        "LoadDivisionNote"
       ]
     },
     "CostReport": {
@@ -433,6 +437,15 @@
           },
           "type": "array"
         },
+        "ReachedByGroup": {
+          "items": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "type": "array"
+        },
         "BlockedAt": {
           "type": "string"
         },
@@ -446,6 +459,7 @@
         "JourneyID",
         "Flows",
         "Hops",
+        "ReachedByGroup",
         "BlockedAt",
         "BlockedReason"
       ]
@@ -463,6 +477,9 @@
         },
         "Reason": {
           "type": "string"
+        },
+        "GroupIndex": {
+          "type": "integer"
         }
       },
       "additionalProperties": false,
@@ -471,7 +488,8 @@
         "From",
         "To",
         "Allowed",
-        "Reason"
+        "Reason",
+        "GroupIndex"
       ]
     },
     "Provenance": {
@@ -874,5 +892,5 @@
     "provenance"
   ],
   "x-changelog": "contracts/CHANGELOG.md",
-  "x-schema-version": "1.2.0"
+  "x-schema-version": "1.3.0"
 }

@@ -1786,8 +1786,15 @@
             "From": "internet",
             "To": "aws_lb.payments",
             "Allowed": false,
-            "Reason": "Blocked at aws_subnet.public_a (nacl_check): destination subnet has no resolvable associated NACL"
+            "Reason": "Blocked at aws_subnet.public_a (nacl_check): destination subnet has no resolvable associated NACL",
+            "GroupIndex": 1
           }
+        ],
+        "ReachedByGroup": [
+          [
+            "internet"
+          ],
+          []
         ],
         "BlockedAt": "aws_lb.payments",
         "BlockedReason": "Blocked at aws_subnet.public_a (nacl_check): destination subnet has no resolvable associated NACL"
@@ -1800,8 +1807,15 @@
             "From": "aws_eks_cluster.payments",
             "To": "aws_sqs_queue.settlement",
             "Allowed": false,
-            "Reason": "Blocked at aws_sqs_queue.settlement (route_selection): destination has no resolvable effective route table"
+            "Reason": "Blocked at aws_sqs_queue.settlement (route_selection): destination has no resolvable effective route table",
+            "GroupIndex": 1
           }
+        ],
+        "ReachedByGroup": [
+          [
+            "aws_eks_cluster.payments"
+          ],
+          []
         ],
         "BlockedAt": "aws_sqs_queue.settlement",
         "BlockedReason": "Blocked at aws_sqs_queue.settlement (route_selection): destination has no resolvable effective route table"
