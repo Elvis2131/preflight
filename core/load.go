@@ -10,13 +10,14 @@
 // proven structurally, core/load_test.go's own grep-style check.
 //
 // LOAD-DIVISION ASSUMPTION, recorded once here rather than left implicit (the Card's
-// own instruction): if/when PC-125 grows real parallel-path enumeration (its own
-// stated scope gap — this IR's node granularity has no per-AZ-instance node today),
-// load across those parallel paths would divide evenly among them. That rule is not
-// yet exercised — PC-125 does not produce parallel paths to divide across — but is
-// recorded now so it has exactly one place to live when it becomes real, rather than
-// being invented ad hoc later. Never assumed to be AWS's own real ALB/routing
-// algorithm; stated as a modelling simplification.
+// own instruction): load across a journey's own parallel path members (PC-125's own
+// "|"-separated Path groups) divides evenly among however many of that position's
+// members are actually reached right now — under a fault that kills some but not all
+// of a group, the SAME total flow continues through fewer members, each now carrying
+// more (the Card's own named example: "2 of 3 app nodes lost, survivors at 150% of
+// declared capacity"). Never assumed to be AWS's own real ALB/routing algorithm;
+// stated as a modelling simplification, applied identically regardless of which
+// specific members survive.
 package core
 
 import (
@@ -24,10 +25,11 @@ import (
 	"sort"
 )
 
-// LoadDivisionAssumption is PC-126's own recorded (currently unexercised — see this
-// file's own package doc comment) rule for dividing load across parallel paths, once
-// PC-125 can produce more than one per journey.
-const LoadDivisionAssumption = "even split across parallel paths (not AWS's own real load-balancing algorithm — a stated modelling simplification, unexercised until PC-125 models parallel paths)"
+// LoadDivisionAssumption is PC-126's own recorded rule for dividing load across a
+// journey's own parallel path members — see this file's own package doc comment. Now
+// genuinely exercised (core/load_parallel_test.go) since core/journey_flow.go gained
+// real "|"-separated parallel Path groups.
+const LoadDivisionAssumption = "even split across parallel paths (not AWS's own real load-balancing algorithm — a stated modelling simplification)"
 
 // ComponentLoad is one component's offered load and (if capacity is declared)
 // utilisation, for one evaluated scenario (no fault, or a specific declared one).
@@ -39,6 +41,14 @@ type ComponentLoad struct {
 	Capacity            *float64 // nil when undeclared — never a guessed default
 	Utilization         *float64 // nil when Capacity is nil
 	NotAssessableReason string   // populated only when Capacity is nil
+
+	// LoadDivisionNote is PC-126's own explicit "visible in output" acceptance
+	// criterion: populated with LoadDivisionAssumption's own text, but ONLY for a
+	// component that is actually a member of a currently-reached parallel group of
+	// more than one (i.e. OfferedRPS above genuinely reflects an even-split
+	// assumption, not just a linear pass-through) — empty for every other component,
+	// so this never implies an assumption was applied where it wasn't.
+	LoadDivisionNote string
 }
 
 // ComputeComponentLoad sums every fully-specified journey's (declared PeakRPS, PC-124)
@@ -56,6 +66,7 @@ func ComputeComponentLoad(ir *IR, workload Workload, killed map[string]bool) []C
 
 	offered := map[string]float64{}
 	touched := map[string]bool{}
+	divided := map[string]bool{}
 	var order []string
 
 	for _, j := range workload.Journeys {
@@ -63,11 +74,21 @@ func ComputeComponentLoad(ir *IR, workload Workload, killed map[string]bool) []C
 			continue // no declared peak load — this journey contributes nothing countable, never guessed
 		}
 		flow := ComputeJourneyFlow(ir, j, killed)
-		for _, hop := range flow.Hops {
-			if !hop.Allowed {
+		// Each reached member of each Path position is credited EXACTLY ONCE, with
+		// *j.PeakRPS divided by however many members of that same position were
+		// actually reached (LoadDivisionAssumption above) — crediting per Hops entry
+		// instead would double- (or N-) count a node that is the source or
+		// destination of more than one evaluated pair in a parallel group (e.g. three
+		// sources fanning into one shared destination is 3 Hops entries but ONE real
+		// arrival of the journey's own total rate at that destination). A singleton
+		// position (len 1, every pre-parallel-paths journey) divides by 1, crediting
+		// the full declared rate — this function's own original behaviour, unchanged.
+		for _, members := range flow.ReachedByGroup {
+			if len(members) == 0 {
 				continue
 			}
-			for _, nodeID := range []string{hop.From, hop.To} {
+			share := *j.PeakRPS / float64(len(members))
+			for _, nodeID := range members {
 				if nodeID == JourneyInternetSentinel {
 					continue // not a real component
 				}
@@ -75,7 +96,10 @@ func ComputeComponentLoad(ir *IR, workload Workload, killed map[string]bool) []C
 					touched[nodeID] = true
 					order = append(order, nodeID)
 				}
-				offered[nodeID] += *j.PeakRPS
+				offered[nodeID] += share
+				if len(members) > 1 {
+					divided[nodeID] = true
+				}
 			}
 		}
 	}
@@ -87,6 +111,9 @@ func ComputeComponentLoad(ir *IR, workload Workload, killed map[string]bool) []C
 		node := byID[nodeID]
 		key := JourneyCapacityKey(node.Type)
 		cl := ComponentLoad{NodeID: nodeID, NodeType: node.Type, OfferedRPS: offered[nodeID], CapacityKey: key}
+		if divided[nodeID] {
+			cl.LoadDivisionNote = LoadDivisionAssumption
+		}
 		if capValue, ok := workload.Capacity[key]; ok {
 			util := cl.OfferedRPS / capValue
 			cl.Capacity = &capValue
