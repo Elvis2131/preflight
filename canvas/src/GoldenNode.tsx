@@ -30,8 +30,34 @@ function simStateStyle(simState: string | undefined, selected: boolean | undefin
   }
 }
 
+// utilizationColor picks a display band purely from the number /simulate already
+// computed (core.ComponentLoad.Utilization) — never a threshold this app invents new
+// meaning for, just a stoplight rendering of a ratio the server itself produced:
+// green under 70%, amber up to 100%, red once a component is offered more load than
+// its declared capacity.
+function utilizationColor(utilization: number): string {
+  if (utilization > 1) return "#dc2626";
+  if (utilization >= 0.7) return "#d97706";
+  return "#16a34a";
+}
+
 export function GoldenNode({ data, selected }: NodeProps<GoldenNodeType>) {
   const { border, background, opacity } = simStateStyle(data.simState, selected);
+  // journeyOnPath (PC-127) is a highlight ADDED via box-shadow, never a border
+  // override: PC-88/89's own killed/severed/cascaded border colors are the one true
+  // fault signal (see simStateStyle's own doc comment on why they must stay
+  // legible) — a journey highlight must never mask that a node is also killed.
+  const journeyRing = data.journeyOnPath ? "0 0 0 3px #7c3aed" : undefined;
+  const baseShadow = journeyRing ?? "0 1px 2px rgba(0,0,0,0.08)";
+  // notAssessableLoad (PC-127): a diagonal hatch, distinct from any simState color,
+  // for a component core.ComponentLoad itself marked not_assessable (no declared
+  // capacity) — never silently shown as 0% utilized.
+  const hatch = data.notAssessableLoad
+    ? {
+        backgroundImage:
+          "repeating-linear-gradient(45deg, #e2e8f0, #e2e8f0 4px, #f8fafc 4px, #f8fafc 8px)",
+      }
+    : {};
   return (
     <div
       style={{
@@ -42,7 +68,8 @@ export function GoldenNode({ data, selected }: NodeProps<GoldenNodeType>) {
         opacity,
         minWidth: 140,
         fontSize: 13,
-        boxShadow: "0 1px 2px rgba(0,0,0,0.08)",
+        boxShadow: baseShadow,
+        ...hatch,
       }}
     >
       <Handle type="target" position={Position.Top} />
@@ -54,6 +81,21 @@ export function GoldenNode({ data, selected }: NodeProps<GoldenNodeType>) {
         <div style={{ fontSize: 10, fontWeight: 600, marginTop: 2, color: "#dc2626" }}>
           {data.simState.toUpperCase()}
         </div>
+      )}
+      {typeof data.utilization === "number" && (
+        <div style={{ marginTop: 4, height: 4, borderRadius: 2, background: "#e2e8f0" }}>
+          <div
+            style={{
+              width: `${Math.min(data.utilization, 1) * 100}%`,
+              height: "100%",
+              borderRadius: 2,
+              background: utilizationColor(data.utilization),
+            }}
+          />
+        </div>
+      )}
+      {data.notAssessableLoad && (
+        <div style={{ fontSize: 9, color: "#94a3b8", marginTop: 2 }}>utilization not_assessable</div>
       )}
       <Handle type="source" position={Position.Bottom} />
     </div>

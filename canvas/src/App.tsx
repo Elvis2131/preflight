@@ -28,9 +28,10 @@ import type { CanvasNodeData, CanvasEdgeData } from "./types";
 import { serialize } from "./serialize";
 import { GoldenNode } from "./GoldenNode";
 import { Inspector } from "./Inspector";
-import { assessCanvas, simulateNodeLoss, describeSimError, type SimulateResponse } from "./api";
+import { assessCanvas, simulateNodeLoss, simulateBaseline, describeSimError, type SimulateResponse } from "./api";
 import { ReportView } from "./ReportView";
 import { WorkloadForm, buildWorkload, emptyWorkloadFormValue, type WorkloadFormValue } from "./WorkloadForm";
+import { JourneyPanel } from "./JourneyPanel";
 
 const nodeTypes = { golden: GoldenNode };
 
@@ -96,6 +97,11 @@ function CanvasInner() {
   const [simBusy, setSimBusy] = useState(false);
   const [simError, setSimError] = useState<string | null>(null);
   const [simSummary, setSimSummary] = useState<SimulateResponse | null>(null);
+  // selectedJourneyID (PC-127): which declared journey the JourneyPanel/canvas
+  // highlight currently reflects — independent of selectedNodeID (killing a node and
+  // inspecting a journey's flow are separate concerns).
+  const [selectedJourneyID, setSelectedJourneyID] = useState<string | null>(null);
+  const [showJourneyPanel, setShowJourneyPanel] = useState(true);
 
   const onNodeClick = useCallback<NodeMouseHandler>((_event, node) => {
     setSelectedNodeID(node.id);
@@ -215,6 +221,28 @@ function CanvasInner() {
     }
   }, [selectedNodeID, nodes, edges, workloadForm, applySimResult]);
 
+  // runBaseline (PC-127) is the "before" half of the fault before/after comparison
+  // the Card asks for: a real /simulate call with an empty faults list (a genuine
+  // no-fault scenario core.Simulate already supports, not a client-side stand-in),
+  // so the JourneyPanel/canvas highlight can show real flow/utilization even before
+  // any node has been killed.
+  const runBaseline = useCallback(async () => {
+    setSimBusy(true);
+    setSimError(null);
+    try {
+      const doc = serialize(nodes, edges);
+      const workload = buildWorkload(workloadForm);
+      const assessed = await assessCanvas(sessionIDRef.current, doc, workload);
+      const sim = await simulateBaseline(sessionIDRef.current, assessed.version_number);
+      stopAnimation();
+      setSimSummary(sim);
+    } catch (err) {
+      setSimError(describeSimError(err));
+    } finally {
+      setSimBusy(false);
+    }
+  }, [nodes, edges, workloadForm, stopAnimation]);
+
   // repriceCurrentDesign (PC-123) re-runs assessCanvas against the CURRENT canvas
   // state, no explicit price_snapshot_id — the server's own already-documented
   // resolution rule (server/assess.go) then prices against whatever snapshot is
@@ -291,16 +319,74 @@ function CanvasInner() {
   );
 
   const doc = serialize(nodes, edges);
+  const journeys = useMemo(() => buildWorkload(workloadForm).journeys ?? [], [workloadForm]);
+
+  // Default to the first declared journey once one exists and nothing is selected
+  // yet — a convenience only; it never invents a selection when the architect has
+  // declared no journeys at all.
+  useEffect(() => {
+    if (selectedJourneyID === null && journeys.length > 0) {
+      setSelectedJourneyID(journeys[0].id);
+    }
+  }, [journeys, selectedJourneyID]);
+
+  // selectedFlow/journeyNodeIDs/journeyHopKeys (PC-127) project the selected
+  // journey's own Hops (from /simulate's flow_detail — never recomputed) onto the
+  // current canvas: which node IDs and which from/to edge pairs to highlight. Purely
+  // a lookup against server-returned hop pairs, not a flow computation of its own.
+  const selectedFlow = simSummary?.flow_detail.find((f) => f.JourneyID === selectedJourneyID) ?? null;
+  const journeyNodeIDs = useMemo(() => {
+    const ids = new Set<string>();
+    for (const hop of selectedFlow?.Hops ?? []) {
+      ids.add(hop.From);
+      ids.add(hop.To);
+    }
+    return ids;
+  }, [selectedFlow]);
+  const journeyHopKeys = useMemo(() => {
+    const keys = new Set<string>();
+    for (const hop of selectedFlow?.Hops ?? []) {
+      keys.add(`${hop.From}|${hop.To}`);
+    }
+    return keys;
+  }, [selectedFlow]);
+  const loadByNodeID = useMemo(() => {
+    const loadEntries = simSummary?.load ?? [];
+    const m = new Map<string, (typeof loadEntries)[number]>();
+    for (const l of loadEntries) m.set(l.NodeID, l);
+    return m;
+  }, [simSummary]);
+
+  // displayNodes overlays journey highlight + utilization presentation at render
+  // time only, same "never written back into node state" discipline displayEdges
+  // below already applies to severed.
+  const displayNodes = nodes.map((n) => {
+    const load = loadByNodeID.get(n.id);
+    return {
+      ...n,
+      data: {
+        ...n.data,
+        journeyOnPath: journeyNodeIDs.has(n.id),
+        utilization: load ? load.Utilization : undefined,
+        notAssessableLoad: load ? load.Capacity === null : false,
+      },
+    };
+  });
 
   // displayEdges applies severed styling at render time only — edges' own stored
   // `data.severed` (set by applySimResult) never becomes a React Flow `style`/
   // `animated` prop directly, so serialize.ts's own field whitelist stays the single
   // source of truth for what's UI-only vs. wire-shape.
-  const displayEdges = edges.map((e) =>
-    e.data?.severed
-      ? { ...e, style: { stroke: "#dc2626", strokeDasharray: "6 4" }, animated: true }
-      : e,
-  );
+  const displayEdges = edges.map((e) => {
+    const onPath = journeyHopKeys.has(`${e.source}|${e.target}`);
+    if (e.data?.severed) {
+      return { ...e, style: { stroke: "#dc2626", strokeDasharray: "6 4" }, animated: true };
+    }
+    if (onPath) {
+      return { ...e, style: { stroke: "#7c3aed", strokeWidth: 2.5 }, animated: true };
+    }
+    return e;
+  });
 
   return (
     <div style={{ display: "flex", flexDirection: "column", height: "100vh", width: "100%" }}>
@@ -370,6 +456,13 @@ function CanvasInner() {
           <button onClick={clearSimulation} disabled={!simSummary} style={{ fontSize: 12 }}>
             Clear simulation
           </button>
+          <span style={{ borderLeft: "1px solid #e2e8f0", height: 20 }} />
+          <button onClick={runBaseline} disabled={simBusy || journeys.length === 0} style={{ fontSize: 12 }}>
+            Run baseline (no fault)
+          </button>
+          <button onClick={() => setShowJourneyPanel((v) => !v)} style={{ fontSize: 12 }}>
+            {showJourneyPanel ? "Hide" : "Show"} journey panel
+          </button>
         </div>
         {(simError || simSummary) && (
           <div
@@ -403,7 +496,7 @@ function CanvasInner() {
         )}
         <div ref={wrapperRef} style={{ flex: 1, position: "relative" }} onDragOver={onDragOver} onDrop={onDrop}>
           <ReactFlow
-            nodes={nodes}
+            nodes={displayNodes}
             edges={displayEdges}
             nodeTypes={nodeTypes}
             onNodesChange={onNodesChange}
@@ -439,6 +532,17 @@ function CanvasInner() {
         </div>
       </div>
       {selectedNode && <Inspector node={selectedNode} onChange={updateNodeSizing} />}
+      {showJourneyPanel && (
+        <div style={{ width: 320, borderLeft: "1px solid #e2e8f0", overflowY: "auto" }}>
+          <JourneyPanel
+            journeys={journeys}
+            flowDetail={simSummary?.flow_detail ?? []}
+            load={simSummary?.load ?? []}
+            selectedJourneyID={selectedJourneyID}
+            onSelectJourney={setSelectedJourneyID}
+          />
+        </div>
+      )}
     </div>
       )}
     </div>

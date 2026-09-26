@@ -30,6 +30,37 @@ export interface Journey {
   survives: boolean;
 }
 
+// JourneyHopFlow/JourneyFlowResult mirror core.JourneyHopFlow/core.JourneyFlowResult
+// (core/journey_flow.go, PC-125) — no json tags on the Go structs, so field names are
+// the default Go-encoding/json PascalCase, not guessed or snake_cased.
+export interface JourneyHopFlow {
+  From: string;
+  To: string;
+  Allowed: boolean;
+  Reason: string;
+}
+
+export interface JourneyFlowResult {
+  JourneyID: string;
+  Flows: boolean;
+  Hops: JourneyHopFlow[];
+  BlockedAt: string;
+  BlockedReason: string;
+}
+
+// ComponentLoad mirrors core.ComponentLoad (core/load.go, PC-126) — again no json
+// tags, so PascalCase. Capacity/Utilization are nullable exactly as the Go doc
+// comment states: nil means undeclared/not_assessable, never a guessed default.
+export interface ComponentLoad {
+  NodeID: string;
+  NodeType: string;
+  OfferedRPS: number;
+  CapacityKey: string;
+  Capacity: number | null;
+  Utilization: number | null;
+  NotAssessableReason: string;
+}
+
 export interface SimulateResponse {
   journeys: Journey[] | null;
   capacity: AssessmentEnvelope;
@@ -42,6 +73,11 @@ export interface SimulateResponse {
   severed_paths: string[] | null;
   cascade: string[] | null;
   verdict: AssessmentEnvelope;
+  // flow_detail/load (PC-127): PC-125/126's own real per-journey flow and
+  // per-component utilization, exposed so this UI never recomputes either
+  // client-side — see core/simulate.go's own SimulateResponse doc comment.
+  flow_detail: JourneyFlowResult[];
+  load: ComponentLoad[];
 }
 
 // APIError (PC-95) mirrors server.APIError's own wire shape ({error_code, message}) —
@@ -321,5 +357,22 @@ export function simulateNodeLoss(
     session_id: sessionID,
     version_number: versionNumber,
     faults: [{ type: "node_loss", target: targetNodeID }],
+  });
+}
+
+// simulateBaseline (PC-127) posts an empty faults list — core.Simulate/resolveFaults
+// treats that as a real, legitimate no-fault scenario (an empty killed set), not a
+// special case this file invents. Gives the journey/utilization panel a genuine
+// server-computed "before" to compare a fault's "after" against, rather than
+// synthesizing one client-side.
+export function simulateBaseline(
+  sessionID: string,
+  versionNumber: number,
+  baseURL: string = ASSESSD_BASE_URL,
+): Promise<SimulateResponse> {
+  return postJSON(`${baseURL}/simulate`, {
+    session_id: sessionID,
+    version_number: versionNumber,
+    faults: [],
   });
 }

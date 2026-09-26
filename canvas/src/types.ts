@@ -56,15 +56,24 @@ export interface CanvasDocument {
 // (severed_paths) is never diluted by a broader "affected" set.
 export type SimState = "normal" | "killed" | "severed" | "cascaded";
 
+// journeyOnPath/utilization/notAssessableLoad (PC-127) are, like simState above,
+// UI-only presentation state derived at render time from /simulate's own
+// flow_detail/load — never written into CanvasDocument, never computed by this app
+// (utilization is the exact number core.ComponentLoad already returned; this file
+// only picks a display band for it, it never derives the number itself).
 export interface CanvasNodeData extends Record<string, unknown> {
   nodeType: NodeType;
   label: string;
   capability: Record<string, string>;
   sizing?: Record<string, string>;
   simState?: SimState;
+  journeyOnPath?: boolean;
+  utilization?: number | null;
+  notAssessableLoad?: boolean;
 }
 
 export interface CanvasEdgeData extends Record<string, unknown> {
   edgeType: EdgeType;
   severed?: boolean;
+  journeyOnPath?: boolean;
 }
