@@ -94,7 +94,7 @@ func main() {
 			// output here) — a real, honest "cost section unavailable" case, not a
 			// gap invented for test coverage.
 			scorecard := core.BuildScorecard(findings, 1)
-			report := core.BuildReport("golden", 1, result.IR, workload, findings, scorecard, nil, nil)
+			report := core.BuildReport("golden", 1, result.IR, workload, findings, scorecard, nil, core.PriceTable{}, nil)
 			writeJSON(outDir, "aws.report.json", report)
 			fmt.Printf("wrote %s\n", filepath.Join("golden", "fixtures", "aws.report.json"))
 		}

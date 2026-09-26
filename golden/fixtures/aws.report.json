@@ -1810,7 +1810,8 @@
   "cost": {
     "available": false,
     "unavailable_reason": "no pricing snapshot was available when this version was assessed",
-    "disclaimer": "Cost figures are estimates derived from a dated AWS Price List snapshot and declared sizing. They are not a bill, do not reflect any negotiated discount, and do not include usage-based charges (data transfer, request volume, storage I/O) unless separately modelled."
+    "disclaimer": "Cost figures are estimates derived from a dated AWS Price List snapshot and declared sizing. They are not a bill, do not reflect any negotiated discount, and do not include usage-based charges (data transfer, request volume, storage I/O) unless separately modelled.",
+    "usage_based_charges": []
   },
   "delta": [],
   "assumptions": [],

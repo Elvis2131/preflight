@@ -71,6 +71,12 @@ journeys:
     criticality: tier1
     peak_rps: 800
     steady_rps: 500
+    # PC-132's own addition: average request/response payload size, needed only for
+    # byte-based usage cost (NAT data processing, data transfer, LB data-processed
+    # LCUs). A representative JSON API payload size for a payments checkout call —
+    # not measured, a reasonable declared estimate, same status as steady_rps itself.
+    avg_request_bytes: 2048
+    avg_response_bytes: 8192
   - id: settlement
     name: "Settlement: EKS -> SQS"
     path:

@@ -34,7 +34,7 @@ func TestBuildReport_NFRConformance_RPOWiredOthersNotEvaluated(t *testing.T) {
 	}}
 	scorecard := core.BuildScorecard(findings, 1)
 
-	report := core.BuildReport("s1", 1, ir, workload, findings, scorecard, nil, nil)
+	report := core.BuildReport("s1", 1, ir, workload, findings, scorecard, nil, core.PriceTable{}, nil)
 
 	byReq := map[string]core.ReportNFREntry{}
 	for _, e := range report.NFRConformance {
@@ -62,7 +62,7 @@ func TestBuildReport_NFRConformance_RPOWiredOthersNotEvaluated(t *testing.T) {
 
 func TestBuildReport_CostUnavailable_ExplicitReason(t *testing.T) {
 	ir := &core.IR{}
-	report := core.BuildReport("s1", 1, ir, core.Workload{}, nil, core.Scorecard{VersionNumber: 1}, nil, nil)
+	report := core.BuildReport("s1", 1, ir, core.Workload{}, nil, core.Scorecard{VersionNumber: 1}, nil, core.PriceTable{}, nil)
 	if report.Cost.Available {
 		t.Fatal("Cost.Available = true, want false — no CostReport was supplied")
 	}
@@ -76,7 +76,7 @@ func TestBuildReport_CostUnavailable_ExplicitReason(t *testing.T) {
 
 func TestBuildReport_TrafficUnavailable_NoJourneysDeclared(t *testing.T) {
 	ir := &core.IR{}
-	report := core.BuildReport("s1", 1, ir, core.Workload{}, nil, core.Scorecard{VersionNumber: 1}, nil, nil)
+	report := core.BuildReport("s1", 1, ir, core.Workload{}, nil, core.Scorecard{VersionNumber: 1}, nil, core.PriceTable{}, nil)
 	if report.Traffic.Available {
 		t.Fatal("Traffic.Available = true, want false — no journeys declared")
 	}
@@ -87,7 +87,7 @@ func TestBuildReport_TrafficUnavailable_NoJourneysDeclared(t *testing.T) {
 
 func TestBuildReport_NoNullSlices(t *testing.T) {
 	ir := &core.IR{}
-	report := core.BuildReport("s1", 1, ir, core.Workload{}, nil, core.Scorecard{VersionNumber: 1}, nil, nil)
+	report := core.BuildReport("s1", 1, ir, core.Workload{}, nil, core.Scorecard{VersionNumber: 1}, nil, core.PriceTable{}, nil)
 	if report.Delta == nil {
 		t.Error("Delta is nil, want an empty (never null) slice")
 	}
@@ -113,7 +113,7 @@ func TestBuildReport_NoOrphanVerdicts(t *testing.T) {
 	workload := loadGoldenWorkload(t)
 	findings := core.BuildFindings(ir, workload)
 	scorecard := core.BuildScorecard(findings, 1)
-	report := core.BuildReport("s1", 1, ir, workload, findings, scorecard, nil, nil)
+	report := core.BuildReport("s1", 1, ir, workload, findings, scorecard, nil, core.PriceTable{}, nil)
 
 	findingIDs := map[string]bool{}
 	for _, f := range report.FailureModes.Findings {
@@ -175,7 +175,7 @@ func TestGatherReportAssumptions_FindsAssumedAndStated_AtVariousNestingDepths(t 
 	}}
 	scorecard := core.BuildScorecard(findings, 1)
 
-	report := core.BuildReport("s1", 1, ir, core.Workload{}, findings, scorecard, nil, nil)
+	report := core.BuildReport("s1", 1, ir, core.Workload{}, findings, scorecard, nil, core.PriceTable{}, nil)
 
 	var foundAssumed, foundStated bool
 	for _, a := range report.Assumptions {
@@ -215,7 +215,7 @@ func TestGatherReportAssumptions_Deduplicates(t *testing.T) {
 		Outcome:  core.NotAssessable[any]("x", statedProv).ToEnvelope(),
 	}}
 	scorecard := core.BuildScorecard(findings, 1)
-	report := core.BuildReport("s1", 1, ir, core.Workload{}, findings, scorecard, nil, nil)
+	report := core.BuildReport("s1", 1, ir, core.Workload{}, findings, scorecard, nil, core.PriceTable{}, nil)
 
 	count := 0
 	for _, a := range report.Assumptions {
@@ -230,7 +230,7 @@ func TestGatherReportAssumptions_Deduplicates(t *testing.T) {
 
 func TestReport_Validate(t *testing.T) {
 	ir := &core.IR{}
-	report := core.BuildReport("s1", 1, ir, core.Workload{}, nil, core.Scorecard{VersionNumber: 1}, nil, nil)
+	report := core.BuildReport("s1", 1, ir, core.Workload{}, nil, core.Scorecard{VersionNumber: 1}, nil, core.PriceTable{}, nil)
 	if err := report.Validate(); err != nil {
 		t.Fatalf("Validate() = %v, want nil", err)
 	}

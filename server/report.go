@@ -48,7 +48,23 @@ func GetReport(store *Store, sessionID string, versionNumber int) (core.Report, 
 		}
 	}
 
-	return core.BuildReport(sessionID, versionNumber, stored.IR, stored.Workload, stored.Findings, stored.Scorecard, stored.Cost, delta), nil
+	// PC-132's own usage-based cost needs the exact PriceTable this version's own
+	// Cost was computed from — re-fetched by the SAME snapshot ID CostReport already
+	// carries (never the currently-active snapshot, which may have since changed),
+	// mirroring computeCostIfAvailable's own row-conversion (server/assess.go).
+	var priceTable core.PriceTable
+	if stored.Cost != nil && store.pricingStore != nil {
+		if snap, ok, err := store.pricingStore.GetSnapshot(stored.Cost.SnapshotID); err == nil && ok {
+			priceTable.SnapshotID = snap.ID
+			for _, e := range snap.Entries {
+				priceTable.Rows = append(priceTable.Rows, core.PriceRow{
+					Service: e.Service, SKUAttributes: e.SKUAttributes, Unit: e.Unit, Price: e.Price, Currency: e.Currency,
+				})
+			}
+		}
+	}
+
+	return core.BuildReport(sessionID, versionNumber, stored.IR, stored.Workload, stored.Findings, stored.Scorecard, stored.Cost, priceTable, delta), nil
 }
 
 // GetReportHandler serves GET /sessions/{id}/versions/{n}/report, registered with Go

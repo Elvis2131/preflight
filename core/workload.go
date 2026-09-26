@@ -56,6 +56,14 @@ type DeclaredJourney struct {
 	PeakRPS   *float64 `json:"peak_rps,omitempty" yaml:"peak_rps,omitempty"`
 	SteadyRPS *float64 `json:"steady_rps,omitempty" yaml:"steady_rps,omitempty"`
 
+	// AvgRequestBytes/AvgResponseBytes are PC-132's own addition — average payload
+	// size per request/response, needed only for byte-based usage cost (NAT data
+	// processing, data transfer, LB data-processed LCUs). Same "absence is a real,
+	// stated gap" discipline as PeakRPS/SteadyRPS: never inferred, per the Card's own
+	// explicit instruction ("Never infer payload sizes").
+	AvgRequestBytes  *float64 `json:"avg_request_bytes,omitempty" yaml:"avg_request_bytes,omitempty"`
+	AvgResponseBytes *float64 `json:"avg_response_bytes,omitempty" yaml:"avg_response_bytes,omitempty"`
+
 	// IAMCheck is PC-135's own addition: an optional IAM authorization check applied
 	// to this journey's FINAL hop only (its ultimate target — the Card's own named
 	// examples, Lambda -> S3 and ECS task -> Secrets Manager, are both end-to-end

@@ -10,6 +10,32 @@ Each generated `contracts/*.schema.json` carries its own version in `x-schema-ve
 stamped by `cmd/gen-contracts` — check that field against this file, not the other way
 around, since a schema file is regenerated output, not hand-edited.
 
+## report.schema.json 1.1.0 — 2026-09-26 (PC-132: ReportCostSection.usage_based_charges added)
+
+**Additive change to `report.schema.json` only** — the other six schemas are
+untouched and remain at their current versions.
+
+`ReportCostSection` gains one new field: `usage_based_charges` (an array of
+`UsageBasedCostEntry` — NAT gateway data processing, internet egress, cross-AZ
+transfer, and LB data-processed LCU charges computed from declared traffic, PC-132).
+Always present (never omitted/null, same "no null in JSON" discipline as
+`Inventory`/`Delta`/`Assumptions`) — empty when no journeys are declared or no price
+table was available, both distinguishable elsewhere in the same report (`Traffic.
+Available`, `Cost.Available`), so no separate `unavailable_reason` is duplicated on
+this field itself.
+
+## workload.schema.json 1.3.0 — 2026-09-26 (PC-132: DeclaredJourney payload sizes added)
+
+**Additive change to `workload.schema.json` only** — the other six schemas are
+untouched and remain at their current versions.
+
+`DeclaredJourney` gains two new, optional fields: `avg_request_bytes` and
+`avg_response_bytes` (average payload size per request/response) — needed only for
+byte-based usage cost (NAT gateway data processing, data transfer, LB data-processed
+LCUs, PC-132). Never inferred, per the Card's own explicit instruction: a journey
+missing either produces a real `not_assessable` usage-cost result naming the missing
+field, not a guessed payload size.
+
 ## report.schema.json 1.0.0 — 2026-09-26 (PC-120: seventh frozen contract, new)
 
 New contract, generated from `core.Report` — the report assembly endpoint's own root

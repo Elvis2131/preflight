@@ -20,7 +20,7 @@ func TestGoldenReport_ByteIdentical(t *testing.T) {
 	workload := loadGoldenWorkload(t)
 	findings := core.BuildFindings(ir, workload)
 	scorecard := core.BuildScorecard(findings, 1)
-	report := core.BuildReport("golden", 1, ir, workload, findings, scorecard, nil, nil)
+	report := core.BuildReport("golden", 1, ir, workload, findings, scorecard, nil, core.PriceTable{}, nil)
 
 	got, err := json.MarshalIndent(report, "", "  ")
 	if err != nil {
@@ -48,7 +48,7 @@ func TestGoldenReport_ByteIdentical_NegativeControl(t *testing.T) {
 	workload := loadGoldenWorkload(t)
 	findings := core.BuildFindings(ir, workload)
 	scorecard := core.BuildScorecard(findings, 1)
-	report := core.BuildReport("deliberately-different-session-id", 1, ir, workload, findings, scorecard, nil, nil)
+	report := core.BuildReport("deliberately-different-session-id", 1, ir, workload, findings, scorecard, nil, core.PriceTable{}, nil)
 
 	got, err := json.MarshalIndent(report, "", "  ")
 	if err != nil {

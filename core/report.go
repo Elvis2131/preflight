@@ -78,6 +78,14 @@ type ReportCostSection struct {
 	UnavailableReason string      `json:"unavailable_reason,omitempty"`
 	Disclaimer        string      `json:"disclaimer,omitempty"`
 	Report            *CostReport `json:"report,omitempty"`
+
+	// UsageBasedCharges is PC-132's own addition — NAT data processing, internet
+	// egress, cross-AZ transfer, and LB data-processed LCU charges computed from
+	// declared traffic (ComputeUsageBasedCost). Always present (never null, even
+	// empty — no journeys declared, or no price table was available, both real,
+	// distinct-from-each-other reasons a caller can already see elsewhere in this
+	// same report, so no separate unavailable_reason is duplicated here).
+	UsageBasedCharges []UsageBasedCostEntry `json:"usage_based_charges"`
 }
 
 // costDisclaimer is the Card's own required "cost with disclaimer" section text —
@@ -149,7 +157,7 @@ func (r Report) Validate() error {
 // (server/store.go) persisted for this version; delta is exactly what
 // GetStoredVersion already computed against the prior version, reused verbatim, not
 // recomputed here.
-func BuildReport(sessionID string, versionNumber int, ir *IR, workload Workload, findings []Finding, scorecard Scorecard, cost *CostReport, delta []DeltaEntry) Report {
+func BuildReport(sessionID string, versionNumber int, ir *IR, workload Workload, findings []Finding, scorecard Scorecard, cost *CostReport, priceTable PriceTable, delta []DeltaEntry) Report {
 	prov := NewProvenance(KindDerived, "core/report")
 
 	// No null in JSON (this codebase's established discipline — see e.g.
@@ -190,12 +198,15 @@ func BuildReport(sessionID string, versionNumber int, ir *IR, workload Workload,
 		traffic.Load = RankBottlenecks(ComputeComponentLoad(ir, workload, nil))
 	}
 
-	costSection := ReportCostSection{Disclaimer: costDisclaimer}
+	costSection := ReportCostSection{Disclaimer: costDisclaimer, UsageBasedCharges: []UsageBasedCostEntry{}}
 	if cost == nil {
 		costSection.UnavailableReason = "no pricing snapshot was available when this version was assessed"
 	} else {
 		costSection.Available = true
 		costSection.Report = cost
+		if len(workload.Journeys) > 0 && priceTable.SnapshotID != "" {
+			costSection.UsageBasedCharges = ComputeUsageBasedCost(ir, workload, priceTable, nil)
+		}
 	}
 
 	scorecardCounts := map[string]int{}

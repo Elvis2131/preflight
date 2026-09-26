@@ -593,12 +593,19 @@
         },
         "report": {
           "$ref": "#/$defs/CostReport"
+        },
+        "usage_based_charges": {
+          "items": {
+            "$ref": "#/$defs/UsageBasedCostEntry"
+          },
+          "type": "array"
         }
       },
       "additionalProperties": false,
       "type": "object",
       "required": [
-        "available"
+        "available",
+        "usage_based_charges"
       ]
     },
     "ReportExecutiveSummary": {
@@ -736,6 +743,58 @@
       "required": [
         "available"
       ]
+    },
+    "UsageBasedCostEntry": {
+      "properties": {
+        "JourneyID": {
+          "type": "string"
+        },
+        "HopFrom": {
+          "type": "string"
+        },
+        "HopTo": {
+          "type": "string"
+        },
+        "Kind": {
+          "type": "string"
+        },
+        "Decision": {
+          "type": "string"
+        },
+        "MonthlyGB": {
+          "type": "number"
+        },
+        "MonthlyAmount": {
+          "type": "number"
+        },
+        "Currency": {
+          "type": "string"
+        },
+        "Reason": {
+          "type": "string"
+        },
+        "SnapshotID": {
+          "type": "string"
+        },
+        "Provenance": {
+          "$ref": "#/$defs/Provenance"
+        }
+      },
+      "additionalProperties": false,
+      "type": "object",
+      "required": [
+        "JourneyID",
+        "HopFrom",
+        "HopTo",
+        "Kind",
+        "Decision",
+        "MonthlyGB",
+        "MonthlyAmount",
+        "Currency",
+        "Reason",
+        "SnapshotID",
+        "Provenance"
+      ]
     }
   },
   "properties": {
@@ -810,5 +869,5 @@
     "provenance"
   ],
   "x-changelog": "contracts/CHANGELOG.md",
-  "x-schema-version": "1.0.0"
+  "x-schema-version": "1.1.0"
 }

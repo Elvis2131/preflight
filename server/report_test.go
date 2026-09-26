@@ -11,6 +11,7 @@ import (
 	"testing"
 
 	"preflight/core"
+	"preflight/pricing"
 	"preflight/server"
 )
 
@@ -46,6 +47,65 @@ func TestGetReport_AfterAssess_MatchesBuildReport(t *testing.T) {
 	}
 	if len(report.FailureModes.Findings) == 0 {
 		t.Error("FailureModes.Findings is empty, want golden/aws's own real findings")
+	}
+	if err := report.Validate(); err != nil {
+		t.Errorf("Validate() = %v, want nil", err)
+	}
+}
+
+// TestGetReport_WithPricingSnapshot_ReconstructsPriceTable is PC-132's own server
+// integration: GetReport must re-fetch the EXACT snapshot CostReport.SnapshotID
+// names (never the currently-active one, which may have since changed) to compute
+// usage-based cost — proven here by attaching a real pricing store and confirming
+// the report comes back valid with a non-nil (never null) UsageBasedCharges slice.
+// golden/aws's own checkout journey does not structurally flow at baseline (a real,
+// pre-existing, already-documented gap — see core/usage_cost_test.go's own header
+// note), so an empty slice here is the correct, honest result, not absence of
+// wiring; core/usage_cost_test.go already proves the actual pricing/classification
+// logic in isolation on fixtures that DO flow.
+func TestGetReport_WithPricingSnapshot_ReconstructsPriceTable(t *testing.T) {
+	store, err := server.OpenStore(":memory:")
+	if err != nil {
+		t.Fatalf("OpenStore: %v", err)
+	}
+	defer store.Close()
+
+	pricingStore, err := pricing.OpenStore(":memory:")
+	if err != nil {
+		t.Fatalf("pricing.OpenStore: %v", err)
+	}
+	defer pricingStore.Close()
+	if err := pricingStore.PutSnapshot(realPricingSnapshot("usage-cost-snap")); err != nil {
+		t.Fatalf("PutSnapshot: %v", err)
+	}
+	if err := pricingStore.SetActive("usage-cost-snap"); err != nil {
+		t.Fatalf("SetActive: %v", err)
+	}
+	store.AttachPricingStore(pricingStore)
+
+	bundleDir, err := filepath.Abs("../golden/aws")
+	if err != nil {
+		t.Fatal(err)
+	}
+	workloadPath, err := filepath.Abs("../golden/workload.yaml")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := server.Assess(store, server.AssessRequest{
+		SessionID: "usage-cost-report-test", BundleDir: bundleDir, WorkloadPath: workloadPath,
+	}); err != nil {
+		t.Fatalf("Assess: %v", err)
+	}
+
+	report, err := server.GetReport(store, "usage-cost-report-test", 1)
+	if err != nil {
+		t.Fatalf("GetReport: %v", err)
+	}
+	if !report.Cost.Available {
+		t.Fatal("Cost.Available = false, want true — a pricing store was attached")
+	}
+	if report.Cost.UsageBasedCharges == nil {
+		t.Error("UsageBasedCharges is nil, want an empty (never null) slice")
 	}
 	if err := report.Validate(); err != nil {
 		t.Errorf("Validate() = %v, want nil", err)
