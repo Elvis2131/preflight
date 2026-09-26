@@ -168,9 +168,21 @@ const labelStyle: React.CSSProperties = { fontSize: 11, color: "#475569", displa
 export function WorkloadForm({
   value,
   onChange,
+  pickingPathForRow = null,
+  onStartPickPath,
+  onStopPickPath,
 }: {
   value: WorkloadFormValue;
   onChange: (v: WorkloadFormValue) => void;
+  // pickingPathForRow/onStartPickPath/onStopPickPath (PC-124's own stated
+  // acceptance criterion: "journey paths can be picked on the canvas by clicking
+  // components in order") — App.tsx owns node-click handling, so path-picking mode
+  // lives there; this form only starts/stops it and shows which row (if any) is
+  // currently being picked. Optional so existing callers/tests that don't need
+  // canvas picking (e.g. buildWorkload unit tests) need no changes.
+  pickingPathForRow?: number | null;
+  onStartPickPath?: (rowIndex: number) => void;
+  onStopPickPath?: () => void;
 }) {
   const [showRequirementHelp, setShowRequirementHelp] = useState(false);
 
@@ -373,16 +385,55 @@ export function WorkloadForm({
             />
             <button onClick={() => update({ journeyRows: value.journeyRows.filter((_, idx) => idx !== i) })}>×</button>
           </div>
-          <input
-            style={{ ...inputStyle, marginBottom: 4 }}
-            placeholder="path (e.g. internet, lb-1, db-1)"
-            value={row.pathText}
-            onChange={(e) => {
-              const rows = value.journeyRows.slice();
-              rows[i] = { ...rows[i], pathText: e.target.value };
-              update({ journeyRows: rows });
-            }}
-          />
+          <div style={rowStyle}>
+            <input
+              style={{ ...inputStyle, flex: 1, marginBottom: 4 }}
+              placeholder="path (e.g. internet, lb-1, db-1)"
+              value={row.pathText}
+              onChange={(e) => {
+                const rows = value.journeyRows.slice();
+                rows[i] = { ...rows[i], pathText: e.target.value };
+                update({ journeyRows: rows });
+              }}
+            />
+            <button
+              title='Prepend "internet" as the first hop — core.JourneyInternetSentinel, for an internet-originated journey'
+              onClick={() => {
+                const rows = value.journeyRows.slice();
+                const hops = row.pathText.split(",").map((h) => h.trim()).filter((h) => h !== "");
+                if (hops[0] !== "internet") hops.unshift("internet");
+                rows[i] = { ...rows[i], pathText: hops.join(", ") };
+                update({ journeyRows: rows });
+              }}
+              style={{ fontSize: 11, whiteSpace: "nowrap" }}
+            >
+              + internet start
+            </button>
+            {onStartPickPath &&
+              onStopPickPath &&
+              (pickingPathForRow === i ? (
+                <button
+                  onClick={onStopPickPath}
+                  style={{ fontSize: 11, background: "#dcfce7", border: "1px solid #16a34a", whiteSpace: "nowrap" }}
+                >
+                  Done picking
+                </button>
+              ) : (
+                <button
+                  onClick={() => onStartPickPath(i)}
+                  disabled={pickingPathForRow !== null}
+                  style={{ fontSize: 11, whiteSpace: "nowrap" }}
+                >
+                  Pick path on canvas
+                </button>
+              ))}
+          </div>
+          {pickingPathForRow === i && (
+            <p style={{ fontSize: 10, color: "#7c3aed", margin: "0 0 4px" }}>
+              Click canvas nodes in order to append them to this path. Click "Done
+              picking" when finished.
+            </p>
+          )}
           <div style={rowStyle}>
             <input
               style={{ ...inputStyle, width: 70 }}

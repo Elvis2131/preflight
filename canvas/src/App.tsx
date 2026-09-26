@@ -103,9 +103,32 @@ function CanvasInner() {
   const [selectedJourneyID, setSelectedJourneyID] = useState<string | null>(null);
   const [showJourneyPanel, setShowJourneyPanel] = useState(true);
 
-  const onNodeClick = useCallback<NodeMouseHandler>((_event, node) => {
-    setSelectedNodeID(node.id);
-  }, []);
+  // pickingJourneyRowIndex (PC-124's own explicit acceptance criterion: "journey
+  // paths can be picked on the canvas by clicking components in order") — while set,
+  // a node click appends that node's ID to the named journey row's own pathText
+  // instead of the normal select-a-node-to-kill behavior below.
+  const [pickingJourneyRowIndex, setPickingJourneyRowIndex] = useState<number | null>(null);
+  const startPickPath = useCallback((rowIndex: number) => setPickingJourneyRowIndex(rowIndex), []);
+  const stopPickPath = useCallback(() => setPickingJourneyRowIndex(null), []);
+
+  const onNodeClick = useCallback<NodeMouseHandler>(
+    (_event, node) => {
+      if (pickingJourneyRowIndex !== null) {
+        setWorkloadForm((v) => {
+          const rows = v.journeyRows.slice();
+          const row = rows[pickingJourneyRowIndex];
+          if (!row) return v;
+          const hops = row.pathText.split(",").map((h) => h.trim()).filter((h) => h !== "");
+          hops.push(node.id);
+          rows[pickingJourneyRowIndex] = { ...row, pathText: hops.join(", ") };
+          return { ...v, journeyRows: rows };
+        });
+        return;
+      }
+      setSelectedNodeID(node.id);
+    },
+    [pickingJourneyRowIndex],
+  );
 
   // STEP_DELAY_MS (PC-89) is a fixed UI pacing interval between reveal steps — purely
   // a legibility choice for how fast the animation advances on screen. It is NOT a
@@ -424,7 +447,13 @@ function CanvasInner() {
       <Palette />
       {showWorkloadForm && (
         <div style={{ width: 300, borderRight: "1px solid #e2e8f0", overflowY: "auto" }}>
-          <WorkloadForm value={workloadForm} onChange={setWorkloadForm} />
+          <WorkloadForm
+            value={workloadForm}
+            onChange={setWorkloadForm}
+            pickingPathForRow={pickingJourneyRowIndex}
+            onStartPickPath={startPickPath}
+            onStopPickPath={stopPickPath}
+          />
         </div>
       )}
       <div style={{ flex: 1, display: "flex", flexDirection: "column" }}>
@@ -452,7 +481,11 @@ function CanvasInner() {
           <button onClick={() => setShowWorkloadForm((v) => !v)} style={{ fontSize: 12 }}>
             {showWorkloadForm ? "Hide" : "Show"} Workload form
           </button>
-          {selectedNodeID ? (
+          {pickingJourneyRowIndex !== null ? (
+            <span style={{ fontSize: 12, color: "#7c3aed", fontWeight: 600 }}>
+              Picking journey path — click nodes in order (see Workload form)
+            </span>
+          ) : selectedNodeID ? (
             <span style={{ fontSize: 12 }}>
               Selected: <strong>{selectedNodeLabel ?? selectedNodeID}</strong>
             </span>
