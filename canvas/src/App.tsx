@@ -277,6 +277,19 @@ function CanvasInner() {
     [setNodes],
   );
 
+  // updateNodeServiceID (PC-136) is the Inspector's Service picker's own write
+  // path — same immutable-map pattern as updateNodeSizing above. An empty selection
+  // stores undefined (not ""), matching serialize.ts's own "omitted, not blank"
+  // convention for service_id.
+  const updateNodeServiceID = useCallback(
+    (nodeID: string, serviceID: string) => {
+      setNodes((nds) =>
+        nds.map((n) => (n.id === nodeID ? { ...n, data: { ...n.data, serviceID: serviceID || undefined } } : n)),
+      );
+    },
+    [setNodes],
+  );
+
   const onConnect = useCallback(
     (connection: Connection) => {
       setEdges((eds) =>
@@ -531,7 +544,9 @@ function CanvasInner() {
           )}
         </div>
       </div>
-      {selectedNode && <Inspector node={selectedNode} onChange={updateNodeSizing} />}
+      {selectedNode && (
+        <Inspector node={selectedNode} onChange={updateNodeSizing} onServiceChange={updateNodeServiceID} />
+      )}
       {showJourneyPanel && (
         <div style={{ width: 320, borderLeft: "1px solid #e2e8f0", overflowY: "auto" }}>
           <JourneyPanel

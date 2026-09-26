@@ -88,6 +88,22 @@ describe("serialize", () => {
     expect(Object.prototype.hasOwnProperty.call(doc.nodes[0], "sizing")).toBe(false);
   });
 
+  it("includes service_id when the architect picked one (PC-136)", () => {
+    const nodes: Node<CanvasNodeData>[] = [
+      { id: "n1", type: "golden", position: { x: 0, y: 0 }, data: { nodeType: "managed_database", label: "DB", capability: {}, serviceID: "aws_db_instance" } },
+    ];
+    const doc = serialize(nodes, []);
+    expect(doc.nodes[0].service_id).toBe("aws_db_instance");
+  });
+
+  it("omits service_id entirely when no service was picked — never a guessed default", () => {
+    const nodes: Node<CanvasNodeData>[] = [
+      { id: "n1", type: "golden", position: { x: 0, y: 0 }, data: { nodeType: "managed_database", label: "DB", capability: {} } },
+    ];
+    const doc = serialize(nodes, []);
+    expect(Object.prototype.hasOwnProperty.call(doc.nodes[0], "service_id")).toBe(false);
+  });
+
   it("strips all UI-only fields from edges and maps source/target to from/to", () => {
     const edges: Edge<CanvasEdgeData>[] = [
       {

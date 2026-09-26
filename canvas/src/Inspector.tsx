@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import type { Node } from "@xyflow/react";
 import type { CanvasNodeData } from "./types";
 import { SIZING_FIELDS, type SizingFieldDef } from "./sizingFields";
-import { listPricingSnapshots, getPricingSnapshot, type PricingSnapshot } from "./api";
+import { listPricingSnapshots, getPricingSnapshot, listServiceCatalog, type PricingSnapshot, type ServiceCatalogEntry } from "./api";
 
 // SERVICE_FOR_INSTANCE_TYPE_KIND maps a SizingFieldDef's own instanceTypeKind to the
 // real AWS Price List `service` name PC-117's own cost engine matches against
@@ -54,6 +54,34 @@ function usePricingSnapshot(): { snapshot: PricingSnapshot | null; loading: bool
   return { snapshot, loading };
 }
 
+// useServiceCatalog fetches the real registry's own node mappings once (PC-136's
+// GET /catalog/services) — empty on any failure, never thrown to the caller: this
+// picker is a convenience over free text, the same "no hard dependency" discipline
+// usePricingSnapshot above already established for the instance-type picker.
+function useServiceCatalog(): { entries: ServiceCatalogEntry[]; loading: boolean } {
+  const [entries, setEntries] = useState<ServiceCatalogEntry[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const list = await listServiceCatalog();
+        if (!cancelled) setEntries(list);
+      } catch {
+        // Network/backend unavailable — fall back to free text silently.
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  return { entries, loading };
+}
+
 function instanceTypesFor(snapshot: PricingSnapshot | null, kind: SizingFieldDef["instanceTypeKind"]): string[] {
   if (!snapshot || !kind) return [];
   const service = SERVICE_FOR_INSTANCE_TYPE_KIND[kind];
@@ -79,13 +107,23 @@ const inputStyle: React.CSSProperties = { width: "100%", fontSize: 12, padding: 
 export function Inspector({
   node,
   onChange,
+  onServiceChange,
 }: {
   node: Node<CanvasNodeData>;
   onChange: (nodeID: string, sizing: Record<string, string>) => void;
+  onServiceChange: (nodeID: string, serviceID: string) => void;
 }) {
   const fields = SIZING_FIELDS[node.data.nodeType];
   const { snapshot, loading } = usePricingSnapshot();
+  const { entries: serviceEntries, loading: servicesLoading } = useServiceCatalog();
   const sizing = node.data.sizing ?? {};
+
+  // servicesForNodeType (PC-136): only entries whose OWN node_type matches the
+  // selected node's declared NodeType are offered — the same discipline
+  // resolveCanvasCapabilityLevel enforces server-side (a mismatched ServiceID is
+  // never trusted), applied here so the picker cannot even present a choice that
+  // would fail server-side resolution.
+  const servicesForNodeType = serviceEntries.filter((e) => e.node_type === node.data.nodeType);
 
   const setField = (key: string, value: string) => {
     const next = { ...sizing };
@@ -103,6 +141,31 @@ export function Inspector({
       <p style={{ fontSize: 11, color: "#64748b", margin: "0 0 8px" }}>
         {node.data.label} <span style={{ color: "#94a3b8" }}>({node.data.nodeType})</span>
       </p>
+
+      <label style={labelStyle}>
+        Service
+        {!servicesLoading && servicesForNodeType.length === 0 && (
+          <span style={{ fontWeight: 400, color: "#b45309" }}> (no real service mapped to this node type yet)</span>
+        )}
+      </label>
+      <p style={{ fontSize: 10, color: "#94a3b8", margin: "0 0 4px" }}>
+        Which real AWS/Azure service this node represents (PC-136). A journey through
+        a node with no service picked stays not_assessable — this engine only
+        resolves a capability level for a real, chosen service, never a guess from
+        the structural type alone.
+      </p>
+      <select
+        style={inputStyle}
+        value={node.data.serviceID ?? ""}
+        onChange={(e) => onServiceChange(node.id, e.target.value)}
+      >
+        <option value="">— none selected —</option>
+        {servicesForNodeType.map((s) => (
+          <option key={s.resource_type} value={s.resource_type}>
+            {s.resource_type}
+          </option>
+        ))}
+      </select>
 
       {!fields || fields.length === 0 ? (
         <p style={{ fontSize: 11, color: "#94a3b8" }}>

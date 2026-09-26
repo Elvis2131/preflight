@@ -164,6 +164,24 @@ export function getPricingSnapshot(id: string, baseURL: string = ASSESSD_BASE_UR
   return getJSON(`${baseURL}/pricing/snapshots/${id}`);
 }
 
+// ServiceCatalogEntry mirrors server.ServiceCatalogEntry (server/catalog.go, PC-136)
+// field-for-field — the real merged providers.Registry's own node mappings (edge
+// mappings excluded server-side), never an invented list of AWS/Azure services.
+export interface ServiceCatalogEntry {
+  resource_type: string;
+  node_type: string;
+  capability_level: string;
+}
+
+// listServiceCatalog (PC-136) backs the Inspector's own Service picker: GET
+// /catalog/services returns every real node mapping so a canvas node's ServiceID can
+// be chosen from services this engine actually resolves, filtered client-side by the
+// selected node's own NodeType (Inspector.tsx) — never a second copy of the registry
+// data, only a read of what the server already computed from it.
+export function listServiceCatalog(baseURL: string = ASSESSD_BASE_URL): Promise<ServiceCatalogEntry[]> {
+  return getJSON(`${baseURL}/catalog/services`);
+}
+
 // listVersions (PC-123) backs the Report mode's own version picker — GET
 // /sessions/{id}/versions (PC-92) returns one AssessResponse-shaped entry per stored
 // version; only version_number is actually read by the picker today.

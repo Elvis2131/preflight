@@ -28,6 +28,15 @@ export interface CanvasNode {
   // object) when the architect has not opened the inspector for this node at all,
   // matching capability's own "absence means nothing entered" convention.
   sizing?: Record<string, string>;
+  // service_id: PC-136's own addition — the real provider Terraform resource_type
+  // this node represents (e.g. "aws_db_instance"), the same key providers.Registry
+  // is keyed by for the Terraform ingest path. Absent (never a guessed default)
+  // means the architect has not picked a specific service yet — CanvasNode.Type
+  // alone ("compute") cannot distinguish EC2 from Lambda, which carry different
+  // PC-107 capability levels, so a canvas node with no service_id resolves no
+  // capability_level at all and every journey through it is honestly
+  // not_assessable (core/trace.go's own capability gate).
+  service_id?: string;
 }
 
 export interface CanvasEdge {
@@ -66,6 +75,7 @@ export interface CanvasNodeData extends Record<string, unknown> {
   label: string;
   capability: Record<string, string>;
   sizing?: Record<string, string>;
+  serviceID?: string;
   simState?: SimState;
   journeyOnPath?: boolean;
   utilization?: number | null;
