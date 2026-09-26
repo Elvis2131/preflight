@@ -10,6 +10,25 @@ Each generated `contracts/*.schema.json` carries its own version in `x-schema-ve
 stamped by `cmd/gen-contracts` — check that field against this file, not the other way
 around, since a schema file is regenerated output, not hand-edited.
 
+## report.schema.json 1.0.0 — 2026-09-26 (PC-120: seventh frozen contract, new)
+
+New contract, generated from `core.Report` — the report assembly endpoint's own root
+type (`GET /sessions/{id}/versions/{n}/report`). No migration note applies to a new
+contract's first version; recorded here so its own future changes have a starting
+point to diff against.
+
+**Why this contract exists at all, despite Design §5's own earlier v6 forward-note
+guess** ("most likely no new contract for the report itself... a pure projection of
+results the other five/six contracts already govern," `docs/preflight-technical-
+design.md` §5): "projection" describes the report's own VERDICT logic — it invents no
+new pass/fail/score, every value traces to an existing engine's own finding/control/
+cost record by ID. It does NOT mean the report's own wire shape needs no schema: a
+real, structured response spanning six other engines' output (findings, PC-121's three
+compliance catalogs, PC-125/126's traffic/load, PC-117's cost, NFR conformance, an
+assumptions appendix) is exactly the kind of "genuine new producer" `canvas.schema.
+json`'s own precedent already established earns a contract. Design §5 and CLAUDE.md
+§8's contract counts are updated in this same change (six frozen contracts → seven).
+
 ## workload.schema.json 1.2.0 — 2026-09-25 (PC-135: DeclaredJourney.iam_check added)
 
 **Additive change to `workload.schema.json` only** — the other five schemas are

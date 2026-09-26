@@ -56,6 +56,7 @@ func main() {
 	mux.HandleFunc("POST /sessions/{id}/canvas", server.AssessCanvasHandler(store))
 	mux.HandleFunc("GET /sessions/{id}/versions", server.ListVersionsHandler(store))
 	mux.HandleFunc("GET /sessions/{id}/versions/{n}", server.GetVersionHandler(store))
+	mux.HandleFunc("GET /sessions/{id}/versions/{n}/report", server.GetReportHandler(store))
 	mux.HandleFunc("POST /sessions/{id}/trace", server.TraceHandler(store))
 	mux.HandleFunc("GET /pricing/snapshots", server.ListPricingSnapshotsHandler(pricingStore))
 	mux.HandleFunc("GET /pricing/snapshots/{id}", server.GetPricingSnapshotHandler(pricingStore))

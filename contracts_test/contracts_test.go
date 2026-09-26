@@ -30,6 +30,7 @@ var pairs = []struct {
 	{"finding.schema.json", "finding-compliance.sample.json"}, // PC-18: exercises EvidenceRef.Attribute
 	{"adr.schema.json", "adr.sample.json"},
 	{"canvas.schema.json", "canvas.sample.json"}, // PC-86 groundwork: real output captured from actually driving canvas/ in a live browser (Playwright), not hand-typed
+	{"report.schema.json", "report.sample.json"}, // PC-120: a real BuildReport() run against golden/aws, byte-identical to golden/fixtures/aws.report.json
 }
 
 func TestGeneratedSchemasValidateSamplePayloads(t *testing.T) {

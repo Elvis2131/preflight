@@ -220,6 +220,50 @@ func buildOpenAPISpec() map[string]any {
 					},
 				},
 			},
+			"/sessions/{id}/versions/{n}/report": map[string]any{
+				"get": map[string]any{
+					"summary":     "Assemble a structured report for a stored version (PC-120)",
+					"description": "Projection only, per its own Card: every value traces to an existing engine's own output (BuildFindings, PC-121's compliance catalogs, PC-125/126's traffic/load, PC-117's cost, NFR conformance, an assumptions appendix) — this endpoint invents no new verdict, score, or simulation logic. Sections whose underlying data is unavailable for this version (e.g. no pricing snapshot was attached) render with an explicit unavailable_reason rather than being silently omitted.",
+					"parameters": []any{
+						map[string]any{
+							"name": "id", "in": "path", "required": true,
+							"schema":      map[string]any{"type": "string"},
+							"description": "Session ID.",
+						},
+						map[string]any{
+							"name": "n", "in": "path", "required": true,
+							"schema":      map[string]any{"type": "integer"},
+							"description": "Version number to report on.",
+						},
+					},
+					"responses": map[string]any{
+						"200": map[string]any{
+							"description": "Report assembled successfully",
+							"content": map[string]any{
+								"application/json": map[string]any{
+									"schema": reflectSchema(core.Report{}),
+								},
+							},
+						},
+						"400": map[string]any{
+							"description": "The version number in the path isn't a valid integer (error_code: invalid_request_body)",
+							"content": map[string]any{
+								"application/json": map[string]any{
+									"schema": reflectSchema(errorBody{}),
+								},
+							},
+						},
+						"404": map[string]any{
+							"description": "No such session at all (error_code: session_not_found), or the session exists but not that version_number (error_code: version_not_found)",
+							"content": map[string]any{
+								"application/json": map[string]any{
+									"schema": reflectSchema(errorBody{}),
+								},
+							},
+						},
+					},
+				},
+			},
 			"/sessions/{id}/canvas": map[string]any{
 				"post": map[string]any{
 					"summary":     "Assess a canvas-authored architecture",

@@ -137,7 +137,7 @@ preflight/
 │                   #   (LocalStack), Rung 3 (ephemeral apply/experiment/destroy)
 └── ui/             # graph, diff, timeline. Reads server API only. Built last.
 
-contracts/          # six frozen JSON Schemas — see §8
+contracts/          # seven frozen JSON Schemas — see §8
 golden/             # the golden reference architecture (Terraform) + fixtures
 ```
 
@@ -172,7 +172,7 @@ Everything hangs off a cloud-agnostic IR, frozen as a contract in week 1:
 - **Resolution state** on every node/edge: `known` | `inferred` | `unresolved`. Partial input is the *normal* case — agents call mid-authoring. Unresolved never gets silently dropped; it propagates to `not_assessable` (I4).
 - **Governing rule: scenario-driven minimalism.** Nothing enters the IR unless one of the six golden failure scenarios (§14) needs it. This is the test for every new field: which scenario needs this? If none, it stays out.
 
-Six frozen contracts in `contracts/`: `ir.schema.json`, `provenance.schema.json`, `workload.schema.json`, `finding.schema.json`, `adr.schema.json`, `canvas.schema.json` (PC-86 — the canvas UI's second IR producer, same freezing discipline as the original five, not an implicit TS→Go shape). Breaking changes require a version bump and migration note (`contracts/CHANGELOG.md`). Everything else in the codebase may churn freely.
+Seven frozen contracts in `contracts/`: `ir.schema.json`, `provenance.schema.json`, `workload.schema.json`, `finding.schema.json`, `adr.schema.json`, `canvas.schema.json` (PC-86 — the canvas UI's second IR producer, same freezing discipline as the original five, not an implicit TS→Go shape), `report.schema.json` (PC-120 — the report assembly endpoint's own contract; projection-only, no new verdict logic). Breaking changes require a version bump and migration note (`contracts/CHANGELOG.md`). Everything else in the codebase may churn freely.
 
 ------------------------------------------------------------------------
 

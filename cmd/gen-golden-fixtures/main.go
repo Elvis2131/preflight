@@ -84,6 +84,20 @@ func main() {
 		findings = append(findings, core.BuildUnsupportedRouteFindings(toUnsupportedRouteInfos(result.UnsupportedRoutes))...)
 		writeJSON(outDir, b.findName, findings)
 		fmt.Printf("wrote %s (%d findings)\n", filepath.Join("golden", "fixtures", b.findName), len(findings))
+
+		if b.dir == "golden/aws" {
+			// PC-120: one golden report fixture, byte-compared in CI
+			// (report_golden_test.go) — golden/aws only, deliberately: this is a
+			// projection over the same IR/findings already generated above, not a
+			// second independent thing to keep in sync across four bundles. Cost is
+			// nil (no pricing snapshot exists in this generator, same as every other
+			// output here) — a real, honest "cost section unavailable" case, not a
+			// gap invented for test coverage.
+			scorecard := core.BuildScorecard(findings, 1)
+			report := core.BuildReport("golden", 1, result.IR, workload, findings, scorecard, nil, nil)
+			writeJSON(outDir, "aws.report.json", report)
+			fmt.Printf("wrote %s\n", filepath.Join("golden", "fixtures", "aws.report.json"))
+		}
 	}
 }
 

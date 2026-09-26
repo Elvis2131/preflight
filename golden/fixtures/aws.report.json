@@ -1,0 +1,1821 @@
+{
+  "session_id": "golden",
+  "version_number": 1,
+  "executive_summary": {
+    "scorecard_status_counts": {
+      "2 component(s) affected": 1,
+      "4 component(s) affected": 1,
+      "consistent: declared public, and a real default route to an internet gateway confirms it": 3,
+      "not_assessable": 2,
+      "satisfied": 9
+    },
+    "compliance_catalog_counts": {
+      "cis_aws": {
+        "Assessable": 2,
+        "Partial": 0,
+        "NotAssessable": 0
+      },
+      "pci_dss_4": {
+        "Assessable": 2,
+        "Partial": 0,
+        "NotAssessable": 10
+      },
+      "soc2": {
+        "Assessable": 0,
+        "Partial": 1,
+        "NotAssessable": 8
+      }
+    },
+    "compliance_result_counts": {
+      "cis_aws": {
+        "Satisfied": 2,
+        "Applicable": 0,
+        "Partial": 0,
+        "Unsatisfied": 0,
+        "NotAssessable": 0
+      },
+      "pci_dss_4": {
+        "Satisfied": 1,
+        "Applicable": 0,
+        "Partial": 0,
+        "Unsatisfied": 0,
+        "NotAssessable": 11
+      },
+      "soc2": {
+        "Satisfied": 0,
+        "Applicable": 0,
+        "Partial": 0,
+        "Unsatisfied": 0,
+        "NotAssessable": 9
+      }
+    },
+    "nfr_evaluated_count": 1,
+    "nfr_not_evaluated_count": 2
+  },
+  "inventory": [
+    {
+      "node_id": "aws_db_instance.payments",
+      "type": "managed_database",
+      "resolution": "known"
+    },
+    {
+      "node_id": "aws_db_subnet_group.payments",
+      "type": "network_boundary",
+      "resolution": "known"
+    },
+    {
+      "node_id": "aws_eks_cluster.payments",
+      "type": "container_workload",
+      "resolution": "known"
+    },
+    {
+      "node_id": "aws_elasticache_replication_group.payments",
+      "type": "cache",
+      "resolution": "known"
+    },
+    {
+      "node_id": "aws_elasticache_subnet_group.payments",
+      "type": "network_boundary",
+      "resolution": "known"
+    },
+    {
+      "node_id": "aws_iam_role.eks_cluster",
+      "type": "identity",
+      "resolution": "known"
+    },
+    {
+      "node_id": "aws_iam_role.eks_node",
+      "type": "identity",
+      "resolution": "known"
+    },
+    {
+      "node_id": "aws_iam_role.payments_app",
+      "type": "identity",
+      "resolution": "known"
+    },
+    {
+      "node_id": "aws_internet_gateway.payments",
+      "type": "network_boundary",
+      "resolution": "known"
+    },
+    {
+      "node_id": "aws_lb.payments",
+      "type": "load_balancer",
+      "resolution": "known"
+    },
+    {
+      "node_id": "aws_nat_gateway.nat_a",
+      "type": "network_boundary",
+      "resolution": "known"
+    },
+    {
+      "node_id": "aws_nat_gateway.nat_b",
+      "type": "network_boundary",
+      "resolution": "known"
+    },
+    {
+      "node_id": "aws_nat_gateway.nat_c",
+      "type": "network_boundary",
+      "resolution": "known"
+    },
+    {
+      "node_id": "aws_route53_record.api",
+      "type": "dns",
+      "resolution": "known"
+    },
+    {
+      "node_id": "aws_route_table.private_a",
+      "type": "network_boundary",
+      "resolution": "known"
+    },
+    {
+      "node_id": "aws_route_table.private_b",
+      "type": "network_boundary",
+      "resolution": "known"
+    },
+    {
+      "node_id": "aws_route_table.private_c",
+      "type": "network_boundary",
+      "resolution": "known"
+    },
+    {
+      "node_id": "aws_route_table.public",
+      "type": "network_boundary",
+      "resolution": "known"
+    },
+    {
+      "node_id": "aws_security_group.alb",
+      "type": "network_boundary",
+      "resolution": "known"
+    },
+    {
+      "node_id": "aws_security_group.cache",
+      "type": "network_boundary",
+      "resolution": "known"
+    },
+    {
+      "node_id": "aws_security_group.database",
+      "type": "network_boundary",
+      "resolution": "known"
+    },
+    {
+      "node_id": "aws_security_group.workload",
+      "type": "network_boundary",
+      "resolution": "known"
+    },
+    {
+      "node_id": "aws_sqs_queue.settlement",
+      "type": "queue/stream",
+      "resolution": "known"
+    },
+    {
+      "node_id": "aws_sqs_queue.settlement_dlq",
+      "type": "queue/stream",
+      "resolution": "known"
+    },
+    {
+      "node_id": "aws_subnet.data_a",
+      "type": "network_boundary",
+      "resolution": "known"
+    },
+    {
+      "node_id": "aws_subnet.data_b",
+      "type": "network_boundary",
+      "resolution": "known"
+    },
+    {
+      "node_id": "aws_subnet.data_c",
+      "type": "network_boundary",
+      "resolution": "known"
+    },
+    {
+      "node_id": "aws_subnet.private_a",
+      "type": "network_boundary",
+      "resolution": "known"
+    },
+    {
+      "node_id": "aws_subnet.private_b",
+      "type": "network_boundary",
+      "resolution": "known"
+    },
+    {
+      "node_id": "aws_subnet.private_c",
+      "type": "network_boundary",
+      "resolution": "known"
+    },
+    {
+      "node_id": "aws_subnet.public_a",
+      "type": "network_boundary",
+      "resolution": "known"
+    },
+    {
+      "node_id": "aws_subnet.public_b",
+      "type": "network_boundary",
+      "resolution": "known"
+    },
+    {
+      "node_id": "aws_subnet.public_c",
+      "type": "network_boundary",
+      "resolution": "known"
+    },
+    {
+      "node_id": "aws_vpc.payments",
+      "type": "network_boundary",
+      "resolution": "known"
+    },
+    {
+      "node_id": "aws_wafv2_web_acl.payments",
+      "type": "network_boundary",
+      "resolution": "known"
+    }
+  ],
+  "nfr_conformance": [
+    {
+      "requirement_id": "availability.target",
+      "priority": "hard",
+      "value": 99.95,
+      "evaluated": false,
+      "reason": "no finding in this version currently evaluates this requirement"
+    },
+    {
+      "requirement_id": "rto_seconds",
+      "priority": "hard",
+      "value": 60,
+      "evaluated": false,
+      "reason": "no finding in this version currently evaluates this requirement"
+    },
+    {
+      "requirement_id": "rpo_seconds",
+      "priority": "hard",
+      "value": 0,
+      "evaluated": true,
+      "finding_ids": [
+        "finding.compliance.rds-rpo-feasibility.aws_db_instance.payments"
+      ]
+    }
+  ],
+  "compliance": [
+    {
+      "framework": "pci_dss_4",
+      "catalog_counts": {
+        "Assessable": 2,
+        "Partial": 0,
+        "NotAssessable": 10
+      },
+      "result_counts": {
+        "Satisfied": 1,
+        "Applicable": 0,
+        "Partial": 0,
+        "Unsatisfied": 0,
+        "NotAssessable": 11
+      },
+      "controls": [
+        {
+          "ControlID": "pci_dss_4.req_1.no_public_database_route",
+          "Framework": "pci_dss_4",
+          "RequirementID": "1",
+          "Title": "Network security controls: database not directly reachable from the internet",
+          "Classification": "assessable_from_architecture",
+          "NodeID": "aws_db_instance.payments",
+          "Result": {
+            "status": "not_assessable",
+            "provenance": {
+              "kind": "derived",
+              "source": "core/compliance_pci_dss"
+            }
+          },
+          "Rationale": "this resource has no resolvable subnet placement"
+        },
+        {
+          "ControlID": "pci_dss_4.req_2",
+          "Framework": "pci_dss_4",
+          "RequirementID": "2",
+          "Title": "Apply secure configurations to all system components",
+          "Classification": "not_assessable_from_architecture",
+          "NodeID": "",
+          "Result": {
+            "status": "not_assessable",
+            "provenance": {
+              "kind": "derived",
+              "source": "core/compliance_pci_dss"
+            }
+          },
+          "Rationale": "this control concerns people, process, physical security, or organizational policy — no architecture diagram can evidence it"
+        },
+        {
+          "ControlID": "pci_dss_4.req_3.storage_encryption",
+          "Framework": "pci_dss_4",
+          "RequirementID": "3",
+          "Title": "Protect stored account data: storage encryption at rest",
+          "Classification": "assessable_from_architecture",
+          "NodeID": "aws_db_instance.payments",
+          "Result": {
+            "status": "satisfied",
+            "provenance": {
+              "kind": "derived",
+              "source": "core/compliance_pci_dss"
+            }
+          },
+          "Rationale": "storage encryption is enabled — data at rest, snapshots, and automated backups are protected"
+        },
+        {
+          "ControlID": "pci_dss_4.req_4",
+          "Framework": "pci_dss_4",
+          "RequirementID": "4",
+          "Title": "Protect cardholder data with strong cryptography during transmission",
+          "Classification": "not_assessable_from_architecture",
+          "NodeID": "",
+          "Result": {
+            "status": "not_assessable",
+            "provenance": {
+              "kind": "derived",
+              "source": "core/compliance_pci_dss"
+            }
+          },
+          "Rationale": "this control concerns people, process, physical security, or organizational policy — no architecture diagram can evidence it"
+        },
+        {
+          "ControlID": "pci_dss_4.req_5",
+          "Framework": "pci_dss_4",
+          "RequirementID": "5",
+          "Title": "Protect all systems and networks from malicious software",
+          "Classification": "not_assessable_from_architecture",
+          "NodeID": "",
+          "Result": {
+            "status": "not_assessable",
+            "provenance": {
+              "kind": "derived",
+              "source": "core/compliance_pci_dss"
+            }
+          },
+          "Rationale": "this control concerns people, process, physical security, or organizational policy — no architecture diagram can evidence it"
+        },
+        {
+          "ControlID": "pci_dss_4.req_6",
+          "Framework": "pci_dss_4",
+          "RequirementID": "6",
+          "Title": "Develop and maintain secure systems and software",
+          "Classification": "not_assessable_from_architecture",
+          "NodeID": "",
+          "Result": {
+            "status": "not_assessable",
+            "provenance": {
+              "kind": "derived",
+              "source": "core/compliance_pci_dss"
+            }
+          },
+          "Rationale": "this control concerns people, process, physical security, or organizational policy — no architecture diagram can evidence it"
+        },
+        {
+          "ControlID": "pci_dss_4.req_7",
+          "Framework": "pci_dss_4",
+          "RequirementID": "7",
+          "Title": "Restrict access to system components and cardholder data by business need to know",
+          "Classification": "not_assessable_from_architecture",
+          "NodeID": "",
+          "Result": {
+            "status": "not_assessable",
+            "provenance": {
+              "kind": "derived",
+              "source": "core/compliance_pci_dss"
+            }
+          },
+          "Rationale": "this control concerns people, process, physical security, or organizational policy — no architecture diagram can evidence it"
+        },
+        {
+          "ControlID": "pci_dss_4.req_8",
+          "Framework": "pci_dss_4",
+          "RequirementID": "8",
+          "Title": "Identify users and authenticate access to system components",
+          "Classification": "not_assessable_from_architecture",
+          "NodeID": "",
+          "Result": {
+            "status": "not_assessable",
+            "provenance": {
+              "kind": "derived",
+              "source": "core/compliance_pci_dss"
+            }
+          },
+          "Rationale": "this control concerns people, process, physical security, or organizational policy — no architecture diagram can evidence it"
+        },
+        {
+          "ControlID": "pci_dss_4.req_9",
+          "Framework": "pci_dss_4",
+          "RequirementID": "9",
+          "Title": "Restrict physical access to cardholder data",
+          "Classification": "not_assessable_from_architecture",
+          "NodeID": "",
+          "Result": {
+            "status": "not_assessable",
+            "provenance": {
+              "kind": "derived",
+              "source": "core/compliance_pci_dss"
+            }
+          },
+          "Rationale": "this control concerns people, process, physical security, or organizational policy — no architecture diagram can evidence it"
+        },
+        {
+          "ControlID": "pci_dss_4.req_10",
+          "Framework": "pci_dss_4",
+          "RequirementID": "10",
+          "Title": "Log and monitor all access to system components and cardholder data",
+          "Classification": "not_assessable_from_architecture",
+          "NodeID": "",
+          "Result": {
+            "status": "not_assessable",
+            "provenance": {
+              "kind": "derived",
+              "source": "core/compliance_pci_dss"
+            }
+          },
+          "Rationale": "this control concerns people, process, physical security, or organizational policy — no architecture diagram can evidence it"
+        },
+        {
+          "ControlID": "pci_dss_4.req_11",
+          "Framework": "pci_dss_4",
+          "RequirementID": "11",
+          "Title": "Test security of systems and networks regularly",
+          "Classification": "not_assessable_from_architecture",
+          "NodeID": "",
+          "Result": {
+            "status": "not_assessable",
+            "provenance": {
+              "kind": "derived",
+              "source": "core/compliance_pci_dss"
+            }
+          },
+          "Rationale": "this control concerns people, process, physical security, or organizational policy — no architecture diagram can evidence it"
+        },
+        {
+          "ControlID": "pci_dss_4.req_12",
+          "Framework": "pci_dss_4",
+          "RequirementID": "12",
+          "Title": "Support information security with organizational policies and programs",
+          "Classification": "not_assessable_from_architecture",
+          "NodeID": "",
+          "Result": {
+            "status": "not_assessable",
+            "provenance": {
+              "kind": "derived",
+              "source": "core/compliance_pci_dss"
+            }
+          },
+          "Rationale": "this control concerns people, process, physical security, or organizational policy — no architecture diagram can evidence it"
+        }
+      ]
+    },
+    {
+      "framework": "soc2",
+      "catalog_counts": {
+        "Assessable": 0,
+        "Partial": 1,
+        "NotAssessable": 8
+      },
+      "result_counts": {
+        "Satisfied": 0,
+        "Applicable": 0,
+        "Partial": 0,
+        "Unsatisfied": 0,
+        "NotAssessable": 9
+      },
+      "controls": [
+        {
+          "ControlID": "soc2.cc1",
+          "Framework": "soc2",
+          "RequirementID": "CC1",
+          "Title": "Control environment: organizational integrity and security governance",
+          "Classification": "not_assessable_from_architecture",
+          "NodeID": "",
+          "Result": {
+            "status": "not_assessable",
+            "provenance": {
+              "kind": "derived",
+              "source": "core/compliance_soc2"
+            }
+          },
+          "Rationale": "this control concerns people, process, physical security, or organizational policy — no architecture diagram can evidence it"
+        },
+        {
+          "ControlID": "soc2.cc2",
+          "Framework": "soc2",
+          "RequirementID": "CC2",
+          "Title": "Communication and information: security policies communicated internally and externally",
+          "Classification": "not_assessable_from_architecture",
+          "NodeID": "",
+          "Result": {
+            "status": "not_assessable",
+            "provenance": {
+              "kind": "derived",
+              "source": "core/compliance_soc2"
+            }
+          },
+          "Rationale": "this control concerns people, process, physical security, or organizational policy — no architecture diagram can evidence it"
+        },
+        {
+          "ControlID": "soc2.cc3",
+          "Framework": "soc2",
+          "RequirementID": "CC3",
+          "Title": "Risk assessment: identifying and analyzing risk to objectives",
+          "Classification": "not_assessable_from_architecture",
+          "NodeID": "",
+          "Result": {
+            "status": "not_assessable",
+            "provenance": {
+              "kind": "derived",
+              "source": "core/compliance_soc2"
+            }
+          },
+          "Rationale": "this control concerns people, process, physical security, or organizational policy — no architecture diagram can evidence it"
+        },
+        {
+          "ControlID": "soc2.cc4",
+          "Framework": "soc2",
+          "RequirementID": "CC4",
+          "Title": "Monitoring activities: evaluating control effectiveness over time",
+          "Classification": "not_assessable_from_architecture",
+          "NodeID": "",
+          "Result": {
+            "status": "not_assessable",
+            "provenance": {
+              "kind": "derived",
+              "source": "core/compliance_soc2"
+            }
+          },
+          "Rationale": "this control concerns people, process, physical security, or organizational policy — no architecture diagram can evidence it"
+        },
+        {
+          "ControlID": "soc2.cc5",
+          "Framework": "soc2",
+          "RequirementID": "CC5",
+          "Title": "Control activities: selecting and developing controls that mitigate risk",
+          "Classification": "not_assessable_from_architecture",
+          "NodeID": "",
+          "Result": {
+            "status": "not_assessable",
+            "provenance": {
+              "kind": "derived",
+              "source": "core/compliance_soc2"
+            }
+          },
+          "Rationale": "this control concerns people, process, physical security, or organizational policy — no architecture diagram can evidence it"
+        },
+        {
+          "ControlID": "soc2.cc6.no_public_database_route",
+          "Framework": "soc2",
+          "RequirementID": "CC6",
+          "Title": "Logical access controls: customer data store not directly reachable from the internet",
+          "Classification": "partially_assessable",
+          "NodeID": "aws_db_instance.payments",
+          "Result": {
+            "status": "not_assessable",
+            "provenance": {
+              "kind": "derived",
+              "source": "core/compliance_soc2"
+            }
+          },
+          "Rationale": "this resource has no resolvable subnet placement"
+        },
+        {
+          "ControlID": "soc2.cc7",
+          "Framework": "soc2",
+          "RequirementID": "CC7",
+          "Title": "System operations: detecting and responding to security incidents",
+          "Classification": "not_assessable_from_architecture",
+          "NodeID": "",
+          "Result": {
+            "status": "not_assessable",
+            "provenance": {
+              "kind": "derived",
+              "source": "core/compliance_soc2"
+            }
+          },
+          "Rationale": "this control concerns people, process, physical security, or organizational policy — no architecture diagram can evidence it"
+        },
+        {
+          "ControlID": "soc2.cc8",
+          "Framework": "soc2",
+          "RequirementID": "CC8",
+          "Title": "Change management: authorizing, testing, and approving system changes",
+          "Classification": "not_assessable_from_architecture",
+          "NodeID": "",
+          "Result": {
+            "status": "not_assessable",
+            "provenance": {
+              "kind": "derived",
+              "source": "core/compliance_soc2"
+            }
+          },
+          "Rationale": "this control concerns people, process, physical security, or organizational policy — no architecture diagram can evidence it"
+        },
+        {
+          "ControlID": "soc2.cc9",
+          "Framework": "soc2",
+          "RequirementID": "CC9",
+          "Title": "Risk mitigation: managing risk from vendors and business disruption",
+          "Classification": "not_assessable_from_architecture",
+          "NodeID": "",
+          "Result": {
+            "status": "not_assessable",
+            "provenance": {
+              "kind": "derived",
+              "source": "core/compliance_soc2"
+            }
+          },
+          "Rationale": "this control concerns people, process, physical security, or organizational policy — no architecture diagram can evidence it"
+        }
+      ]
+    },
+    {
+      "framework": "cis_aws",
+      "catalog_counts": {
+        "Assessable": 2,
+        "Partial": 0,
+        "NotAssessable": 0
+      },
+      "result_counts": {
+        "Satisfied": 2,
+        "Applicable": 0,
+        "Partial": 0,
+        "Unsatisfied": 0,
+        "NotAssessable": 0
+      },
+      "controls": [
+        {
+          "ControlID": "cis_aws.storage_encryption",
+          "Framework": "cis_aws",
+          "RequirementID": "unmapped",
+          "Title": "Managed database storage encryption at rest",
+          "Classification": "assessable_from_architecture",
+          "NodeID": "aws_db_instance.payments",
+          "Result": {
+            "status": "satisfied",
+            "provenance": {
+              "kind": "derived",
+              "source": "core/compliance_cis_aws"
+            }
+          },
+          "Rationale": "storage encryption is enabled — data at rest, snapshots, and automated backups are protected"
+        },
+        {
+          "ControlID": "cis_aws.nat_gateway_redundancy",
+          "Framework": "cis_aws",
+          "RequirementID": "unmapped",
+          "Title": "NAT gateway redundancy across public subnets",
+          "Classification": "assessable_from_architecture",
+          "NodeID": "",
+          "Result": {
+            "status": "satisfied",
+            "provenance": {
+              "kind": "derived",
+              "source": "core/compliance_cis_aws"
+            }
+          },
+          "Rationale": "all 3 public subnet(s) have independent NAT gateway coverage"
+        }
+      ]
+    }
+  ],
+  "failure_modes": {
+    "available": true,
+    "findings": [
+      {
+        "id": "finding.zone-kill.public-a",
+        "title": "AZ loss: eu-west-1a public subnet",
+        "dimensions": {
+          "trigger": "availability zone loss",
+          "affected_components": [
+            "aws_subnet.public_a"
+          ],
+          "blast_radius": [
+            "aws_lb.payments",
+            "aws_nat_gateway.nat_a"
+          ],
+          "detection": "modeled",
+          "existing_mitigation": "none stated",
+          "impact": {
+            "state": "assessed",
+            "value": "2 component(s) in blast radius; workload criticality \"tier1\"",
+            "provenance": {
+              "kind": "derived",
+              "source": "core/analyse:zone-kill:aws_subnet.public_a"
+            }
+          },
+          "likelihood": {
+            "state": "not_assessable",
+            "reason": "likelihood is not assessable from structural analysis alone — no frequency/probability data exists to assume from; an assumed guess here would be exactly the fabrication CLAUDE.md §10 warns against",
+            "provenance": {
+              "kind": "derived",
+              "source": "core/analyse:zone-kill:aws_subnet.public_a"
+            }
+          },
+          "detectability": {
+            "state": "assessed",
+            "value": "high — this simulator models the failure directly",
+            "provenance": {
+              "kind": "derived",
+              "source": "core/analyse:zone-kill:aws_subnet.public_a"
+            }
+          },
+          "recoverability": {
+            "failover_path_exists": {
+              "state": "not_assessable",
+              "reason": "recoverability is evaluated per affected resource, not at the zone-kill level — see per-resource RTO/RPO findings",
+              "provenance": {
+                "kind": "derived",
+                "source": "core/analyse:zone-kill:aws_subnet.public_a"
+              }
+            },
+            "rpo_feasible": {
+              "state": "not_assessable",
+              "reason": "recoverability is evaluated per affected resource, not at the zone-kill level",
+              "provenance": {
+                "kind": "derived",
+                "source": "core/analyse:zone-kill:aws_subnet.public_a"
+              }
+            }
+          }
+        },
+        "evidence": [
+          {
+            "node_id": "aws_subnet.public_a",
+            "description": "core.ContainmentBlastRadius over this bundle's real contained_in edges"
+          }
+        ],
+        "outcome": {
+          "state": "assessed",
+          "value": "2 component(s) affected",
+          "provenance": {
+            "kind": "derived",
+            "source": "core/analyse:zone-kill:aws_subnet.public_a"
+          }
+        }
+      },
+      {
+        "id": "finding.zone-kill.data-a",
+        "title": "AZ loss: eu-west-1a data subnet",
+        "dimensions": {
+          "trigger": "availability zone loss",
+          "affected_components": [
+            "aws_subnet.data_a"
+          ],
+          "blast_radius": [
+            "aws_db_instance.payments",
+            "aws_db_subnet_group.payments",
+            "aws_elasticache_replication_group.payments",
+            "aws_elasticache_subnet_group.payments"
+          ],
+          "detection": "modeled",
+          "existing_mitigation": "none stated",
+          "impact": {
+            "state": "assessed",
+            "value": "4 component(s) in blast radius; workload criticality \"tier1\"",
+            "provenance": {
+              "kind": "derived",
+              "source": "core/analyse:zone-kill:aws_subnet.data_a"
+            }
+          },
+          "likelihood": {
+            "state": "not_assessable",
+            "reason": "likelihood is not assessable from structural analysis alone — no frequency/probability data exists to assume from; an assumed guess here would be exactly the fabrication CLAUDE.md §10 warns against",
+            "provenance": {
+              "kind": "derived",
+              "source": "core/analyse:zone-kill:aws_subnet.data_a"
+            }
+          },
+          "detectability": {
+            "state": "assessed",
+            "value": "high — this simulator models the failure directly",
+            "provenance": {
+              "kind": "derived",
+              "source": "core/analyse:zone-kill:aws_subnet.data_a"
+            }
+          },
+          "recoverability": {
+            "failover_path_exists": {
+              "state": "not_assessable",
+              "reason": "recoverability is evaluated per affected resource, not at the zone-kill level — see per-resource RTO/RPO findings",
+              "provenance": {
+                "kind": "derived",
+                "source": "core/analyse:zone-kill:aws_subnet.data_a"
+              }
+            },
+            "rpo_feasible": {
+              "state": "not_assessable",
+              "reason": "recoverability is evaluated per affected resource, not at the zone-kill level",
+              "provenance": {
+                "kind": "derived",
+                "source": "core/analyse:zone-kill:aws_subnet.data_a"
+              }
+            }
+          }
+        },
+        "evidence": [
+          {
+            "node_id": "aws_subnet.data_a",
+            "description": "core.ContainmentBlastRadius over this bundle's real contained_in edges"
+          }
+        ],
+        "outcome": {
+          "state": "assessed",
+          "value": "4 component(s) affected",
+          "provenance": {
+            "kind": "derived",
+            "source": "core/analyse:zone-kill:aws_subnet.data_a"
+          }
+        }
+      },
+      {
+        "id": "finding.compliance.nat-gateway-redundancy",
+        "title": "NAT gateway redundancy across public subnets",
+        "dimensions": {
+          "trigger": "a single NAT gateway's AZ is lost, or the gateway itself fails",
+          "affected_components": [
+            "aws_subnet.public_a",
+            "aws_subnet.public_b",
+            "aws_subnet.public_c"
+          ],
+          "detection": "modeled",
+          "impact": {
+            "state": "not_assessable",
+            "reason": "impact dimension not evaluated by this compliance check",
+            "provenance": {
+              "kind": "derived",
+              "source": "core/analyse:nat-gateway-redundancy"
+            }
+          },
+          "likelihood": {
+            "state": "not_assessable",
+            "reason": "likelihood is not assessable from structural analysis alone — no frequency/probability data exists to assume from; an assumed guess here would be exactly the fabrication CLAUDE.md §10 warns against",
+            "provenance": {
+              "kind": "derived",
+              "source": "core/analyse:nat-gateway-redundancy"
+            }
+          },
+          "detectability": {
+            "state": "assessed",
+            "value": "high — this simulator models the failure directly",
+            "provenance": {
+              "kind": "derived",
+              "source": "core/analyse:nat-gateway-redundancy"
+            }
+          },
+          "recoverability": {
+            "failover_path_exists": {
+              "state": "not_assessable",
+              "reason": "recoverability not evaluated by this compliance check",
+              "provenance": {
+                "kind": "derived",
+                "source": "core/analyse:nat-gateway-redundancy"
+              }
+            },
+            "rpo_feasible": {
+              "state": "not_assessable",
+              "reason": "recoverability not evaluated by this compliance check",
+              "provenance": {
+                "kind": "derived",
+                "source": "core/analyse:nat-gateway-redundancy"
+              }
+            }
+          }
+        },
+        "evidence": [
+          {
+            "description": "all 3 public subnet(s) have independent NAT gateway coverage"
+          }
+        ],
+        "outcome": {
+          "state": "assessed",
+          "value": "satisfied",
+          "provenance": {
+            "kind": "derived",
+            "source": "core/analyse:nat-gateway-redundancy"
+          }
+        }
+      },
+      {
+        "id": "finding.compliance.rds-storage-encryption.aws_db_instance.payments",
+        "title": "RDS storage encryption at rest",
+        "dimensions": {
+          "trigger": "unencrypted storage exposed via snapshot, backup, or storage compromise",
+          "affected_components": [
+            "aws_db_instance.payments"
+          ],
+          "detection": "modeled",
+          "impact": {
+            "state": "not_assessable",
+            "reason": "impact dimension not evaluated by this compliance check",
+            "provenance": {
+              "kind": "derived",
+              "source": "core/analyse:storage-encryption-check:aws_db_instance.payments"
+            }
+          },
+          "likelihood": {
+            "state": "not_assessable",
+            "reason": "likelihood is not assessable from structural analysis alone — no frequency/probability data exists to assume from; an assumed guess here would be exactly the fabrication CLAUDE.md §10 warns against",
+            "provenance": {
+              "kind": "derived",
+              "source": "core/analyse:storage-encryption-check:aws_db_instance.payments"
+            }
+          },
+          "detectability": {
+            "state": "assessed",
+            "value": "high — this simulator models the failure directly",
+            "provenance": {
+              "kind": "derived",
+              "source": "core/analyse:storage-encryption-check:aws_db_instance.payments"
+            }
+          },
+          "recoverability": {
+            "failover_path_exists": {
+              "state": "not_assessable",
+              "reason": "recoverability not evaluated by this compliance check",
+              "provenance": {
+                "kind": "derived",
+                "source": "core/analyse:storage-encryption-check:aws_db_instance.payments"
+              }
+            },
+            "rpo_feasible": {
+              "state": "not_assessable",
+              "reason": "recoverability not evaluated by this compliance check",
+              "provenance": {
+                "kind": "derived",
+                "source": "core/analyse:storage-encryption-check:aws_db_instance.payments"
+              }
+            }
+          }
+        },
+        "evidence": [
+          {
+            "node_id": "aws_db_instance.payments",
+            "description": "storage encryption is enabled — data at rest, snapshots, and automated backups are protected",
+            "attribute": "storage_encrypted"
+          }
+        ],
+        "outcome": {
+          "state": "assessed",
+          "value": "satisfied",
+          "provenance": {
+            "kind": "derived",
+            "source": "core/analyse:storage-encryption-check:aws_db_instance.payments"
+          }
+        }
+      },
+      {
+        "id": "finding.compliance.rds-rpo-feasibility.aws_db_instance.payments",
+        "title": "RDS RPO feasibility against the declared workload requirement",
+        "dimensions": {
+          "trigger": "primary database failure with an infeasible replication mode for the declared RPO",
+          "affected_components": [
+            "aws_db_instance.payments"
+          ],
+          "detection": "modeled",
+          "impact": {
+            "state": "not_assessable",
+            "reason": "impact dimension not evaluated by this compliance check",
+            "provenance": {
+              "kind": "derived",
+              "source": "core/analyse:rpo-feasibility:aws_db_instance.payments"
+            }
+          },
+          "likelihood": {
+            "state": "not_assessable",
+            "reason": "likelihood is not assessable from structural analysis alone — no frequency/probability data exists to assume from; an assumed guess here would be exactly the fabrication CLAUDE.md §10 warns against",
+            "provenance": {
+              "kind": "derived",
+              "source": "core/analyse:rpo-feasibility:aws_db_instance.payments"
+            }
+          },
+          "detectability": {
+            "state": "assessed",
+            "value": "high — this simulator models the failure directly",
+            "provenance": {
+              "kind": "derived",
+              "source": "core/analyse:rpo-feasibility:aws_db_instance.payments"
+            }
+          },
+          "recoverability": {
+            "failover_path_exists": {
+              "state": "not_assessable",
+              "reason": "see this finding's own Outcome for this same underlying check",
+              "provenance": {
+                "kind": "derived",
+                "source": "core/analyse:rpo-feasibility:aws_db_instance.payments"
+              }
+            },
+            "rpo_feasible": {
+              "state": "assessed",
+              "value": true,
+              "provenance": {
+                "kind": "derived",
+                "source": "core/analyse:rpo-feasibility:aws_db_instance.payments"
+              }
+            }
+          }
+        },
+        "evidence": [
+          {
+            "node_id": "aws_db_instance.payments",
+            "description": "declared rpo_seconds requirement is feasible given this resource's replication mode"
+          }
+        ],
+        "outcome": {
+          "state": "assessed",
+          "value": "satisfied",
+          "provenance": {
+            "kind": "derived",
+            "source": "core/analyse:rpo-feasibility:aws_db_instance.payments"
+          }
+        }
+      },
+      {
+        "id": "finding.routing.public-subnet-label.aws_subnet.public_a",
+        "title": "Declared-public subnet's route table actually routes to an internet gateway",
+        "dimensions": {
+          "trigger": "a subnet is tagged Tier=public but its effective route table has no default route to an internet gateway",
+          "affected_components": [
+            "aws_subnet.public_a"
+          ],
+          "detection": "modeled",
+          "impact": {
+            "state": "not_assessable",
+            "reason": "impact dimension not evaluated by this structural check",
+            "provenance": {
+              "kind": "derived",
+              "source": "core/routing:public-subnet-check:aws_subnet.public_a"
+            }
+          },
+          "likelihood": {
+            "state": "not_assessable",
+            "reason": "likelihood is not assessable from structural analysis alone — no frequency/probability data exists to assume from; an assumed guess here would be exactly the fabrication CLAUDE.md §10 warns against",
+            "provenance": {
+              "kind": "derived",
+              "source": "core/routing:public-subnet-check:aws_subnet.public_a"
+            }
+          },
+          "detectability": {
+            "state": "assessed",
+            "value": "high — this simulator models the failure directly",
+            "provenance": {
+              "kind": "derived",
+              "source": "core/routing:public-subnet-check:aws_subnet.public_a"
+            }
+          },
+          "recoverability": {
+            "failover_path_exists": {
+              "state": "not_assessable",
+              "reason": "recoverability not evaluated by this structural check",
+              "provenance": {
+                "kind": "derived",
+                "source": "core/routing:public-subnet-check:aws_subnet.public_a"
+              }
+            },
+            "rpo_feasible": {
+              "state": "not_assessable",
+              "reason": "recoverability not evaluated by this structural check",
+              "provenance": {
+                "kind": "derived",
+                "source": "core/routing:public-subnet-check:aws_subnet.public_a"
+              }
+            }
+          }
+        },
+        "evidence": [
+          {
+            "node_id": "aws_subnet.public_a",
+            "description": "effective route table has a 0.0.0.0/0 route to an internet gateway"
+          }
+        ],
+        "outcome": {
+          "state": "assessed",
+          "value": "consistent: declared public, and a real default route to an internet gateway confirms it",
+          "provenance": {
+            "kind": "derived",
+            "source": "core/routing:public-subnet-check:aws_subnet.public_a"
+          }
+        }
+      },
+      {
+        "id": "finding.routing.public-subnet-label.aws_subnet.public_b",
+        "title": "Declared-public subnet's route table actually routes to an internet gateway",
+        "dimensions": {
+          "trigger": "a subnet is tagged Tier=public but its effective route table has no default route to an internet gateway",
+          "affected_components": [
+            "aws_subnet.public_b"
+          ],
+          "detection": "modeled",
+          "impact": {
+            "state": "not_assessable",
+            "reason": "impact dimension not evaluated by this structural check",
+            "provenance": {
+              "kind": "derived",
+              "source": "core/routing:public-subnet-check:aws_subnet.public_b"
+            }
+          },
+          "likelihood": {
+            "state": "not_assessable",
+            "reason": "likelihood is not assessable from structural analysis alone — no frequency/probability data exists to assume from; an assumed guess here would be exactly the fabrication CLAUDE.md §10 warns against",
+            "provenance": {
+              "kind": "derived",
+              "source": "core/routing:public-subnet-check:aws_subnet.public_b"
+            }
+          },
+          "detectability": {
+            "state": "assessed",
+            "value": "high — this simulator models the failure directly",
+            "provenance": {
+              "kind": "derived",
+              "source": "core/routing:public-subnet-check:aws_subnet.public_b"
+            }
+          },
+          "recoverability": {
+            "failover_path_exists": {
+              "state": "not_assessable",
+              "reason": "recoverability not evaluated by this structural check",
+              "provenance": {
+                "kind": "derived",
+                "source": "core/routing:public-subnet-check:aws_subnet.public_b"
+              }
+            },
+            "rpo_feasible": {
+              "state": "not_assessable",
+              "reason": "recoverability not evaluated by this structural check",
+              "provenance": {
+                "kind": "derived",
+                "source": "core/routing:public-subnet-check:aws_subnet.public_b"
+              }
+            }
+          }
+        },
+        "evidence": [
+          {
+            "node_id": "aws_subnet.public_b",
+            "description": "effective route table has a 0.0.0.0/0 route to an internet gateway"
+          }
+        ],
+        "outcome": {
+          "state": "assessed",
+          "value": "consistent: declared public, and a real default route to an internet gateway confirms it",
+          "provenance": {
+            "kind": "derived",
+            "source": "core/routing:public-subnet-check:aws_subnet.public_b"
+          }
+        }
+      },
+      {
+        "id": "finding.routing.public-subnet-label.aws_subnet.public_c",
+        "title": "Declared-public subnet's route table actually routes to an internet gateway",
+        "dimensions": {
+          "trigger": "a subnet is tagged Tier=public but its effective route table has no default route to an internet gateway",
+          "affected_components": [
+            "aws_subnet.public_c"
+          ],
+          "detection": "modeled",
+          "impact": {
+            "state": "not_assessable",
+            "reason": "impact dimension not evaluated by this structural check",
+            "provenance": {
+              "kind": "derived",
+              "source": "core/routing:public-subnet-check:aws_subnet.public_c"
+            }
+          },
+          "likelihood": {
+            "state": "not_assessable",
+            "reason": "likelihood is not assessable from structural analysis alone — no frequency/probability data exists to assume from; an assumed guess here would be exactly the fabrication CLAUDE.md §10 warns against",
+            "provenance": {
+              "kind": "derived",
+              "source": "core/routing:public-subnet-check:aws_subnet.public_c"
+            }
+          },
+          "detectability": {
+            "state": "assessed",
+            "value": "high — this simulator models the failure directly",
+            "provenance": {
+              "kind": "derived",
+              "source": "core/routing:public-subnet-check:aws_subnet.public_c"
+            }
+          },
+          "recoverability": {
+            "failover_path_exists": {
+              "state": "not_assessable",
+              "reason": "recoverability not evaluated by this structural check",
+              "provenance": {
+                "kind": "derived",
+                "source": "core/routing:public-subnet-check:aws_subnet.public_c"
+              }
+            },
+            "rpo_feasible": {
+              "state": "not_assessable",
+              "reason": "recoverability not evaluated by this structural check",
+              "provenance": {
+                "kind": "derived",
+                "source": "core/routing:public-subnet-check:aws_subnet.public_c"
+              }
+            }
+          }
+        },
+        "evidence": [
+          {
+            "node_id": "aws_subnet.public_c",
+            "description": "effective route table has a 0.0.0.0/0 route to an internet gateway"
+          }
+        ],
+        "outcome": {
+          "state": "assessed",
+          "value": "consistent: declared public, and a real default route to an internet gateway confirms it",
+          "provenance": {
+            "kind": "derived",
+            "source": "core/routing:public-subnet-check:aws_subnet.public_c"
+          }
+        }
+      },
+      {
+        "id": "finding.compliance.iam-least-privilege-wildcard-admin.aws_iam_role.eks_cluster",
+        "title": "IAM role aws_iam_role.eks_cluster: least-privilege check for wildcard administrative access",
+        "dimensions": {
+          "trigger": "a compromised or misused credential for this role has unrestricted access to every resource",
+          "affected_components": [
+            "aws_iam_role.eks_cluster"
+          ],
+          "detection": "modeled",
+          "impact": {
+            "state": "not_assessable",
+            "reason": "impact dimension not evaluated by this compliance check",
+            "provenance": {
+              "kind": "derived",
+              "source": "core/iam_evaluate:least-privilege-wildcard-admin:aws_iam_role.eks_cluster"
+            }
+          },
+          "likelihood": {
+            "state": "not_assessable",
+            "reason": "likelihood is not assessable from structural analysis alone — no frequency/probability data exists to assume from; an assumed guess here would be exactly the fabrication CLAUDE.md §10 warns against",
+            "provenance": {
+              "kind": "derived",
+              "source": "core/iam_evaluate:least-privilege-wildcard-admin:aws_iam_role.eks_cluster"
+            }
+          },
+          "detectability": {
+            "state": "assessed",
+            "value": "high — this simulator models the failure directly",
+            "provenance": {
+              "kind": "derived",
+              "source": "core/iam_evaluate:least-privilege-wildcard-admin:aws_iam_role.eks_cluster"
+            }
+          },
+          "recoverability": {
+            "failover_path_exists": {
+              "state": "not_assessable",
+              "reason": "recoverability not evaluated by this compliance check",
+              "provenance": {
+                "kind": "derived",
+                "source": "core/iam_evaluate:least-privilege-wildcard-admin:aws_iam_role.eks_cluster"
+              }
+            },
+            "rpo_feasible": {
+              "state": "not_assessable",
+              "reason": "recoverability not evaluated by this compliance check",
+              "provenance": {
+                "kind": "derived",
+                "source": "core/iam_evaluate:least-privilege-wildcard-admin:aws_iam_role.eks_cluster"
+              }
+            }
+          }
+        },
+        "evidence": [
+          {
+            "node_id": "aws_iam_role.eks_cluster",
+            "description": "no identity policy statement grants every action (\"*\") on every resource (\"*\")",
+            "attribute": "iam_identity_policies"
+          }
+        ],
+        "outcome": {
+          "state": "assessed",
+          "value": "satisfied",
+          "provenance": {
+            "kind": "derived",
+            "source": "core/iam_evaluate:least-privilege-wildcard-admin:aws_iam_role.eks_cluster"
+          }
+        }
+      },
+      {
+        "id": "finding.compliance.iam-least-privilege-assumable-by-any-principal.aws_iam_role.eks_cluster",
+        "title": "IAM role aws_iam_role.eks_cluster: least-privilege check for an overly broad trust policy",
+        "dimensions": {
+          "trigger": "any AWS principal, not just the intended one, can assume this role",
+          "affected_components": [
+            "aws_iam_role.eks_cluster"
+          ],
+          "detection": "modeled",
+          "impact": {
+            "state": "not_assessable",
+            "reason": "impact dimension not evaluated by this compliance check",
+            "provenance": {
+              "kind": "derived",
+              "source": "core/iam_evaluate:least-privilege-assumable-by-any-principal:aws_iam_role.eks_cluster"
+            }
+          },
+          "likelihood": {
+            "state": "not_assessable",
+            "reason": "likelihood is not assessable from structural analysis alone — no frequency/probability data exists to assume from; an assumed guess here would be exactly the fabrication CLAUDE.md §10 warns against",
+            "provenance": {
+              "kind": "derived",
+              "source": "core/iam_evaluate:least-privilege-assumable-by-any-principal:aws_iam_role.eks_cluster"
+            }
+          },
+          "detectability": {
+            "state": "assessed",
+            "value": "high — this simulator models the failure directly",
+            "provenance": {
+              "kind": "derived",
+              "source": "core/iam_evaluate:least-privilege-assumable-by-any-principal:aws_iam_role.eks_cluster"
+            }
+          },
+          "recoverability": {
+            "failover_path_exists": {
+              "state": "not_assessable",
+              "reason": "recoverability not evaluated by this compliance check",
+              "provenance": {
+                "kind": "derived",
+                "source": "core/iam_evaluate:least-privilege-assumable-by-any-principal:aws_iam_role.eks_cluster"
+              }
+            },
+            "rpo_feasible": {
+              "state": "not_assessable",
+              "reason": "recoverability not evaluated by this compliance check",
+              "provenance": {
+                "kind": "derived",
+                "source": "core/iam_evaluate:least-privilege-assumable-by-any-principal:aws_iam_role.eks_cluster"
+              }
+            }
+          }
+        },
+        "evidence": [
+          {
+            "node_id": "aws_iam_role.eks_cluster",
+            "description": "this role's trust policy does not allow an unrestricted (\"*\") principal to assume it",
+            "attribute": "iam_trust_policy"
+          }
+        ],
+        "outcome": {
+          "state": "assessed",
+          "value": "satisfied",
+          "provenance": {
+            "kind": "derived",
+            "source": "core/iam_evaluate:least-privilege-assumable-by-any-principal:aws_iam_role.eks_cluster"
+          }
+        }
+      },
+      {
+        "id": "finding.compliance.iam-least-privilege-wildcard-admin.aws_iam_role.eks_node",
+        "title": "IAM role aws_iam_role.eks_node: least-privilege check for wildcard administrative access",
+        "dimensions": {
+          "trigger": "a compromised or misused credential for this role has unrestricted access to every resource",
+          "affected_components": [
+            "aws_iam_role.eks_node"
+          ],
+          "detection": "modeled",
+          "impact": {
+            "state": "not_assessable",
+            "reason": "impact dimension not evaluated by this compliance check",
+            "provenance": {
+              "kind": "derived",
+              "source": "core/iam_evaluate:least-privilege-wildcard-admin:aws_iam_role.eks_node"
+            }
+          },
+          "likelihood": {
+            "state": "not_assessable",
+            "reason": "likelihood is not assessable from structural analysis alone — no frequency/probability data exists to assume from; an assumed guess here would be exactly the fabrication CLAUDE.md §10 warns against",
+            "provenance": {
+              "kind": "derived",
+              "source": "core/iam_evaluate:least-privilege-wildcard-admin:aws_iam_role.eks_node"
+            }
+          },
+          "detectability": {
+            "state": "assessed",
+            "value": "high — this simulator models the failure directly",
+            "provenance": {
+              "kind": "derived",
+              "source": "core/iam_evaluate:least-privilege-wildcard-admin:aws_iam_role.eks_node"
+            }
+          },
+          "recoverability": {
+            "failover_path_exists": {
+              "state": "not_assessable",
+              "reason": "recoverability not evaluated by this compliance check",
+              "provenance": {
+                "kind": "derived",
+                "source": "core/iam_evaluate:least-privilege-wildcard-admin:aws_iam_role.eks_node"
+              }
+            },
+            "rpo_feasible": {
+              "state": "not_assessable",
+              "reason": "recoverability not evaluated by this compliance check",
+              "provenance": {
+                "kind": "derived",
+                "source": "core/iam_evaluate:least-privilege-wildcard-admin:aws_iam_role.eks_node"
+              }
+            }
+          }
+        },
+        "evidence": [
+          {
+            "node_id": "aws_iam_role.eks_node",
+            "description": "no identity policy statement grants every action (\"*\") on every resource (\"*\")",
+            "attribute": "iam_identity_policies"
+          }
+        ],
+        "outcome": {
+          "state": "assessed",
+          "value": "satisfied",
+          "provenance": {
+            "kind": "derived",
+            "source": "core/iam_evaluate:least-privilege-wildcard-admin:aws_iam_role.eks_node"
+          }
+        }
+      },
+      {
+        "id": "finding.compliance.iam-least-privilege-assumable-by-any-principal.aws_iam_role.eks_node",
+        "title": "IAM role aws_iam_role.eks_node: least-privilege check for an overly broad trust policy",
+        "dimensions": {
+          "trigger": "any AWS principal, not just the intended one, can assume this role",
+          "affected_components": [
+            "aws_iam_role.eks_node"
+          ],
+          "detection": "modeled",
+          "impact": {
+            "state": "not_assessable",
+            "reason": "impact dimension not evaluated by this compliance check",
+            "provenance": {
+              "kind": "derived",
+              "source": "core/iam_evaluate:least-privilege-assumable-by-any-principal:aws_iam_role.eks_node"
+            }
+          },
+          "likelihood": {
+            "state": "not_assessable",
+            "reason": "likelihood is not assessable from structural analysis alone — no frequency/probability data exists to assume from; an assumed guess here would be exactly the fabrication CLAUDE.md §10 warns against",
+            "provenance": {
+              "kind": "derived",
+              "source": "core/iam_evaluate:least-privilege-assumable-by-any-principal:aws_iam_role.eks_node"
+            }
+          },
+          "detectability": {
+            "state": "assessed",
+            "value": "high — this simulator models the failure directly",
+            "provenance": {
+              "kind": "derived",
+              "source": "core/iam_evaluate:least-privilege-assumable-by-any-principal:aws_iam_role.eks_node"
+            }
+          },
+          "recoverability": {
+            "failover_path_exists": {
+              "state": "not_assessable",
+              "reason": "recoverability not evaluated by this compliance check",
+              "provenance": {
+                "kind": "derived",
+                "source": "core/iam_evaluate:least-privilege-assumable-by-any-principal:aws_iam_role.eks_node"
+              }
+            },
+            "rpo_feasible": {
+              "state": "not_assessable",
+              "reason": "recoverability not evaluated by this compliance check",
+              "provenance": {
+                "kind": "derived",
+                "source": "core/iam_evaluate:least-privilege-assumable-by-any-principal:aws_iam_role.eks_node"
+              }
+            }
+          }
+        },
+        "evidence": [
+          {
+            "node_id": "aws_iam_role.eks_node",
+            "description": "this role's trust policy does not allow an unrestricted (\"*\") principal to assume it",
+            "attribute": "iam_trust_policy"
+          }
+        ],
+        "outcome": {
+          "state": "assessed",
+          "value": "satisfied",
+          "provenance": {
+            "kind": "derived",
+            "source": "core/iam_evaluate:least-privilege-assumable-by-any-principal:aws_iam_role.eks_node"
+          }
+        }
+      },
+      {
+        "id": "finding.compliance.iam-least-privilege-wildcard-admin.aws_iam_role.payments_app",
+        "title": "IAM role aws_iam_role.payments_app: least-privilege check for wildcard administrative access",
+        "dimensions": {
+          "trigger": "a compromised or misused credential for this role has unrestricted access to every resource",
+          "affected_components": [
+            "aws_iam_role.payments_app"
+          ],
+          "detection": "modeled",
+          "impact": {
+            "state": "not_assessable",
+            "reason": "impact dimension not evaluated by this compliance check",
+            "provenance": {
+              "kind": "derived",
+              "source": "core/iam_evaluate:least-privilege-wildcard-admin:aws_iam_role.payments_app"
+            }
+          },
+          "likelihood": {
+            "state": "not_assessable",
+            "reason": "likelihood is not assessable from structural analysis alone — no frequency/probability data exists to assume from; an assumed guess here would be exactly the fabrication CLAUDE.md §10 warns against",
+            "provenance": {
+              "kind": "derived",
+              "source": "core/iam_evaluate:least-privilege-wildcard-admin:aws_iam_role.payments_app"
+            }
+          },
+          "detectability": {
+            "state": "assessed",
+            "value": "high — this simulator models the failure directly",
+            "provenance": {
+              "kind": "derived",
+              "source": "core/iam_evaluate:least-privilege-wildcard-admin:aws_iam_role.payments_app"
+            }
+          },
+          "recoverability": {
+            "failover_path_exists": {
+              "state": "not_assessable",
+              "reason": "recoverability not evaluated by this compliance check",
+              "provenance": {
+                "kind": "derived",
+                "source": "core/iam_evaluate:least-privilege-wildcard-admin:aws_iam_role.payments_app"
+              }
+            },
+            "rpo_feasible": {
+              "state": "not_assessable",
+              "reason": "recoverability not evaluated by this compliance check",
+              "provenance": {
+                "kind": "derived",
+                "source": "core/iam_evaluate:least-privilege-wildcard-admin:aws_iam_role.payments_app"
+              }
+            }
+          }
+        },
+        "evidence": [
+          {
+            "node_id": "aws_iam_role.payments_app",
+            "description": "no identity policy statement grants every action (\"*\") on every resource (\"*\")",
+            "attribute": "iam_identity_policies"
+          }
+        ],
+        "outcome": {
+          "state": "assessed",
+          "value": "satisfied",
+          "provenance": {
+            "kind": "derived",
+            "source": "core/iam_evaluate:least-privilege-wildcard-admin:aws_iam_role.payments_app"
+          }
+        }
+      },
+      {
+        "id": "finding.compliance.iam-least-privilege-assumable-by-any-principal.aws_iam_role.payments_app",
+        "title": "IAM role aws_iam_role.payments_app: least-privilege check for an overly broad trust policy",
+        "dimensions": {
+          "trigger": "any AWS principal, not just the intended one, can assume this role",
+          "affected_components": [
+            "aws_iam_role.payments_app"
+          ],
+          "detection": "modeled",
+          "impact": {
+            "state": "not_assessable",
+            "reason": "impact dimension not evaluated by this compliance check",
+            "provenance": {
+              "kind": "derived",
+              "source": "core/iam_evaluate:least-privilege-assumable-by-any-principal:aws_iam_role.payments_app"
+            }
+          },
+          "likelihood": {
+            "state": "not_assessable",
+            "reason": "likelihood is not assessable from structural analysis alone — no frequency/probability data exists to assume from; an assumed guess here would be exactly the fabrication CLAUDE.md §10 warns against",
+            "provenance": {
+              "kind": "derived",
+              "source": "core/iam_evaluate:least-privilege-assumable-by-any-principal:aws_iam_role.payments_app"
+            }
+          },
+          "detectability": {
+            "state": "assessed",
+            "value": "high — this simulator models the failure directly",
+            "provenance": {
+              "kind": "derived",
+              "source": "core/iam_evaluate:least-privilege-assumable-by-any-principal:aws_iam_role.payments_app"
+            }
+          },
+          "recoverability": {
+            "failover_path_exists": {
+              "state": "not_assessable",
+              "reason": "recoverability not evaluated by this compliance check",
+              "provenance": {
+                "kind": "derived",
+                "source": "core/iam_evaluate:least-privilege-assumable-by-any-principal:aws_iam_role.payments_app"
+              }
+            },
+            "rpo_feasible": {
+              "state": "not_assessable",
+              "reason": "recoverability not evaluated by this compliance check",
+              "provenance": {
+                "kind": "derived",
+                "source": "core/iam_evaluate:least-privilege-assumable-by-any-principal:aws_iam_role.payments_app"
+              }
+            }
+          }
+        },
+        "evidence": [
+          {
+            "node_id": "aws_iam_role.payments_app",
+            "description": "this role's trust policy does not allow an unrestricted (\"*\") principal to assume it",
+            "attribute": "iam_trust_policy"
+          }
+        ],
+        "outcome": {
+          "state": "assessed",
+          "value": "satisfied",
+          "provenance": {
+            "kind": "derived",
+            "source": "core/iam_evaluate:least-privilege-assumable-by-any-principal:aws_iam_role.payments_app"
+          }
+        }
+      },
+      {
+        "id": "finding.resilience.configuration-blast-surface.checkout",
+        "title": "Journey \"Checkout: internet -\u003e ALB -\u003e EKS -\u003e RDS\": configuration blast surface (single rule changes that would break it)",
+        "dimensions": {
+          "trigger": "a single security-group or NACL rule is tightened, removed, or misconfigured — infrastructure intact, a rule changed",
+          "affected_components": [
+            "internet",
+            "aws_lb.payments",
+            "aws_eks_cluster.payments",
+            "aws_db_instance.payments"
+          ],
+          "detection": "unknown",
+          "impact": {
+            "state": "not_assessable",
+            "reason": "impact dimension not evaluated by this check",
+            "provenance": {
+              "kind": "derived",
+              "source": "core/config_blast_surface:checkout"
+            }
+          },
+          "likelihood": {
+            "state": "not_assessable",
+            "reason": "likelihood is not assessable from structural analysis alone — no frequency/probability data exists to assume from; an assumed guess here would be exactly the fabrication CLAUDE.md §10 warns against",
+            "provenance": {
+              "kind": "derived",
+              "source": "core/config_blast_surface:checkout"
+            }
+          },
+          "detectability": {
+            "state": "not_assessable",
+            "reason": "no detection mechanism is known or declared for this failure",
+            "provenance": {
+              "kind": "derived",
+              "source": "core/config_blast_surface:checkout"
+            }
+          },
+          "recoverability": {
+            "failover_path_exists": {
+              "state": "not_assessable",
+              "reason": "recoverability not evaluated by this check",
+              "provenance": {
+                "kind": "derived",
+                "source": "core/config_blast_surface:checkout"
+              }
+            },
+            "rpo_feasible": {
+              "state": "not_assessable",
+              "reason": "recoverability not evaluated by this check",
+              "provenance": {
+                "kind": "derived",
+                "source": "core/config_blast_surface:checkout"
+              }
+            }
+          }
+        },
+        "evidence": [
+          {
+            "description": "journey \"checkout\" does not structurally flow today (Blocked at aws_subnet.public_a (nacl_check): destination subnet has no resolvable associated NACL) — a configuration blast surface is not meaningful without a working baseline"
+          }
+        ],
+        "outcome": {
+          "state": "not_assessable",
+          "reason": "journey \"checkout\" does not structurally flow today (Blocked at aws_subnet.public_a (nacl_check): destination subnet has no resolvable associated NACL) — a configuration blast surface is not meaningful without a working baseline",
+          "provenance": {
+            "kind": "derived",
+            "source": "core/config_blast_surface:checkout"
+          }
+        }
+      },
+      {
+        "id": "finding.resilience.configuration-blast-surface.settlement",
+        "title": "Journey \"Settlement: EKS -\u003e SQS\": configuration blast surface (single rule changes that would break it)",
+        "dimensions": {
+          "trigger": "a single security-group or NACL rule is tightened, removed, or misconfigured — infrastructure intact, a rule changed",
+          "affected_components": [
+            "aws_eks_cluster.payments",
+            "aws_sqs_queue.settlement"
+          ],
+          "detection": "unknown",
+          "impact": {
+            "state": "not_assessable",
+            "reason": "impact dimension not evaluated by this check",
+            "provenance": {
+              "kind": "derived",
+              "source": "core/config_blast_surface:settlement"
+            }
+          },
+          "likelihood": {
+            "state": "not_assessable",
+            "reason": "likelihood is not assessable from structural analysis alone — no frequency/probability data exists to assume from; an assumed guess here would be exactly the fabrication CLAUDE.md §10 warns against",
+            "provenance": {
+              "kind": "derived",
+              "source": "core/config_blast_surface:settlement"
+            }
+          },
+          "detectability": {
+            "state": "not_assessable",
+            "reason": "no detection mechanism is known or declared for this failure",
+            "provenance": {
+              "kind": "derived",
+              "source": "core/config_blast_surface:settlement"
+            }
+          },
+          "recoverability": {
+            "failover_path_exists": {
+              "state": "not_assessable",
+              "reason": "recoverability not evaluated by this check",
+              "provenance": {
+                "kind": "derived",
+                "source": "core/config_blast_surface:settlement"
+              }
+            },
+            "rpo_feasible": {
+              "state": "not_assessable",
+              "reason": "recoverability not evaluated by this check",
+              "provenance": {
+                "kind": "derived",
+                "source": "core/config_blast_surface:settlement"
+              }
+            }
+          }
+        },
+        "evidence": [
+          {
+            "description": "journey \"settlement\" does not structurally flow today (Blocked at aws_sqs_queue.settlement (route_selection): destination has no resolvable effective route table) — a configuration blast surface is not meaningful without a working baseline"
+          }
+        ],
+        "outcome": {
+          "state": "not_assessable",
+          "reason": "journey \"settlement\" does not structurally flow today (Blocked at aws_sqs_queue.settlement (route_selection): destination has no resolvable effective route table) — a configuration blast surface is not meaningful without a working baseline",
+          "provenance": {
+            "kind": "derived",
+            "source": "core/config_blast_surface:settlement"
+          }
+        }
+      }
+    ]
+  },
+  "traffic": {
+    "available": true,
+    "flows": [
+      {
+        "JourneyID": "checkout",
+        "Flows": false,
+        "Hops": [
+          {
+            "From": "internet",
+            "To": "aws_lb.payments",
+            "Allowed": false,
+            "Reason": "Blocked at aws_subnet.public_a (nacl_check): destination subnet has no resolvable associated NACL"
+          }
+        ],
+        "BlockedAt": "aws_lb.payments",
+        "BlockedReason": "Blocked at aws_subnet.public_a (nacl_check): destination subnet has no resolvable associated NACL"
+      },
+      {
+        "JourneyID": "settlement",
+        "Flows": false,
+        "Hops": [
+          {
+            "From": "aws_eks_cluster.payments",
+            "To": "aws_sqs_queue.settlement",
+            "Allowed": false,
+            "Reason": "Blocked at aws_sqs_queue.settlement (route_selection): destination has no resolvable effective route table"
+          }
+        ],
+        "BlockedAt": "aws_sqs_queue.settlement",
+        "BlockedReason": "Blocked at aws_sqs_queue.settlement (route_selection): destination has no resolvable effective route table"
+      }
+    ]
+  },
+  "cost": {
+    "available": false,
+    "unavailable_reason": "no pricing snapshot was available when this version was assessed",
+    "disclaimer": "Cost figures are estimates derived from a dated AWS Price List snapshot and declared sizing. They are not a bill, do not reflect any negotiated discount, and do not include usage-based charges (data transfer, request volume, storage I/O) unless separately modelled."
+  },
+  "delta": [],
+  "assumptions": [],
+  "provenance": {
+    "kind": "derived",
+    "source": "core/report"
+  }
+}

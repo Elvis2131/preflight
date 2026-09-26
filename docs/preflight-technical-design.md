@@ -18,7 +18,15 @@ provenance boundary at ingestion rather than on the wire; **v6 records the
 architect-first pivot's own topology/contract consequences** — the pricing-snapshot
 fetcher's placement (§1a) and a forward note on the new engines' anticipated contracts
 (§5) — without freezing anything speculatively (PC-103's own scope: record what
-changes, don't design ahead of the epics that will actually build it).
+changes, don't design ahead of the epics that will actually build it); **v7 adds a
+seventh frozen contract (`report.schema.json`, PC-120)** — see §5's own updated note:
+this doc's own v6 forward-note guess ("most likely no new contract for the report
+itself... a pure projection") did not hold once PC-120 was actually specified — the
+Card explicitly calls for a versioned `report.schema.json`. "Projection" describes the
+report's own VERDICT logic (it invents none — every value traces to an existing
+engine's own output), not whether its response shape needs a schema; a real,
+structured wire type spanning six other engines' outputs still needs one, the same
+"a genuine new producer earns its own contract" standard `canvas.schema.json` set.
 **Scope of this doc:** end-to-end flows, non-functional requirements, and the
 technology selection those NFRs force. Product rationale lives in the PRD and is not
 repeated.
@@ -464,15 +472,20 @@ tagging happens in `ingest/canvas.go` when the wire document is converted into
 `core.IR`, not before.
 
 **v6 forward note (PC-103's own scope: record the consequence, don't design ahead of
-the epics that will build it):** the Network & Request Engine (PC-97), Traffic &
-Capacity (PC-98), Cost (PC-100), and Report (PC-101) epics are each expected to earn
-their own contract once built, on the same "extended when a genuine new producer earns
-one" standard `canvas.schema.json` already set — a request-trace shape, a traffic/flow
-result shape, a cost-snapshot-referencing result shape, and (most likely) no new
-contract for the report itself, since PRD §5.10 states it is a pure projection of
-results the other five/six contracts already govern. None of these are frozen here;
-freezing ahead of the epic that needs them would be exactly the speculative-generality
-this project's own scenario-driven minimalism rule (PRD §4) warns against.
+the epics that will build it):** the Network & Request Engine (PC-97) and Traffic &
+Capacity (PC-98)'s own contracts are still not frozen here. Cost (PC-100) has since
+been built (PC-116/117/118) WITHOUT earning a dedicated contract of its own — its
+fields extended `Scorecard`/`Fault` instead, plain additive Go types outside the
+six-then-seven frozen contracts, the same "not every new producer needs one" latitude
+`canvas.schema.json`'s own precedent always implied, not a rule that every epic must
+freeze something. **Report (PC-101/PC-120) has now been built, and DID earn its own
+contract** (`report.schema.json`, §8's count now seven) — this doc's own earlier guess
+here ("most likely no new contract for the report itself... a pure projection of
+results the other five/six contracts already govern") did not hold: "projection"
+describes PC-120's own VERDICT logic (it invents none), not its wire shape — see this
+section's own v7 history note above. Freezing Capacity's contract ahead of the epic
+that needs it would be exactly the speculative-generality this project's own
+scenario-driven minimalism rule (PRD §4) warns against.
 
 ---
 
@@ -517,7 +530,7 @@ engine change that would have broken a validated prediction fails CI.
 The concrete week-4 definition of done, so progress is unambiguous:
 
 - `contracts/` — five frozen JSON Schemas (as of Phase 1; a sixth, `canvas.schema.
-  json`, was added later — see §5)
+  json`, and a seventh, `report.schema.json` (PC-120), were added later — see §5)
 - `core/ir` — two-level model, resolution states, provenance wrappers,
   content-addressed versioning, diffing
 - `providers/aws` — mappings for the eight golden-architecture capability types

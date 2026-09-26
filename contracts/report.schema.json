@@ -1,0 +1,814 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$defs": {
+    "AssessmentEnvelope": {
+      "properties": {
+        "state": {
+          "type": "string",
+          "enum": [
+            "assessed",
+            "not_assessable"
+          ]
+        },
+        "value": {
+          "description": "Present iff state is assessed."
+        },
+        "reason": {
+          "type": "string",
+          "description": "Present iff state is not_assessable — I4: incompleteness always carries a stated reason"
+        },
+        "provenance": {
+          "$ref": "#/$defs/Provenance"
+        }
+      },
+      "additionalProperties": false,
+      "type": "object",
+      "required": [
+        "state",
+        "provenance"
+      ]
+    },
+    "ComplianceCatalogCounts": {
+      "properties": {
+        "Assessable": {
+          "type": "integer"
+        },
+        "Partial": {
+          "type": "integer"
+        },
+        "NotAssessable": {
+          "type": "integer"
+        }
+      },
+      "additionalProperties": false,
+      "type": "object",
+      "required": [
+        "Assessable",
+        "Partial",
+        "NotAssessable"
+      ]
+    },
+    "ComplianceControlResult": {
+      "properties": {
+        "ControlID": {
+          "type": "string"
+        },
+        "Framework": {
+          "type": "string"
+        },
+        "RequirementID": {
+          "type": "string"
+        },
+        "Title": {
+          "type": "string"
+        },
+        "Classification": {
+          "type": "string"
+        },
+        "NodeID": {
+          "type": "string"
+        },
+        "Result": {
+          "$ref": "#/$defs/ComplianceResult"
+        },
+        "Rationale": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": false,
+      "type": "object",
+      "required": [
+        "ControlID",
+        "Framework",
+        "RequirementID",
+        "Title",
+        "Classification",
+        "NodeID",
+        "Result",
+        "Rationale"
+      ]
+    },
+    "ComplianceResult": {
+      "properties": {
+        "status": {
+          "type": "string",
+          "enum": [
+            "applicable",
+            "satisfied",
+            "partial",
+            "unsatisfied",
+            "not_assessable"
+          ]
+        },
+        "provenance": {
+          "$ref": "#/$defs/Provenance"
+        }
+      },
+      "additionalProperties": false,
+      "type": "object",
+      "required": [
+        "status",
+        "provenance"
+      ]
+    },
+    "ComplianceResultCounts": {
+      "properties": {
+        "Satisfied": {
+          "type": "integer"
+        },
+        "Applicable": {
+          "type": "integer"
+        },
+        "Partial": {
+          "type": "integer"
+        },
+        "Unsatisfied": {
+          "type": "integer"
+        },
+        "NotAssessable": {
+          "type": "integer"
+        }
+      },
+      "additionalProperties": false,
+      "type": "object",
+      "required": [
+        "Satisfied",
+        "Applicable",
+        "Partial",
+        "Unsatisfied",
+        "NotAssessable"
+      ]
+    },
+    "ComponentCost": {
+      "properties": {
+        "NodeID": {
+          "type": "string"
+        },
+        "Decision": {
+          "type": "string"
+        },
+        "MonthlyAmount": {
+          "type": "number"
+        },
+        "Currency": {
+          "type": "string"
+        },
+        "Reason": {
+          "type": "string"
+        },
+        "SnapshotID": {
+          "type": "string"
+        },
+        "SKURateCode": {
+          "type": "string"
+        },
+        "Provenance": {
+          "$ref": "#/$defs/Provenance"
+        }
+      },
+      "additionalProperties": false,
+      "type": "object",
+      "required": [
+        "NodeID",
+        "Decision",
+        "MonthlyAmount",
+        "Currency",
+        "Reason",
+        "SnapshotID",
+        "SKURateCode",
+        "Provenance"
+      ]
+    },
+    "ComponentLoad": {
+      "properties": {
+        "NodeID": {
+          "type": "string"
+        },
+        "NodeType": {
+          "type": "string"
+        },
+        "OfferedRPS": {
+          "type": "number"
+        },
+        "CapacityKey": {
+          "type": "string"
+        },
+        "Capacity": {
+          "type": "number"
+        },
+        "Utilization": {
+          "type": "number"
+        },
+        "NotAssessableReason": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": false,
+      "type": "object",
+      "required": [
+        "NodeID",
+        "NodeType",
+        "OfferedRPS",
+        "CapacityKey",
+        "Capacity",
+        "Utilization",
+        "NotAssessableReason"
+      ]
+    },
+    "CostReport": {
+      "properties": {
+        "SnapshotID": {
+          "type": "string"
+        },
+        "HoursPerMonthAssumed": {
+          "type": "number"
+        },
+        "PricedTotal": {
+          "type": "number"
+        },
+        "Currency": {
+          "type": "string"
+        },
+        "Components": {
+          "items": {
+            "$ref": "#/$defs/ComponentCost"
+          },
+          "type": "array"
+        },
+        "UnpricedCount": {
+          "type": "integer"
+        },
+        "budget_usd": {
+          "type": "number"
+        },
+        "budget_priority": {
+          "type": "string"
+        },
+        "budget_exceeded": {
+          "type": "boolean"
+        }
+      },
+      "additionalProperties": false,
+      "type": "object",
+      "required": [
+        "SnapshotID",
+        "HoursPerMonthAssumed",
+        "PricedTotal",
+        "Currency",
+        "Components",
+        "UnpricedCount"
+      ]
+    },
+    "DeltaEntry": {
+      "properties": {
+        "finding_id": {
+          "type": "string"
+        },
+        "kind": {
+          "type": "string"
+        },
+        "old_status": {
+          "type": "string",
+          "description": "Empty if the finding did not exist in the old version."
+        },
+        "new_status": {
+          "type": "string",
+          "description": "Empty if the finding no longer exists in the new version."
+        },
+        "reason": {
+          "type": "string",
+          "description": "Populated when Kind is not_assessable."
+        },
+        "provenance": {
+          "$ref": "#/$defs/Provenance"
+        }
+      },
+      "additionalProperties": false,
+      "type": "object",
+      "required": [
+        "finding_id",
+        "kind",
+        "provenance"
+      ]
+    },
+    "EvidenceRef": {
+      "properties": {
+        "node_id": {
+          "type": "string",
+          "description": "Set when this evidence points at an IR node."
+        },
+        "edge_id": {
+          "type": "string",
+          "description": "Set when this evidence points at an IR edge."
+        },
+        "experiment_id": {
+          "type": "string",
+          "description": "Set when this evidence is a validate/ Rung 1/3 run"
+        },
+        "description": {
+          "type": "string",
+          "minLength": 1
+        },
+        "attribute": {
+          "type": "string",
+          "description": "The specific attribute this evidence concerns"
+        }
+      },
+      "additionalProperties": false,
+      "type": "object",
+      "required": [
+        "description"
+      ]
+    },
+    "FailureMode": {
+      "properties": {
+        "trigger": {
+          "type": "string",
+          "minLength": 1
+        },
+        "affected_components": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array",
+          "minItems": 1
+        },
+        "blast_radius": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "detection": {
+          "type": "string",
+          "enum": [
+            "modeled",
+            "declared",
+            "unknown",
+            "observed"
+          ]
+        },
+        "existing_mitigation": {
+          "type": "string"
+        },
+        "gap": {
+          "type": "string"
+        },
+        "impact": {
+          "$ref": "#/$defs/AssessmentEnvelope"
+        },
+        "likelihood": {
+          "$ref": "#/$defs/AssessmentEnvelope",
+          "description": "Per CLAUDE.md §10: assumed or unknown"
+        },
+        "detectability": {
+          "$ref": "#/$defs/AssessmentEnvelope",
+          "description": "Derived from Detection."
+        },
+        "recoverability": {
+          "$ref": "#/$defs/Recoverability"
+        },
+        "recommendation": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": false,
+      "type": "object",
+      "required": [
+        "trigger",
+        "affected_components",
+        "detection",
+        "impact",
+        "likelihood",
+        "detectability",
+        "recoverability"
+      ]
+    },
+    "Finding": {
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "title": {
+          "type": "string",
+          "minLength": 1
+        },
+        "dimensions": {
+          "$ref": "#/$defs/FailureMode"
+        },
+        "evidence": {
+          "items": {
+            "$ref": "#/$defs/EvidenceRef"
+          },
+          "type": "array",
+          "minItems": 1,
+          "description": "A finding must always cite at least one piece of evidence — this project's stated principle is compliance WITH evidence"
+        },
+        "outcome": {
+          "$ref": "#/$defs/AssessmentEnvelope"
+        }
+      },
+      "additionalProperties": false,
+      "type": "object",
+      "required": [
+        "id",
+        "title",
+        "dimensions",
+        "evidence",
+        "outcome"
+      ]
+    },
+    "JourneyFlowResult": {
+      "properties": {
+        "JourneyID": {
+          "type": "string"
+        },
+        "Flows": {
+          "type": "boolean"
+        },
+        "Hops": {
+          "items": {
+            "$ref": "#/$defs/JourneyHopFlow"
+          },
+          "type": "array"
+        },
+        "BlockedAt": {
+          "type": "string"
+        },
+        "BlockedReason": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": false,
+      "type": "object",
+      "required": [
+        "JourneyID",
+        "Flows",
+        "Hops",
+        "BlockedAt",
+        "BlockedReason"
+      ]
+    },
+    "JourneyHopFlow": {
+      "properties": {
+        "From": {
+          "type": "string"
+        },
+        "To": {
+          "type": "string"
+        },
+        "Allowed": {
+          "type": "boolean"
+        },
+        "Reason": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": false,
+      "type": "object",
+      "required": [
+        "From",
+        "To",
+        "Allowed",
+        "Reason"
+      ]
+    },
+    "Provenance": {
+      "properties": {
+        "kind": {
+          "type": "string",
+          "enum": [
+            "stated",
+            "derived",
+            "assumed",
+            "llm_reasoned",
+            "observed"
+          ]
+        },
+        "source": {
+          "type": "string",
+          "minLength": 1
+        },
+        "reason": {
+          "type": "string",
+          "description": "Required for assumed and llm_reasoned; the IR evidence citation or the overridable default's justification."
+        },
+        "evidence_tier": {
+          "type": "string",
+          "enum": [
+            "functional",
+            "performance",
+            "resilience"
+          ]
+        },
+        "rung": {
+          "type": "integer",
+          "enum": [
+            1,
+            2,
+            3
+          ]
+        }
+      },
+      "additionalProperties": false,
+      "type": "object",
+      "required": [
+        "kind",
+        "source"
+      ]
+    },
+    "Recoverability": {
+      "properties": {
+        "failover_path_exists": {
+          "$ref": "#/$defs/AssessmentEnvelope"
+        },
+        "rpo_feasible": {
+          "$ref": "#/$defs/AssessmentEnvelope"
+        }
+      },
+      "additionalProperties": false,
+      "type": "object",
+      "required": [
+        "failover_path_exists",
+        "rpo_feasible"
+      ]
+    },
+    "ReportAssumption": {
+      "properties": {
+        "kind": {
+          "type": "string"
+        },
+        "source": {
+          "type": "string"
+        },
+        "reason": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": false,
+      "type": "object",
+      "required": [
+        "kind",
+        "source"
+      ]
+    },
+    "ReportComplianceFrameworkSection": {
+      "properties": {
+        "framework": {
+          "type": "string"
+        },
+        "catalog_counts": {
+          "$ref": "#/$defs/ComplianceCatalogCounts"
+        },
+        "result_counts": {
+          "$ref": "#/$defs/ComplianceResultCounts"
+        },
+        "controls": {
+          "items": {
+            "$ref": "#/$defs/ComplianceControlResult"
+          },
+          "type": "array"
+        }
+      },
+      "additionalProperties": false,
+      "type": "object",
+      "required": [
+        "framework",
+        "catalog_counts",
+        "result_counts",
+        "controls"
+      ]
+    },
+    "ReportCostSection": {
+      "properties": {
+        "available": {
+          "type": "boolean"
+        },
+        "unavailable_reason": {
+          "type": "string"
+        },
+        "disclaimer": {
+          "type": "string"
+        },
+        "report": {
+          "$ref": "#/$defs/CostReport"
+        }
+      },
+      "additionalProperties": false,
+      "type": "object",
+      "required": [
+        "available"
+      ]
+    },
+    "ReportExecutiveSummary": {
+      "properties": {
+        "scorecard_status_counts": {
+          "additionalProperties": {
+            "type": "integer"
+          },
+          "type": "object"
+        },
+        "compliance_catalog_counts": {
+          "additionalProperties": {
+            "$ref": "#/$defs/ComplianceCatalogCounts"
+          },
+          "type": "object"
+        },
+        "compliance_result_counts": {
+          "additionalProperties": {
+            "$ref": "#/$defs/ComplianceResultCounts"
+          },
+          "type": "object"
+        },
+        "nfr_evaluated_count": {
+          "type": "integer"
+        },
+        "nfr_not_evaluated_count": {
+          "type": "integer"
+        }
+      },
+      "additionalProperties": false,
+      "type": "object",
+      "required": [
+        "scorecard_status_counts",
+        "compliance_catalog_counts",
+        "compliance_result_counts",
+        "nfr_evaluated_count",
+        "nfr_not_evaluated_count"
+      ]
+    },
+    "ReportFailureModesSection": {
+      "properties": {
+        "available": {
+          "type": "boolean"
+        },
+        "unavailable_reason": {
+          "type": "string"
+        },
+        "findings": {
+          "items": {
+            "$ref": "#/$defs/Finding"
+          },
+          "type": "array"
+        }
+      },
+      "additionalProperties": false,
+      "type": "object",
+      "required": [
+        "available"
+      ]
+    },
+    "ReportInventoryEntry": {
+      "properties": {
+        "node_id": {
+          "type": "string"
+        },
+        "type": {
+          "type": "string"
+        },
+        "resolution": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": false,
+      "type": "object",
+      "required": [
+        "node_id",
+        "type",
+        "resolution"
+      ]
+    },
+    "ReportNFREntry": {
+      "properties": {
+        "requirement_id": {
+          "type": "string"
+        },
+        "priority": {
+          "type": "string"
+        },
+        "value": true,
+        "evaluated": {
+          "type": "boolean"
+        },
+        "finding_ids": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "reason": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": false,
+      "type": "object",
+      "required": [
+        "requirement_id",
+        "priority",
+        "value",
+        "evaluated"
+      ]
+    },
+    "ReportTrafficSection": {
+      "properties": {
+        "available": {
+          "type": "boolean"
+        },
+        "unavailable_reason": {
+          "type": "string"
+        },
+        "flows": {
+          "items": {
+            "$ref": "#/$defs/JourneyFlowResult"
+          },
+          "type": "array"
+        },
+        "load": {
+          "items": {
+            "$ref": "#/$defs/ComponentLoad"
+          },
+          "type": "array"
+        }
+      },
+      "additionalProperties": false,
+      "type": "object",
+      "required": [
+        "available"
+      ]
+    }
+  },
+  "properties": {
+    "session_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "version_number": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "executive_summary": {
+      "$ref": "#/$defs/ReportExecutiveSummary"
+    },
+    "inventory": {
+      "items": {
+        "$ref": "#/$defs/ReportInventoryEntry"
+      },
+      "type": "array"
+    },
+    "nfr_conformance": {
+      "items": {
+        "$ref": "#/$defs/ReportNFREntry"
+      },
+      "type": "array"
+    },
+    "compliance": {
+      "items": {
+        "$ref": "#/$defs/ReportComplianceFrameworkSection"
+      },
+      "type": "array"
+    },
+    "failure_modes": {
+      "$ref": "#/$defs/ReportFailureModesSection"
+    },
+    "traffic": {
+      "$ref": "#/$defs/ReportTrafficSection"
+    },
+    "cost": {
+      "$ref": "#/$defs/ReportCostSection"
+    },
+    "delta": {
+      "items": {
+        "$ref": "#/$defs/DeltaEntry"
+      },
+      "type": "array"
+    },
+    "assumptions": {
+      "items": {
+        "$ref": "#/$defs/ReportAssumption"
+      },
+      "type": "array"
+    },
+    "provenance": {
+      "$ref": "#/$defs/Provenance"
+    }
+  },
+  "additionalProperties": false,
+  "type": "object",
+  "required": [
+    "session_id",
+    "version_number",
+    "executive_summary",
+    "inventory",
+    "nfr_conformance",
+    "compliance",
+    "failure_modes",
+    "traffic",
+    "cost",
+    "delta",
+    "assumptions",
+    "provenance"
+  ],
+  "x-changelog": "contracts/CHANGELOG.md",
+  "x-schema-version": "1.0.0"
+}
