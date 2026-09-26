@@ -26,7 +26,7 @@ type Fault struct {
 	// IAMAddDenyStatement must be set — the Card's own two named mutations, "remove a
 	// statement, add a deny" — never both, never neither.
 	IAMRemoveStatementSid string           `json:"iam_remove_statement_sid,omitempty" jsonschema:"description=Required only for iam_policy_change when removing a statement — the Sid of the statement to remove from the policy document named by Target."`
-	IAMAddDenyStatement    *PolicyStatement `json:"iam_add_deny_statement,omitempty" jsonschema:"description=Required only for iam_policy_change when adding a deny — a new statement appended to the policy document named by Target. Effect is always forced to Deny regardless of what is supplied here, since this fault only ever injects a new restriction."`
+	IAMAddDenyStatement   *PolicyStatement `json:"iam_add_deny_statement,omitempty" jsonschema:"description=Required only for iam_policy_change when adding a deny — a new statement appended to the policy document named by Target. Effect is always forced to Deny regardless of what is supplied here, since this fault only ever injects a new restriction."`
 
 	// SGRuleRemove/SGRuleAdd/NACLRuleRemove/NACLRuleAdd are PC-130's own addition —
 	// required only for "sg_rule_change"/"nacl_rule_change": Target names the
@@ -68,6 +68,13 @@ type SimulateResponse struct {
 	// discipline as Journeys/SeveredPaths/Cascade) when the workload declares no
 	// journeys at all.
 	FlowDetail []JourneyFlowResult `json:"flow_detail"`
+
+	// Load is PC-127's own addition — PC-126's real per-component utilization
+	// (ComputeComponentLoad/RankBottlenecks) against the SAME fault-mutated IR/killed
+	// set FlowDetail already reflects, so a Simulate-mode UI can show "before" and
+	// "after" utilization for one fault without a second round-trip or reimplementing
+	// the load engine. Empty (never nil) when the workload declares no journeys.
+	Load []ComponentLoad `json:"load"`
 }
 
 // Simulate applies a declared fault set against an IR + Workload, reusing PC-14's
@@ -127,7 +134,7 @@ func Simulate(ir *IR, workload Workload, faults []Fault, prov Provenance) Simula
 	mutatedIR, killed, ok, reason := resolveFaults(ir, workload, faults)
 	if !ok {
 		na := NotAssessable[any](reason, prov).ToEnvelope()
-		return SimulateResponse{Journeys: make([]Journey, 0), SeveredPaths: make([]string, 0), Cascade: make([]string, 0), FlowDetail: make([]JourneyFlowResult, 0), Capacity: na, Verdict: na}
+		return SimulateResponse{Journeys: make([]Journey, 0), SeveredPaths: make([]string, 0), Cascade: make([]string, 0), FlowDetail: make([]JourneyFlowResult, 0), Load: make([]ComponentLoad, 0), Capacity: na, Verdict: na}
 	}
 	ir = mutatedIR
 
@@ -213,8 +220,10 @@ func Simulate(ir *IR, workload Workload, faults []Fault, prov Provenance) Simula
 	// the (possibly fault-mutated) IR — always computed when the workload declares
 	// journeys, for every fault type, not specially cased to the two new ones.
 	flowDetail := make([]JourneyFlowResult, 0)
+	load := make([]ComponentLoad, 0)
 	if len(workload.Journeys) > 0 {
 		flowDetail = ComputeAllJourneyFlows(ir, workload, killed)
+		load = RankBottlenecks(ComputeComponentLoad(ir, workload, killed))
 	}
 
 	return SimulateResponse{
@@ -224,6 +233,7 @@ func Simulate(ir *IR, workload Workload, faults []Fault, prov Provenance) Simula
 		Cascade:      cascade,
 		Verdict:      verdict,
 		FlowDetail:   flowDetail,
+		Load:         load,
 	}
 }
 
