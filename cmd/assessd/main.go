@@ -61,6 +61,7 @@ func main() {
 	mux.HandleFunc("GET /pricing/snapshots", server.ListPricingSnapshotsHandler(pricingStore))
 	mux.HandleFunc("GET /pricing/snapshots/{id}", server.GetPricingSnapshotHandler(pricingStore))
 	mux.HandleFunc("POST /pricing/snapshots/{id}/activate", server.ActivatePricingSnapshotHandler(pricingStore))
+	mux.HandleFunc("GET /catalog/services", server.ListServiceCatalogHandler())
 	mux.HandleFunc("/openapi.json", server.OpenAPISpecHandler())
 	mux.HandleFunc("/swagger", server.SwaggerUIHandler())
 

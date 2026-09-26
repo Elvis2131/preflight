@@ -50,12 +50,15 @@ type AssessCanvasRequest struct {
 }
 
 // AssessCanvas builds an IR directly from a posted canvas document
-// (ingest.IngestCanvas — no HCL, no provider-mapping registry involved) and runs it
-// through the identical downstream pipeline Assess uses. A deliberately incomplete
-// canvas (a dangling edge, a node missing capability fields) never crashes and never
-// gets a silent guess — it produces real not_assessable results, the same guarantee
-// HCL ingestion already has (see ingest.IngestCanvas's own doc comment for exactly
-// how).
+// (ingest.IngestCanvas — no HCL, no provider-mapping registry involved for NodeType/
+// edge-shape decisions) and runs it through the identical downstream pipeline Assess
+// uses. A deliberately incomplete canvas (a dangling edge, a node missing capability
+// fields) never crashes and never gets a silent guess — it produces real
+// not_assessable results, the same guarantee HCL ingestion already has (see
+// ingest.IngestCanvas's own doc comment for exactly how). PC-136: the SAME merged
+// registry Assess uses IS now loaded here too, for the one purpose IngestCanvas
+// actually needs it — resolving a node's declared ServiceID into a PC-107 capability
+// level, via loadMergedRegistry (no separate registry-loading implementation).
 func AssessCanvas(store *Store, req AssessCanvasRequest) (AssessResponse, error) {
 	start := time.Now()
 
@@ -73,7 +76,11 @@ func AssessCanvas(store *Store, req AssessCanvasRequest) (AssessResponse, error)
 		return AssessResponse{}, newAPIError(http.StatusUnprocessableEntity, "invalid_workload", "server: load workload: %s", err)
 	}
 
-	result, err := ingest.IngestCanvas(req.Canvas, versionNumber)
+	registry, err := loadMergedRegistry()
+	if err != nil {
+		return AssessResponse{}, err
+	}
+	result, err := ingest.IngestCanvas(req.Canvas, registry, versionNumber)
 	if err != nil {
 		return AssessResponse{}, fmt.Errorf("server: ingest canvas: %w", err)
 	}

@@ -10,14 +10,22 @@ import (
 	"strconv"
 
 	"preflight/core"
+	"preflight/providers"
 )
 
 // IngestCanvas builds an IR directly from a canvas-authored core.CanvasDocument
 // (PC-85's own wire contract, frozen as contracts/canvas.schema.json). Unlike Ingest,
-// there is no provider-mapping Registry involved: a canvas node already declares its
-// canonical NodeType directly — the palette IS the golden vocabulary (PC-85) — so
-// there is no raw resource_type string to map through a providers.Registry the way an
-// HCL resource has.
+// a canvas node already declares its canonical NodeType directly — the palette IS the
+// golden vocabulary (PC-85) — so there is no NodeType/edge-shape mapping to do
+// through a providers.Registry the way an HCL resource has.
+//
+// PC-136 correction to this file's own earlier claim: a canvas node's NodeType alone
+// does not resolve a PC-107 capability_level ("compute" cannot distinguish EC2 from
+// Lambda). registry IS used here, for exactly that one purpose — resolving
+// CanvasNode.ServiceID through the identical providers.Registry.Lookup the Terraform
+// path already uses (see resolveCanvasCapabilityLevel below) — never a second lookup
+// implementation, never a NodeType/edge-shape decision (those stay canvas-native, as
+// this file's own original reasoning above still holds).
 //
 // Incompleteness handling is this function's actual point, not an afterthought (this
 // ticket's own Conversation: "a half-drawn diagram is the steady state of using a
@@ -43,7 +51,7 @@ import (
 //     capability entered at all — or missing the one field a specific check reads —
 //     produces a nil CapabilityModel field, and every compliance/failover check
 //     already treats that as not_assessable, never a fabricated default.
-func IngestCanvas(doc core.CanvasDocument, versionNumber int) (Result, error) {
+func IngestCanvas(doc core.CanvasDocument, registry providers.Registry, versionNumber int) (Result, error) {
 	nodeExists := make(map[string]bool, len(doc.Nodes))
 	for _, n := range doc.Nodes {
 		nodeExists[n.ID] = true
@@ -59,7 +67,7 @@ func IngestCanvas(doc core.CanvasDocument, versionNumber int) (Result, error) {
 			Resolution:    core.ResolutionKnown,
 			Capability:    buildCanvasCapability(n.Capability),
 			Sizing:        buildCanvasSizing(n.Sizing),
-			RawAttributes: canvasCapabilityToRawAttributes(n.Capability),
+			RawAttributes: resolveCanvasCapabilityLevel(canvasCapabilityToRawAttributes(n.Capability), registry, n.ServiceID, n.Type),
 			Provenance:    prov,
 		})
 	}
@@ -175,5 +183,36 @@ func canvasCapabilityToRawAttributes(capability map[string]string) map[string]an
 	for k, v := range capability {
 		raw[k] = v
 	}
+	return raw
+}
+
+// resolveCanvasCapabilityLevel is PC-136's own addition: resolves a canvas node's
+// declared ServiceID into a PC-107 capability_level via the exact same
+// providers.Registry.Lookup ingest/build.go's own withCapabilityLevel already calls
+// for the Terraform path — no second lookup implementation, per this ticket's own
+// explicit acceptance criterion. Three cases all leave capability_level unset,
+// deliberately indistinguishable from each other at this layer (I4: an uncertain
+// claim is not_assessable, never guessed, and this codebase does not rank different
+// flavors of "uncertain"): ServiceID is empty (no service selected yet); ServiceID
+// has no registry entry at all (unknown service, or a real service this registry
+// simply hasn't mapped); or the registry entry's own NodeType disagrees with this
+// node's declared Type (a real inconsistency — an ID borrowed from a different
+// structural category — that this function refuses to trust rather than silently
+// preferring one side). An unset capability_level is read by core/trace.go's own
+// existing capability gate, which already reports not_assessable naming the node —
+// the identical mechanism a real out-of-vocabulary Terraform resource already
+// produces, not a new one built for canvas.
+func resolveCanvasCapabilityLevel(raw map[string]any, registry providers.Registry, serviceID string, nodeType core.NodeType) map[string]any {
+	if serviceID == "" {
+		return raw
+	}
+	mapping, ok := registry.Lookup(serviceID)
+	if !ok || mapping.IsEdgeMapping() || mapping.NodeType != nodeType {
+		return raw
+	}
+	if raw == nil {
+		raw = make(map[string]any, 1)
+	}
+	raw["capability_level"] = string(mapping.CapabilityLevel)
 	return raw
 }

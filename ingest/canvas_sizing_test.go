@@ -8,6 +8,7 @@ import (
 
 	"preflight/core"
 	"preflight/ingest"
+	"preflight/providers"
 )
 
 func TestIngestCanvas_Sizing_PopulatedFieldsTranslateToTypedSizing(t *testing.T) {
@@ -22,7 +23,7 @@ func TestIngestCanvas_Sizing_PopulatedFieldsTranslateToTypedSizing(t *testing.T)
 		},
 		Edges: []core.CanvasEdge{{ID: "e1", Type: "routes_to", From: "lb", To: "db"}},
 	}
-	result, err := ingest.IngestCanvas(doc, 1)
+	result, err := ingest.IngestCanvas(doc, providers.Registry{}, 1)
 	if err != nil {
 		t.Fatalf("IngestCanvas: %v", err)
 	}
@@ -68,7 +69,7 @@ func TestIngestCanvas_Sizing_AbsentOrBlank_NilSizing(t *testing.T) {
 				},
 				Edges: []core.CanvasEdge{{ID: "e1", Type: "routes_to", From: "lb", To: "db"}},
 			}
-			result, err := ingest.IngestCanvas(doc, 1)
+			result, err := ingest.IngestCanvas(doc, providers.Registry{}, 1)
 			if err != nil {
 				t.Fatalf("IngestCanvas: %v", err)
 			}
@@ -115,7 +116,7 @@ func TestIngestCanvas_Sizing_EndToEndCost(t *testing.T) {
 
 	prov := core.NewProvenance(core.KindDerived, "test")
 
-	pricedResult, err := ingest.IngestCanvas(priced, 1)
+	pricedResult, err := ingest.IngestCanvas(priced, providers.Registry{}, 1)
 	if err != nil {
 		t.Fatalf("IngestCanvas: %v", err)
 	}
@@ -131,7 +132,7 @@ func TestIngestCanvas_Sizing_EndToEndCost(t *testing.T) {
 		},
 		Edges: []core.CanvasEdge{{ID: "e1", Type: "routes_to", From: "lb", To: "db"}},
 	}
-	blankResult, err := ingest.IngestCanvas(blank, 1)
+	blankResult, err := ingest.IngestCanvas(blank, providers.Registry{}, 1)
 	if err != nil {
 		t.Fatalf("IngestCanvas: %v", err)
 	}

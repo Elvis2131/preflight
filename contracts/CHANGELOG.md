@@ -10,6 +10,28 @@ Each generated `contracts/*.schema.json` carries its own version in `x-schema-ve
 stamped by `cmd/gen-contracts` — check that field against this file, not the other way
 around, since a schema file is regenerated output, not hand-edited.
 
+## canvas.schema.json 1.2.0 — 2026-09-26 (PC-136: CanvasNode.service_id added)
+
+**Additive change to `canvas.schema.json` only** — the other six schemas are
+untouched and remain at their current versions.
+
+`CanvasNode` gains one new, optional field: `service_id` — the real provider
+Terraform resource_type string (e.g. `aws_db_instance`, `aws_lambda_function`), the
+same key `providers.Registry` is keyed by for the Terraform ingest path. Found during
+PC-127 live verification: a canvas-authored node carried no way to identify which
+specific AWS/Azure service it represents (`CanvasNode.Type` is a structural category —
+`compute` cannot distinguish EC2 from Lambda, which carry different PC-107 capability
+levels), so `core/trace.go`'s own capability gate correctly, but uselessly, marked
+every canvas-built journey `not_assessable` at its first hop. `ingest/canvas.go`
+resolves `service_id` through the exact same `providers.Registry.Lookup` the
+Terraform path already uses — no second lookup implementation — stamping
+`capability_level` onto `RawAttributes` identically to `ingest/build.go`'s own
+`withCapabilityLevel`. Absent, unknown, or mismatched (a `service_id` whose registry
+entry's own `NodeType` disagrees with this node's declared `Type`) all leave
+`capability_level` unresolved — never guessed, never defaulted (I4) — surfaced by the
+same existing `not_assessable` capability-check path a real out-of-vocabulary
+Terraform resource already produces.
+
 ## report.schema.json 1.2.0 — 2026-09-26 (PC-122: Report.graph added)
 
 **Additive change to `report.schema.json` only** — the other six schemas are

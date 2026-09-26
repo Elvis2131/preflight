@@ -9,6 +9,7 @@ import (
 
 	"preflight/core"
 	"preflight/ingest"
+	"preflight/providers"
 )
 
 func TestIngestCanvas_TwoConnectedNodes_ProducesKnownEverything(t *testing.T) {
@@ -22,7 +23,7 @@ func TestIngestCanvas_TwoConnectedNodes_ProducesKnownEverything(t *testing.T) {
 		},
 	}
 
-	result, err := ingest.IngestCanvas(doc, 1)
+	result, err := ingest.IngestCanvas(doc, providers.Registry{}, 1)
 	if err != nil {
 		t.Fatalf("IngestCanvas: %v", err)
 	}
@@ -72,7 +73,7 @@ func TestIngestCanvas_DanglingEdge_IsUnresolvedNotDroppedNotError(t *testing.T) 
 		},
 	}
 
-	result, err := ingest.IngestCanvas(doc, 1)
+	result, err := ingest.IngestCanvas(doc, providers.Registry{}, 1)
 	if err != nil {
 		t.Fatalf("IngestCanvas: %v", err)
 	}
@@ -97,7 +98,7 @@ func TestIngestCanvas_NoCapabilityDeclared_IsNilNotFabricated(t *testing.T) {
 			{ID: "db", Type: "managed_database", Label: "DB", Capability: map[string]string{}},
 		},
 	}
-	result, err := ingest.IngestCanvas(doc, 1)
+	result, err := ingest.IngestCanvas(doc, providers.Registry{}, 1)
 	if err != nil {
 		t.Fatalf("IngestCanvas: %v", err)
 	}
@@ -113,7 +114,7 @@ func TestIngestCanvas_EmptyCapabilityMap_ProducesNilCapabilityModel(t *testing.T
 			{ID: "db", Type: "managed_database", Label: "DB", Capability: map[string]string{}},
 		},
 	}
-	result, err := ingest.IngestCanvas(doc, 1)
+	result, err := ingest.IngestCanvas(doc, providers.Registry{}, 1)
 	if err != nil {
 		t.Fatalf("IngestCanvas: %v", err)
 	}

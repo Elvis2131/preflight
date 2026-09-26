@@ -46,6 +46,18 @@ type CanvasNode struct {
 	// Engine (PC-117) reports cost_unknown for it, exactly as it does for a
 	// Terraform-ingested node missing the same fact.
 	Sizing map[string]string `json:"sizing,omitempty" jsonschema:"description=Free-form sizing key/value pairs entered via the canvas UI Design inspector (PC-110). Keys are core.Sizing's own canonical field names. Blank/absent means unknown, never defaulted — the Cost Engine reports cost_unknown for that dimension."`
+
+	// ServiceID is PC-136's own addition: the real provider Terraform resource_type
+	// string (e.g. "aws_db_instance", "aws_lambda_function") the architect selected
+	// for this node — the SAME key providers.Registry is keyed by for the Terraform
+	// ingest path (providers/mapping.go's own ResourceMapping.ResourceType). Required
+	// because CanvasNode.Type alone is a structural category, not a specific
+	// service — "compute" cannot distinguish EC2 from Lambda, which carry different
+	// PC-107 capability levels. Absent or a value with no registry entry (or one whose
+	// own NodeType disagrees with this node's declared Type) leaves capability_level
+	// unresolved, exactly as an out-of-vocabulary Terraform resource would — never
+	// guessed, never defaulted (I4).
+	ServiceID string `json:"service_id,omitempty" jsonschema:"description=The real provider resource_type this node represents (e.g. aws_db_instance) — the same key providers.Registry uses for the Terraform ingest path. Absent or unresolvable leaves capability_level unresolved, never guessed."`
 }
 
 type CanvasEdge struct {

@@ -54,6 +54,10 @@
           },
           "type": "object",
           "description": "Free-form sizing key/value pairs entered via the canvas UI Design inspector (PC-110). Keys are core.Sizing's own canonical field names. Blank/absent means unknown"
+        },
+        "service_id": {
+          "type": "string",
+          "description": "The real provider resource_type this node represents (e.g. aws_db_instance) — the same key providers.Registry uses for the Terraform ingest path. Absent or unresolvable leaves capability_level unresolved"
         }
       },
       "additionalProperties": false,
@@ -87,5 +91,5 @@
     "edges"
   ],
   "x-changelog": "contracts/CHANGELOG.md",
-  "x-schema-version": "1.1.0"
+  "x-schema-version": "1.2.0"
 }

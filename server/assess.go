@@ -110,19 +110,10 @@ func Assess(store *Store, req AssessRequest) (AssessResponse, error) {
 		return AssessResponse{}, err
 	}
 
-	// PC-29: merged, not AWS-only — a caller's bundle can be either cloud (or, in
-	// principle, mix resource types from both), and ingest itself has no notion of
-	// "which provider" beyond resource_type string matching (see providers.Merge's own
-	// doc comment for why this merge is safe and unambiguous).
-	awsRegistry, err := awsprovider.Load()
+	registry, err := loadMergedRegistry()
 	if err != nil {
-		return AssessResponse{}, fmt.Errorf("server: load AWS provider mappings: %w", err)
+		return AssessResponse{}, err
 	}
-	azureRegistry, err := azureprovider.Load()
-	if err != nil {
-		return AssessResponse{}, fmt.Errorf("server: load Azure provider mappings: %w", err)
-	}
-	registry := providers.Merge(awsRegistry, azureRegistry)
 	workload, err := ingest.LoadWorkload(req.WorkloadPath)
 	if err != nil {
 		return AssessResponse{}, newAPIError(http.StatusUnprocessableEntity, "invalid_workload", "server: load workload: %s", err)
@@ -133,6 +124,26 @@ func Assess(store *Store, req AssessRequest) (AssessResponse, error) {
 	}
 
 	return assessFromResult(store, req.SessionID, versionNumber, hadPrev, prev, workload, result, start, req.PriceSnapshotID)
+}
+
+// loadMergedRegistry is the ONE place both IR producers (Assess's HCL path,
+// AssessCanvas's canvas path, PC-136) load provider mapping data from — extracted so
+// there is exactly one registry-loading implementation to keep in sync, the same
+// discipline nextVersion already established for session/version bookkeeping. Merged,
+// not AWS-only — a caller's bundle can be either cloud (or, in principle, mix
+// resource types from both), and ingest itself has no notion of "which provider"
+// beyond resource_type string matching (see providers.Merge's own doc comment for why
+// this merge is safe and unambiguous).
+func loadMergedRegistry() (providers.Registry, error) {
+	awsRegistry, err := awsprovider.Load()
+	if err != nil {
+		return nil, fmt.Errorf("server: load AWS provider mappings: %w", err)
+	}
+	azureRegistry, err := azureprovider.Load()
+	if err != nil {
+		return nil, fmt.Errorf("server: load Azure provider mappings: %w", err)
+	}
+	return providers.Merge(awsRegistry, azureRegistry), nil
 }
 
 // nextVersion is the session/version bookkeeping shared by every IR producer this

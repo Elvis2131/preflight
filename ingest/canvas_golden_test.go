@@ -19,6 +19,7 @@ import (
 
 	"preflight/core"
 	"preflight/ingest"
+	"preflight/providers"
 )
 
 func loadCanvasSample(t *testing.T) core.CanvasDocument {
@@ -56,7 +57,7 @@ func TestIngestCanvas_RoundTrip_AgainstTheRealCapturedSample(t *testing.T) {
 		t.Fatalf("precondition failed: sample has %d nodes / %d edges, want 2/1 — did the sample file change?", len(doc.Nodes), len(doc.Edges))
 	}
 
-	result, err := ingest.IngestCanvas(doc, 1)
+	result, err := ingest.IngestCanvas(doc, providers.Registry{}, 1)
 	if err != nil {
 		t.Fatalf("IngestCanvas: %v", err)
 	}
