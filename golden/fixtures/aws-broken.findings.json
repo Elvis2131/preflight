@@ -1025,5 +1025,141 @@
         "source": "core/iam_evaluate:least-privilege-assumable-by-any-principal:aws_iam_role.payments_app"
       }
     }
+  },
+  {
+    "id": "finding.resilience.configuration-blast-surface.checkout",
+    "title": "Journey \"Checkout: internet -\u003e ALB -\u003e EKS -\u003e RDS\": configuration blast surface (single rule changes that would break it)",
+    "dimensions": {
+      "trigger": "a single security-group or NACL rule is tightened, removed, or misconfigured — infrastructure intact, a rule changed",
+      "affected_components": [
+        "internet",
+        "aws_lb.payments",
+        "aws_eks_cluster.payments",
+        "aws_db_instance.payments"
+      ],
+      "detection": "unknown",
+      "impact": {
+        "state": "not_assessable",
+        "reason": "impact dimension not evaluated by this check",
+        "provenance": {
+          "kind": "derived",
+          "source": "core/config_blast_surface:checkout"
+        }
+      },
+      "likelihood": {
+        "state": "not_assessable",
+        "reason": "likelihood is not assessable from structural analysis alone — no frequency/probability data exists to assume from; an assumed guess here would be exactly the fabrication CLAUDE.md §10 warns against",
+        "provenance": {
+          "kind": "derived",
+          "source": "core/config_blast_surface:checkout"
+        }
+      },
+      "detectability": {
+        "state": "not_assessable",
+        "reason": "no detection mechanism is known or declared for this failure",
+        "provenance": {
+          "kind": "derived",
+          "source": "core/config_blast_surface:checkout"
+        }
+      },
+      "recoverability": {
+        "failover_path_exists": {
+          "state": "not_assessable",
+          "reason": "recoverability not evaluated by this check",
+          "provenance": {
+            "kind": "derived",
+            "source": "core/config_blast_surface:checkout"
+          }
+        },
+        "rpo_feasible": {
+          "state": "not_assessable",
+          "reason": "recoverability not evaluated by this check",
+          "provenance": {
+            "kind": "derived",
+            "source": "core/config_blast_surface:checkout"
+          }
+        }
+      }
+    },
+    "evidence": [
+      {
+        "description": "journey \"checkout\" does not structurally flow today (Blocked at aws_subnet.public_a (nacl_check): destination subnet has no resolvable associated NACL) — a configuration blast surface is not meaningful without a working baseline"
+      }
+    ],
+    "outcome": {
+      "state": "not_assessable",
+      "reason": "journey \"checkout\" does not structurally flow today (Blocked at aws_subnet.public_a (nacl_check): destination subnet has no resolvable associated NACL) — a configuration blast surface is not meaningful without a working baseline",
+      "provenance": {
+        "kind": "derived",
+        "source": "core/config_blast_surface:checkout"
+      }
+    }
+  },
+  {
+    "id": "finding.resilience.configuration-blast-surface.settlement",
+    "title": "Journey \"Settlement: EKS -\u003e SQS\": configuration blast surface (single rule changes that would break it)",
+    "dimensions": {
+      "trigger": "a single security-group or NACL rule is tightened, removed, or misconfigured — infrastructure intact, a rule changed",
+      "affected_components": [
+        "aws_eks_cluster.payments",
+        "aws_sqs_queue.settlement"
+      ],
+      "detection": "unknown",
+      "impact": {
+        "state": "not_assessable",
+        "reason": "impact dimension not evaluated by this check",
+        "provenance": {
+          "kind": "derived",
+          "source": "core/config_blast_surface:settlement"
+        }
+      },
+      "likelihood": {
+        "state": "not_assessable",
+        "reason": "likelihood is not assessable from structural analysis alone — no frequency/probability data exists to assume from; an assumed guess here would be exactly the fabrication CLAUDE.md §10 warns against",
+        "provenance": {
+          "kind": "derived",
+          "source": "core/config_blast_surface:settlement"
+        }
+      },
+      "detectability": {
+        "state": "not_assessable",
+        "reason": "no detection mechanism is known or declared for this failure",
+        "provenance": {
+          "kind": "derived",
+          "source": "core/config_blast_surface:settlement"
+        }
+      },
+      "recoverability": {
+        "failover_path_exists": {
+          "state": "not_assessable",
+          "reason": "recoverability not evaluated by this check",
+          "provenance": {
+            "kind": "derived",
+            "source": "core/config_blast_surface:settlement"
+          }
+        },
+        "rpo_feasible": {
+          "state": "not_assessable",
+          "reason": "recoverability not evaluated by this check",
+          "provenance": {
+            "kind": "derived",
+            "source": "core/config_blast_surface:settlement"
+          }
+        }
+      }
+    },
+    "evidence": [
+      {
+        "description": "journey \"settlement\" does not structurally flow today (Blocked at aws_sqs_queue.settlement (route_selection): destination has no resolvable effective route table) — a configuration blast surface is not meaningful without a working baseline"
+      }
+    ],
+    "outcome": {
+      "state": "not_assessable",
+      "reason": "journey \"settlement\" does not structurally flow today (Blocked at aws_sqs_queue.settlement (route_selection): destination has no resolvable effective route table) — a configuration blast surface is not meaningful without a working baseline",
+      "provenance": {
+        "kind": "derived",
+        "source": "core/config_blast_surface:settlement"
+      }
+    }
   }
 ]

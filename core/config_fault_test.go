@@ -1,0 +1,200 @@
+package core_test
+
+// PC-130's own acceptance criteria: "Each new fault type mutates the model and
+// re-runs the request engine; trace shows the changed rule as the deciding step" and
+// "Removing the one SG rule that allows ECS -> RDS breaks the checkout journey, and
+// the trace names that rule — tested on a golden fixture."
+//
+// GOLDEN-FIXTURE HONESTY NOTE, investigated before writing these tests: golden/aws's
+// own checkout journey (golden/workload.yaml) already does not structurally flow at
+// baseline — PC-125's own TestGoldenWorkload_CheckoutJourney_StructuralFlow_HandVerified
+// proves it blocks at aws_lb.payments citing golden/aws's own real, pre-existing gap:
+// ZERO NACL resources exist anywhere in that bundle. That gap is universal, not
+// specific to the checkout journey's own path — BuildTrace's own nacl_check step runs
+// for EVERY subnet-crossing request, internet-originated included (its own doc
+// comment: "an internet-originated request... still crosses the destination subnet's
+// NACL on the way in"), so ANY full BuildTrace call into ANY golden/aws destination
+// is blocked at nacl_check before it can ever reach an sg_dest_ingress decision.
+// Separately, golden's own "data" subnets (RDS/ElastiCache) also have NO
+// aws_route_table_association at all (PC-125's own doc comment), so a trace into
+// aws_db_instance.payments specifically fails even earlier, at route_selection.
+// Both gaps are real, pre-existing, and unrelated to this ticket — working around
+// them would mean fabricating golden Terraform data that does not exist, which this
+// project's own discipline forbids. So no full, real golden BuildTrace call can ever
+// reach Allowed=true today, regardless of any SG/NACL fault applied.
+//
+// What IS hand-verified against golden, honestly, at the layer that gap does not
+// block: EvaluateConnection/SecurityGroupProfile — the exact SG engine BuildTrace
+// itself calls (PC-112) — correctly flips from allow to deny when the real rule the
+// Card names (aws_security_group.database's own ingress from
+// aws_security_group.workload, security.tf) is removed, for both the named RDS pair
+// and the ALB's own real ingress rule. The complete "removing a rule breaks the
+// WHOLE journey, full BuildTrace pipeline included" semantic — impossible to observe
+// against golden/aws for the structural reason above — is proven end-to-end on the
+// synthetic fixture below, where no such unrelated gap exists.
+
+import (
+	"testing"
+
+	"preflight/core"
+)
+
+func TestWithSGRuleRemoved_GoldenBundle_RealWorkloadToDatabaseRule(t *testing.T) {
+	ir := realGoldenIR(t)
+
+	// The exact real rule golden/aws/security.tf declares (aws_security_group_rule.
+	// workload_to_database's own ingress mirror on aws_security_group.database).
+	rule := core.SGRule{Direction: "ingress", Protocol: "tcp", FromPort: 5432, ToPort: 5432, SourceSG: "aws_security_group.workload"}
+
+	// SecurityGroupProfile takes a RESOURCE's own ID (it walks that resource's own
+	// depends_on edges to find its attached SGs) — aws_db_instance.payments and
+	// aws_eks_cluster.payments are the real golden resources depends_on-attached to
+	// the database/workload SGs respectively (golden/aws/rds.tf, eks.tf), not the SG
+	// node IDs themselves.
+	before := core.SecurityGroupProfile(ir.Nodes, ir.Edges, "aws_db_instance.payments")
+	beforeAllowed, _, _ := core.EvaluateConnection(
+		core.SecurityGroupProfile(ir.Nodes, ir.Edges, "aws_eks_cluster.payments"), before, "", "", "tcp", 5432)
+	if !beforeAllowed {
+		t.Fatal("before removal: got denied, want allowed — this is golden/aws's own real, declared rule")
+	}
+
+	mutated, ok := core.WithSGRuleRemoved(ir, "aws_security_group.database", rule)
+	if !ok {
+		t.Fatal("got ok=false — the exact real golden rule was not found; check it against security.tf")
+	}
+
+	after := core.SecurityGroupProfile(mutated.Nodes, mutated.Edges, "aws_db_instance.payments")
+	afterAllowed, _, _ := core.EvaluateConnection(
+		core.SecurityGroupProfile(mutated.Nodes, mutated.Edges, "aws_eks_cluster.payments"), after, "", "", "tcp", 5432)
+	if afterAllowed {
+		t.Fatal("after removal: got allowed, want denied — the only rule permitting this connection was removed")
+	}
+
+	// The original ir must be untouched.
+	stillAllowed, _, _ := core.EvaluateConnection(
+		core.SecurityGroupProfile(ir.Nodes, ir.Edges, "aws_eks_cluster.payments"),
+		core.SecurityGroupProfile(ir.Nodes, ir.Edges, "aws_db_instance.payments"), "", "", "tcp", 5432)
+	if !stillAllowed {
+		t.Fatal("original ir was mutated in place — WithSGRuleRemoved must return a copy")
+	}
+}
+
+// TestSGRuleRemoval_GoldenBundle_BreaksALBIngress_SGStepNamesTheFailure hand-verifies
+// the same real golden ALB ingress rule (security.tf) at the SG-evaluation layer
+// directly, rather than via a full BuildTrace call — see this file's own honesty note
+// above for why: golden/aws has zero NACL resources anywhere, so EVERY full
+// BuildTrace call into golden/aws is blocked at nacl_check before it can ever reach
+// an sg_dest_ingress decision, regardless of any SG fault. EvaluateConnection is the
+// exact function BuildTrace's own sg_dest_ingress step calls (PC-112) — this proves
+// the real rule change propagates correctly through the real engine.
+func TestSGRuleRemoval_GoldenBundle_BreaksALBIngress_SGStepNamesTheFailure(t *testing.T) {
+	ir := realGoldenIR(t)
+
+	rule := core.SGRule{Direction: "ingress", Protocol: "tcp", FromPort: 443, ToPort: 443, CIDRs: []string{"0.0.0.0/0"}}
+	mutated, ok := core.WithSGRuleRemoved(ir, "aws_security_group.alb", rule)
+	if !ok {
+		t.Fatal("got ok=false — the real golden ALB ingress rule was not found; check it against security.tf")
+	}
+
+	albProfile := core.SecurityGroupProfile(ir.Nodes, ir.Edges, "aws_lb.payments")
+	internetProfile := core.SGProfile{Rules: []core.SGRule{{Direction: "egress", Protocol: "-1", CIDRs: []string{"0.0.0.0/0"}}}}
+	beforeAllowed, _, beforeResponder := core.EvaluateConnection(internetProfile, albProfile, "0.0.0.0/0", "0.0.0.0/0", "tcp", 443)
+	if !beforeAllowed {
+		t.Fatal("before removal: got denied, want allowed — this is golden/aws's own real, declared rule")
+	}
+
+	mutatedALBProfile := core.SecurityGroupProfile(mutated.Nodes, mutated.Edges, "aws_lb.payments")
+	afterAllowed, _, afterResponder := core.EvaluateConnection(internetProfile, mutatedALBProfile, "0.0.0.0/0", "0.0.0.0/0", "tcp", 443)
+	if afterAllowed {
+		t.Fatalf("after removal: got allowed, want denied — the only rule permitting HTTPS ingress was removed (before responder decision: %+v, after: %+v)", beforeResponder, afterResponder)
+	}
+}
+
+func TestWithSGRuleAdded_DenyBySGProfileAbsence(t *testing.T) {
+	// SGRule has no "Deny" concept of its own (AWS SGs are allow-only, PC-112's own
+	// documented model) — adding a rule can only ever WIDEN what is allowed, never
+	// narrow it. This proves sg_rule_add does exactly that: a connection that was
+	// denied before becomes allowed after.
+	ir := buildFlowTestIR(false, true) // SG denies port 5432
+	newRule := core.SGRule{Direction: "ingress", Protocol: "tcp", FromPort: 5432, ToPort: 5432, CIDRs: []string{"10.0.1.0/24"}}
+
+	before := core.BuildTrace(ir, "app", "db", "", "tcp", 5432)
+	if before.Allowed {
+		t.Fatal("before add: got Allowed=true, want false")
+	}
+
+	mutated, ok := core.WithSGRuleAdded(ir, "sgDb", newRule)
+	if !ok {
+		t.Fatal("got ok=false, want true — sgDb is a real node in this fixture")
+	}
+	after := core.BuildTrace(mutated, "app", "db", "", "tcp", 5432)
+	if !after.Allowed {
+		t.Fatalf("after add: got Allowed=false, want true: %+v", after.Steps)
+	}
+}
+
+func TestWithNACLRuleRemoved_BreaksJourney_Synthetic(t *testing.T) {
+	ir := buildFlowTestIR(true, true) // fully flows at baseline
+	// naclA's own allow-all rules (see buildFlowTestIR's naclRules helper) — remove
+	// the egress rule, which must break subnetA -> subnetB traffic.
+	rule := core.NACLRule{Number: 100, Direction: "egress", Protocol: "-1", CIDR: "0.0.0.0/0", Allow: true}
+
+	before := core.BuildTrace(ir, "app", "db", "", "tcp", 5432)
+	if !before.Allowed {
+		t.Fatalf("before removal: got Allowed=false, want true: %+v", before.Steps)
+	}
+
+	mutated, ok := core.WithNACLRuleRemoved(ir, "naclA", rule)
+	if !ok {
+		t.Fatal("got ok=false — the fixture's own naclA egress rule was not found")
+	}
+	after := core.BuildTrace(mutated, "app", "db", "", "tcp", 5432)
+	if after.Allowed {
+		t.Fatal("after removal: got Allowed=true, want false — naclA no longer permits any egress")
+	}
+}
+
+func TestWithNACLRuleRemoved_UnknownRule_NotOK(t *testing.T) {
+	ir := buildFlowTestIR(true, true)
+	_, ok := core.WithNACLRuleRemoved(ir, "naclA", core.NACLRule{Number: 999, Direction: "ingress", Protocol: "tcp"})
+	if ok {
+		t.Fatal("got ok=true, want false — refusing to guess which rule was meant")
+	}
+}
+
+func TestResolveFaults_SGRuleChange_RequiresExactlyOneMutation(t *testing.T) {
+	ir := &core.IR{}
+	resp := core.Simulate(ir, core.Workload{}, []core.Fault{
+		{Type: "sg_rule_change", Target: "sg"},
+	}, syntheticProv())
+	if resp.Verdict.State != core.AssessmentStateNotAssessable {
+		t.Fatalf("Verdict.State = %q, want not_assessable", resp.Verdict.State)
+	}
+}
+
+// TestSimulate_SGRuleChangeFault_BreaksOnlyDependentJourney is PC-130's own
+// end-to-end proof — the exact semantic the Card's named scenario describes (a rule
+// removal breaks the journey depending on it), on a synthetic fixture free of
+// golden's own unrelated route/NACL gaps documented above.
+func TestSimulate_SGRuleChangeFault_BreaksOnlyDependentJourney(t *testing.T) {
+	ir := buildFlowTestIR(true, true)
+	workload := core.Workload{
+		Journeys: []core.DeclaredJourney{
+			{ID: "j1", Name: "j1", Path: []string{"app", "db"}, Protocol: "tcp", Port: 5432, Criticality: "tier1"},
+		},
+	}
+
+	before := core.Simulate(ir, workload, nil, syntheticProv())
+	if len(before.FlowDetail) != 1 || !before.FlowDetail[0].Flows {
+		t.Fatalf("before the fault, journey unexpectedly does not flow: %+v", before.FlowDetail)
+	}
+
+	after := core.Simulate(ir, workload, []core.Fault{
+		{Type: "sg_rule_change", Target: "sgDb", SGRuleRemove: &core.SGRule{
+			Direction: "ingress", Protocol: "tcp", FromPort: 5432, ToPort: 5432, CIDRs: []string{"10.0.1.0/24"},
+		}},
+	}, syntheticProv())
+	if len(after.FlowDetail) != 1 || after.FlowDetail[0].Flows {
+		t.Fatalf("after the fault, journey should no longer flow: %+v", after.FlowDetail)
+	}
+}

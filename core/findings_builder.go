@@ -68,6 +68,10 @@ func BuildFindings(ir *IR, workload Workload) []Finding {
 	// evaluator (see core/iam_compliance_findings.go's own boundary-rule doc comment).
 	findings = append(findings, IAMLeastPrivilegeFindings(ir)...)
 
+	// PC-130: per-journey configuration blast surface (single SG/NACL rule changes
+	// that would break it) — see core/config_fault_findings.go's own doc comment.
+	findings = append(findings, BuildConfigurationBlastSurfaceFindings(ir, workload)...)
+
 	return findings
 }
 

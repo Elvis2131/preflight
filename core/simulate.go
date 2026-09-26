@@ -27,6 +27,16 @@ type Fault struct {
 	// statement, add a deny" — never both, never neither.
 	IAMRemoveStatementSid string           `json:"iam_remove_statement_sid,omitempty" jsonschema:"description=Required only for iam_policy_change when removing a statement — the Sid of the statement to remove from the policy document named by Target."`
 	IAMAddDenyStatement    *PolicyStatement `json:"iam_add_deny_statement,omitempty" jsonschema:"description=Required only for iam_policy_change when adding a deny — a new statement appended to the policy document named by Target. Effect is always forced to Deny regardless of what is supplied here, since this fault only ever injects a new restriction."`
+
+	// SGRuleRemove/SGRuleAdd/NACLRuleRemove/NACLRuleAdd are PC-130's own addition —
+	// required only for "sg_rule_change"/"nacl_rule_change": Target names the
+	// security-group or NACL node to mutate. Exactly one of the Remove/Add pair for
+	// the matching fault type must be set, same "never both, never neither"
+	// discipline as IAMRemoveStatementSid/IAMAddDenyStatement above.
+	SGRuleRemove   *SGRule   `json:"sg_rule_remove,omitempty" jsonschema:"description=Required only for sg_rule_change when removing a rule — the exact rule (direction, protocol, ports, CIDRs/source SG) to remove from the security group named by Target."`
+	SGRuleAdd      *SGRule   `json:"sg_rule_add,omitempty" jsonschema:"description=Required only for sg_rule_change when adding a rule — appended verbatim to the security group named by Target."`
+	NACLRuleRemove *NACLRule `json:"nacl_rule_remove,omitempty" jsonschema:"description=Required only for nacl_rule_change when removing a rule — the exact rule to remove from the NACL named by Target."`
+	NACLRuleAdd    *NACLRule `json:"nacl_rule_add,omitempty" jsonschema:"description=Required only for nacl_rule_change when adding a rule — appended verbatim to the NACL named by Target."`
 }
 
 // Journey is one entry-point-to-stateful-node path's fate under the declared faults —
@@ -253,6 +263,46 @@ func resolveFaults(ir *IR, workload Workload, faults []Fault) (mutatedIR *IR, ki
 				}
 			}
 			mutatedIR = mutated
+		case "sg_rule_change":
+			hasRemove := f.SGRuleRemove != nil
+			hasAdd := f.SGRuleAdd != nil
+			if hasRemove == hasAdd {
+				return nil, nil, false, "sg_rule_change requires exactly one of sg_rule_remove or sg_rule_add, not both or neither"
+			}
+			var mutated *IR
+			var ok bool
+			if hasRemove {
+				mutated, ok = WithSGRuleRemoved(mutatedIR, f.Target, *f.SGRuleRemove)
+				if !ok {
+					return nil, nil, false, "sg_rule_change target \"" + f.Target + "\" does not exist, or has no rule exactly matching sg_rule_remove — refusing to guess which rule was meant"
+				}
+			} else {
+				mutated, ok = WithSGRuleAdded(mutatedIR, f.Target, *f.SGRuleAdd)
+				if !ok {
+					return nil, nil, false, "sg_rule_change target \"" + f.Target + "\" (a security group) does not exist in this IR"
+				}
+			}
+			mutatedIR = mutated
+		case "nacl_rule_change":
+			hasRemove := f.NACLRuleRemove != nil
+			hasAdd := f.NACLRuleAdd != nil
+			if hasRemove == hasAdd {
+				return nil, nil, false, "nacl_rule_change requires exactly one of nacl_rule_remove or nacl_rule_add, not both or neither"
+			}
+			var mutated *IR
+			var ok bool
+			if hasRemove {
+				mutated, ok = WithNACLRuleRemoved(mutatedIR, f.Target, *f.NACLRuleRemove)
+				if !ok {
+					return nil, nil, false, "nacl_rule_change target \"" + f.Target + "\" does not exist, or has no rule exactly matching nacl_rule_remove — refusing to guess which rule was meant"
+				}
+			} else {
+				mutated, ok = WithNACLRuleAdded(mutatedIR, f.Target, *f.NACLRuleAdd)
+				if !ok {
+					return nil, nil, false, "nacl_rule_change target \"" + f.Target + "\" (a NACL) does not exist in this IR"
+				}
+			}
+			mutatedIR = mutated
 		}
 	}
 	killed, ok, reason = killedNodesForFaults(mutatedIR, workload, faults)
@@ -286,12 +336,12 @@ func killedNodesForFaults(ir *IR, workload Workload, faults []Fault) (killed map
 				return nil, false, "nat_gateway_loss target \"" + f.Target + "\" does not exist in this IR — refusing to guess which NAT gateway was meant"
 			}
 			killed[f.Target] = true
-		case "route_removal", "iam_policy_change":
+		case "route_removal", "iam_policy_change", "sg_rule_change", "nacl_rule_change":
 			// Already applied as an IR mutation by resolveFaults, before ir (this
 			// function's own parameter) was even built — nothing to add to the
-			// killed-node set for either fault type; ir already reflects it.
+			// killed-node set for any of these; ir already reflects the change.
 		default:
-			return nil, false, "fault type \"" + f.Type + "\" is not implemented — only region_loss, node_loss, nat_gateway_loss, route_removal, and iam_policy_change are hand-verified in this version (PC-82, PC-88, PC-129, PC-135)"
+			return nil, false, "fault type \"" + f.Type + "\" is not implemented — only region_loss, node_loss, nat_gateway_loss, route_removal, iam_policy_change, sg_rule_change, and nacl_rule_change are hand-verified in this version (PC-82, PC-88, PC-129, PC-130, PC-135)"
 		}
 	}
 	return killed, true, ""
