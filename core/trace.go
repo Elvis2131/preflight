@@ -276,6 +276,24 @@ func BuildTrace(ir *IR, sourceID, destID, sourceCIDR, protocol string, port int)
 	} else {
 		sourceSG = SGProfile{Rules: []SGRule{{Direction: "egress", Protocol: "-1", CIDRs: []string{"0.0.0.0/0"}}}}
 	}
+	// PC-137: a resource with genuinely ZERO attached security groups (no
+	// depends_on edge to any node carrying security_group_rules at all) is a
+	// missing-data case, not a real "no rule matched" implicit deny — I4 applies
+	// here exactly as it already does at nacl_check above ("destination subnet has
+	// no resolvable associated NACL" → not_assessable, never a guessed deny). A real
+	// SG that IS attached but whose own authored rule list happens to be empty (or
+	// simply doesn't match) is a genuine, computed implicit deny — AWS's own
+	// documented "allow rules only" semantics — and stays exactly that, unaffected
+	// by this check.
+	if len(destSG.SGIDs) == 0 || (sourceID != "" && len(sourceSG.SGIDs) == 0) {
+		unresolved := destID
+		if len(destSG.SGIDs) > 0 {
+			unresolved = sourceID
+		}
+		step("sg_dest_ingress", unresolved, "evaluate destination's security groups, inbound (union of all attached SGs)", TraceNotAssessable,
+			"no security group is attached to "+unresolved+" — its own inbound/outbound posture is unknown, never assumed", "")
+		return finalize(trace)
+	}
 	// Same "subnet CIDR stands in for the unmodelled per-resource IP" reasoning as the
 	// NACL step above.
 	effectiveSourceCIDR := sourceCIDR

@@ -10,6 +10,35 @@ Each generated `contracts/*.schema.json` carries its own version in `x-schema-ve
 stamped by `cmd/gen-contracts` — check that field against this file, not the other way
 around, since a schema file is regenerated output, not hand-edited.
 
+## canvas.schema.json 1.3.0 — 2026-09-26 (PC-137: CanvasNode.security_group_rules added)
+
+**Additive change to `canvas.schema.json` only** — the other six schemas are
+untouched and remain at their current versions.
+
+Found during PC-136: once canvas nodes resolved their capability level, every
+canvas-built journey moved past the capability gate and immediately stopped at the
+Security Group check, because the canvas had no way to author SG rules at all —
+Terraform-loaded designs work because `ingest/securitygroups.go` reads real
+`aws_security_group`/`aws_security_group_rule` resources; the canvas had no
+equivalent. `CanvasNode` gains `security_group_rules`, a list of the new
+`CanvasSecurityGroupRule` (`direction`, `protocol`, `from_port`, `to_port`,
+`cidr_blocks`, `source_security_group`) — a structured list, not a string map like
+`capability`/`sizing`, since one rule is itself a small record (the same shape
+`ingest/securitygroups.go`'s own `normalizeSGRule` already produces, so
+`ingest/canvas.go` can stamp it onto `RawAttributes["security_group_rules"]`
+unchanged and `core.SecurityGroupProfile` reads it back identically regardless of
+which producer built the IR). A component attaches to a security group via the
+existing `depends_on` edge type — no new edge type, no new attachment mechanism,
+exactly mirroring how the Terraform path already represents SG attachment.
+
+Alongside this contract change, `core/trace.go`'s `sg_dest_ingress` step was
+corrected: a resource with genuinely zero attached security groups (no `depends_on`
+edge to any node carrying `security_group_rules` at all) now yields `not_assessable`
+— missing data, not a computed implicit deny — matching `nacl_check`'s own existing
+convention for an unresolvable NACL. A real SG that IS attached but whose own
+authored rules simply don't match stays exactly what it always was: a genuine,
+computed deny.
+
 ## report.schema.json 1.3.0 — 2026-09-26 (PC-125/126: parallel-path fields added)
 
 **Additive change to `report.schema.json` only** — the other six schemas are

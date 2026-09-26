@@ -58,6 +58,42 @@ type CanvasNode struct {
 	// unresolved, exactly as an out-of-vocabulary Terraform resource would — never
 	// guessed, never defaulted (I4).
 	ServiceID string `json:"service_id,omitempty" jsonschema:"description=The real provider resource_type this node represents (e.g. aws_db_instance) — the same key providers.Registry uses for the Terraform ingest path. Absent or unresolvable leaves capability_level unresolved, never guessed."`
+
+	// SecurityGroupRules is PC-137's own addition: real, structured Security Group
+	// rules the architect authored on this node — mirrors ingest/securitygroups.go's
+	// own normalized rule shape exactly (direction, protocol, from_port/to_port,
+	// cidr_blocks, source_security_group), the same shape core.SecurityGroupProfile
+	// already reads back out of RawAttributes["security_group_rules"] for a
+	// Terraform-ingested SG. A structured list, not a string map like Capability/
+	// Sizing above — a rule is not a flat key/value pair, it is itself a small
+	// record (PC-112's own SGRule shape, unavoidably plural: a security group is
+	// exactly a LIST of these). A component is attached to a security group the
+	// same way Terraform ingest already represents it: a depends_on edge from the
+	// component to this node — no new edge type, no new attachment mechanism.
+	SecurityGroupRules []CanvasSecurityGroupRule `json:"security_group_rules,omitempty" jsonschema:"description=Security Group rules authored on this node (PC-137) — mirrors ingest/securitygroups.go's own normalized rule shape. A component attaches to this security group via a depends_on edge exactly as the Terraform ingest path already represents SG attachment."`
+}
+
+// CanvasSecurityGroupRule is one Security Group rule authored on the canvas — the
+// wire-shape counterpart to ingest/securitygroups.go's own normalizeSGRule output
+// map, typed here instead of left as map[string]any because this is
+// architect-entered, user-facing input (unlike RawAttributes' own internal carrier
+// role), where real validation (a direction that IS "ingress"/"egress", a required
+// protocol) is worth having at the contract boundary.
+type CanvasSecurityGroupRule struct {
+	Direction string `json:"direction" validate:"required,oneof=ingress egress" jsonschema:"required,enum=ingress,enum=egress"`
+	Protocol  string `json:"protocol" validate:"required" jsonschema:"required,description=tcp / udp / icmp / -1 (AWS's own all-protocols sentinel)."`
+	FromPort  int    `json:"from_port,omitempty"`
+	ToPort    int    `json:"to_port,omitempty"`
+
+	// CIDRBlocks and SourceSecurityGroup are mutually exclusive rule-source shapes,
+	// exactly as AWS's own real Security Group rules are (a CIDR-sourced rule or an
+	// SG-referencing rule, never both) — mirrors core.SGRule's own CIDRs/SourceSG
+	// split. SourceSecurityGroup is another canvas node's own ID (a plain string
+	// match against SG node IDs, the same mechanism a Terraform-ingested
+	// aws_security_group_rule's source_security_group_id reference already reduces
+	// to by the time it reaches core.SGRule.SourceSG).
+	CIDRBlocks          []string `json:"cidr_blocks,omitempty"`
+	SourceSecurityGroup string   `json:"source_security_group,omitempty"`
 }
 
 type CanvasEdge struct {

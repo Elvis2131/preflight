@@ -128,6 +128,36 @@ func TestBuildTrace_FullPathAllowed(t *testing.T) {
 	}
 }
 
+// TestBuildTrace_NoSGAttached_NotAssessable is PC-137's own acceptance criterion:
+// "canvas node with no SG attached still yields not_assessable at the SG step, not
+// deny or allow." A resource with genuinely zero attached security groups (no
+// depends_on edge to any node carrying security_group_rules at all) is missing
+// data, not a real implicit-deny decision — distinct from TestBuildTrace_DeniedBySG
+// above, where db DOES have an SG attached, just one whose own rules don't match.
+func TestBuildTrace_NoSGAttached_NotAssessable(t *testing.T) {
+	ir := buildTwoSubnetIR(true, true)
+	var edges []core.Edge
+	for _, e := range ir.Edges {
+		if e.ID == "e8" { // db -> sgDb
+			continue
+		}
+		edges = append(edges, e)
+	}
+	ir.Edges = edges
+
+	tr := core.BuildTrace(ir, "app", "db", "", "tcp", 5432)
+	if tr.Allowed {
+		t.Fatalf("got allowed, want not_assessable: %+v", tr)
+	}
+	last := lastStep(tr)
+	if last.Step != "sg_dest_ingress" {
+		t.Fatalf("got last step %q, want sg_dest_ingress: %+v", last.Step, tr)
+	}
+	if last.Decision != core.TraceNotAssessable {
+		t.Fatalf("got decision %q, want not_assessable — db has no SG attached at all, this is missing data, not a computed deny", last.Decision)
+	}
+}
+
 func TestBuildTrace_DeniedBySG(t *testing.T) {
 	ir := buildTwoSubnetIR(false, true)
 	tr := core.BuildTrace(ir, "app", "db", "", "tcp", 5432)

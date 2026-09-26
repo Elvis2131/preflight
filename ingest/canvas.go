@@ -67,7 +67,10 @@ func IngestCanvas(doc core.CanvasDocument, registry providers.Registry, versionN
 			Resolution:    core.ResolutionKnown,
 			Capability:    buildCanvasCapability(n.Capability),
 			Sizing:        buildCanvasSizing(n.Sizing),
-			RawAttributes: resolveCanvasCapabilityLevel(canvasCapabilityToRawAttributes(n.Capability), registry, n.ServiceID, n.Type),
+			RawAttributes: withCanvasSecurityGroupRules(
+				resolveCanvasCapabilityLevel(canvasCapabilityToRawAttributes(n.Capability), registry, n.ServiceID, n.Type),
+				n.SecurityGroupRules,
+			),
 			Provenance:    prov,
 		})
 	}
@@ -214,5 +217,42 @@ func resolveCanvasCapabilityLevel(raw map[string]any, registry providers.Registr
 		raw = make(map[string]any, 1)
 	}
 	raw["capability_level"] = string(mapping.CapabilityLevel)
+	return raw
+}
+
+// withCanvasSecurityGroupRules is PC-137's own addition: stamps a canvas node's
+// authored SecurityGroupRules onto RawAttributes["security_group_rules"] in the
+// EXACT rule-map shape ingest/securitygroups.go's own normalizeSGRule already
+// produces for the Terraform path — core.SecurityGroupProfile reads this key back
+// identically regardless of which producer built it, so there is exactly one SG
+// evaluation path, not two. Absent or empty leaves the key unset entirely (never an
+// empty slice standing in for "no rules were ever authored") — core/trace.go's own
+// "zero attached SGs" check (this ticket's own companion fix) reads that absence as
+// not_assessable, never an implied deny.
+func withCanvasSecurityGroupRules(raw map[string]any, rules []core.CanvasSecurityGroupRule) map[string]any {
+	if len(rules) == 0 {
+		return raw
+	}
+	out := make([]map[string]any, 0, len(rules))
+	for _, r := range rules {
+		rule := map[string]any{"direction": r.Direction, "protocol": r.Protocol}
+		if r.FromPort != 0 {
+			rule["from_port"] = r.FromPort
+		}
+		if r.ToPort != 0 {
+			rule["to_port"] = r.ToPort
+		}
+		if len(r.CIDRBlocks) > 0 {
+			rule["cidr_blocks"] = r.CIDRBlocks
+		}
+		if r.SourceSecurityGroup != "" {
+			rule["source_security_group"] = r.SourceSecurityGroup
+		}
+		out = append(out, rule)
+	}
+	if raw == nil {
+		raw = make(map[string]any, 1)
+	}
+	raw["security_group_rules"] = out
 	return raw
 }
