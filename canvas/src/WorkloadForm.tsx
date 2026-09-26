@@ -1,5 +1,5 @@
 import { useState } from "react";
-import type { Requirement, RequirementPriority, Workload } from "./workloadTypes";
+import type { Requirement, RequirementPriority, Workload, DeclaredJourney } from "./workloadTypes";
 import { WORKLOAD_SCHEMA_VERSION } from "./workloadTypes";
 
 // WorkloadForm is PC-87's own scope: "a UI over the existing workload.yaml schema —
@@ -50,6 +50,24 @@ export const COMPLIANCE_FRAMEWORK_OPTIONS: FrameworkOption[] = [
   { id: "hipaa", label: "HIPAA", comingSoon: "no control catalog implemented yet" },
 ];
 
+// JourneyRow (PC-127) — pathText is comma-separated IR node IDs (or "internet" as
+// the first hop). peakRPSText/steadyRPSText are text, same "blank means not
+// declared, never coerced to 0" discipline as CapacityRow.valueText above.
+interface JourneyRow {
+  id: string;
+  name: string;
+  pathText: string;
+  protocol: string;
+  port: string;
+  criticality: string;
+  peakRPSText: string;
+  steadyRPSText: string;
+}
+
+function emptyJourneyRow(): JourneyRow {
+  return { id: "", name: "", pathText: "", protocol: "tcp", port: "", criticality: "", peakRPSText: "", steadyRPSText: "" };
+}
+
 export interface WorkloadFormValue {
   name: string;
   criticality: string;
@@ -58,6 +76,7 @@ export interface WorkloadFormValue {
   complianceProfiles: string[]; // PC-110: only IMPLEMENTED_FRAMEWORKS ids, never free text
   capacityRows: CapacityRow[];
   requirementRows: RequirementRow[];
+  journeyRows: JourneyRow[];
 }
 
 export function emptyWorkloadFormValue(): WorkloadFormValue {
@@ -69,6 +88,7 @@ export function emptyWorkloadFormValue(): WorkloadFormValue {
     complianceProfiles: [],
     capacityRows: [{ key: "app_node_rps", valueText: "" }],
     requirementRows: [],
+    journeyRows: [],
   };
 }
 
@@ -106,6 +126,28 @@ export function buildWorkload(v: WorkloadFormValue): Workload {
       return req;
     });
 
+  // journeys (PC-127): a row missing id/name/a real 2+ node path/protocol/port/
+  // criticality is dropped — same "an empty row is not a real declaration" rule
+  // requirementRows already applies. peak_rps/steady_rps stay omitted (never 0) when
+  // their own text field is blank.
+  const journeys: DeclaredJourney[] = v.journeyRows
+    .map((r) => {
+      const path = splitCommaList(r.pathText);
+      const port = Number(r.port);
+      if (!r.id.trim() || !r.name.trim() || path.length < 2 || !r.protocol.trim() || !Number.isFinite(port) || !r.criticality.trim()) {
+        return null;
+      }
+      const j: DeclaredJourney = {
+        id: r.id.trim(), name: r.name.trim(), path, protocol: r.protocol.trim(), port, criticality: r.criticality.trim(),
+      };
+      const peak = Number(r.peakRPSText);
+      if (r.peakRPSText.trim() !== "" && Number.isFinite(peak)) j.peak_rps = peak;
+      const steady = Number(r.steadyRPSText);
+      if (r.steadyRPSText.trim() !== "" && Number.isFinite(steady)) j.steady_rps = steady;
+      return j;
+    })
+    .filter((j): j is DeclaredJourney => j !== null);
+
   return {
     schema_version: WORKLOAD_SCHEMA_VERSION,
     name: v.name.trim(),
@@ -115,6 +157,7 @@ export function buildWorkload(v: WorkloadFormValue): Workload {
     compliance_profiles: v.complianceProfiles,
     requirements,
     capacity: Object.keys(capacity).length > 0 ? capacity : undefined,
+    journeys: journeys.length > 0 ? journeys : undefined,
   };
 }
 
@@ -298,6 +341,103 @@ export function WorkloadForm({
           </button>
         </div>
       </div>
+
+      <h4 style={{ fontSize: 12, margin: "14px 0 4px" }}>Journeys (PC-124/127)</h4>
+      <p style={{ fontSize: 10, color: "#94a3b8", margin: "0 0 6px" }}>
+        Path is a comma-separated list of canvas node IDs (or "internet" as the first
+        hop). peak_rps/steady_rps left blank stay undeclared — traffic/load results
+        report not_assessable for that journey, never a guessed number.
+      </p>
+      {value.journeyRows.map((row, i) => (
+        <div key={i} style={{ marginBottom: 6, paddingBottom: 6, borderBottom: "1px dashed #cbd5e1" }}>
+          <div style={rowStyle}>
+            <input
+              style={{ ...inputStyle, flex: 1 }}
+              placeholder="id"
+              value={row.id}
+              onChange={(e) => {
+                const rows = value.journeyRows.slice();
+                rows[i] = { ...rows[i], id: e.target.value };
+                update({ journeyRows: rows });
+              }}
+            />
+            <input
+              style={{ ...inputStyle, flex: 1 }}
+              placeholder="name"
+              value={row.name}
+              onChange={(e) => {
+                const rows = value.journeyRows.slice();
+                rows[i] = { ...rows[i], name: e.target.value };
+                update({ journeyRows: rows });
+              }}
+            />
+            <button onClick={() => update({ journeyRows: value.journeyRows.filter((_, idx) => idx !== i) })}>×</button>
+          </div>
+          <input
+            style={{ ...inputStyle, marginBottom: 4 }}
+            placeholder="path (e.g. internet, lb-1, db-1)"
+            value={row.pathText}
+            onChange={(e) => {
+              const rows = value.journeyRows.slice();
+              rows[i] = { ...rows[i], pathText: e.target.value };
+              update({ journeyRows: rows });
+            }}
+          />
+          <div style={rowStyle}>
+            <input
+              style={{ ...inputStyle, width: 70 }}
+              placeholder="protocol"
+              value={row.protocol}
+              onChange={(e) => {
+                const rows = value.journeyRows.slice();
+                rows[i] = { ...rows[i], protocol: e.target.value };
+                update({ journeyRows: rows });
+              }}
+            />
+            <input
+              style={{ ...inputStyle, width: 60 }}
+              placeholder="port"
+              value={row.port}
+              onChange={(e) => {
+                const rows = value.journeyRows.slice();
+                rows[i] = { ...rows[i], port: e.target.value };
+                update({ journeyRows: rows });
+              }}
+            />
+            <input
+              style={{ ...inputStyle, width: 70 }}
+              placeholder="criticality"
+              value={row.criticality}
+              onChange={(e) => {
+                const rows = value.journeyRows.slice();
+                rows[i] = { ...rows[i], criticality: e.target.value };
+                update({ journeyRows: rows });
+              }}
+            />
+            <input
+              style={{ ...inputStyle, width: 80 }}
+              placeholder="peak_rps"
+              value={row.peakRPSText}
+              onChange={(e) => {
+                const rows = value.journeyRows.slice();
+                rows[i] = { ...rows[i], peakRPSText: e.target.value };
+                update({ journeyRows: rows });
+              }}
+            />
+            <input
+              style={{ ...inputStyle, width: 80 }}
+              placeholder="steady_rps"
+              value={row.steadyRPSText}
+              onChange={(e) => {
+                const rows = value.journeyRows.slice();
+                rows[i] = { ...rows[i], steadyRPSText: e.target.value };
+                update({ journeyRows: rows });
+              }}
+            />
+          </div>
+        </div>
+      ))}
+      <button onClick={() => update({ journeyRows: [...value.journeyRows, emptyJourneyRow()] })}>+ journey</button>
     </div>
   );
 }

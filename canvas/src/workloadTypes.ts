@@ -19,6 +19,21 @@ export interface Requirement {
   rank?: number;
 }
 
+// DeclaredJourney mirrors core.DeclaredJourney (PC-124) — path is a list of IR Node
+// IDs (or "internet" as the first hop, core.JourneyInternetSentinel). peak_rps/
+// steady_rps are optional: absent means the load engine reports not_assessable for
+// that journey, never a guessed number (same discipline as Workload.capacity above).
+export interface DeclaredJourney {
+  id: string;
+  name: string;
+  path: string[];
+  protocol: string;
+  port: number;
+  criticality: string;
+  peak_rps?: number;
+  steady_rps?: number;
+}
+
 export interface Workload {
   schema_version: string;
   name: string;
@@ -32,6 +47,10 @@ export interface Workload {
   // comment) — never a zero, never inferred. WorkloadForm must preserve this: a
   // blank capacity field in the form omits the key entirely, it never becomes 0.
   capacity?: Record<string, number>;
+  // journeys (PC-127's own addition to the form; the field itself is PC-124's) —
+  // omitted entirely when none are declared, never an empty array standing in for
+  // "the architect considered this and declared nothing."
+  journeys?: DeclaredJourney[];
 }
 
 export const WORKLOAD_SCHEMA_VERSION = "1.0.0";

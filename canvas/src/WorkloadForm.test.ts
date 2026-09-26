@@ -91,6 +91,34 @@ describe("buildWorkload", () => {
     expect(COMPLIANCE_FRAMEWORK_OPTIONS.some((fw) => fw.comingSoon)).toBe(true);
   });
 
+  it("maps a complete journey row and never defaults a blank peak_rps/steady_rps", () => {
+    const w = buildWorkload({
+      ...emptyWorkloadFormValue(),
+      journeyRows: [
+        { id: "checkout", name: "Checkout", pathText: "internet, lb-1, db-1", protocol: "tcp", port: "443", criticality: "tier1", peakRPSText: "800", steadyRPSText: "" },
+      ],
+    });
+    expect(w.journeys).toEqual([
+      { id: "checkout", name: "Checkout", path: ["internet", "lb-1", "db-1"], protocol: "tcp", port: 443, criticality: "tier1", peak_rps: 800 },
+    ]);
+    expect(Object.prototype.hasOwnProperty.call(w.journeys![0], "steady_rps")).toBe(false);
+  });
+
+  it("drops an incomplete journey row (e.g. a path with fewer than two hops)", () => {
+    const w = buildWorkload({
+      ...emptyWorkloadFormValue(),
+      journeyRows: [
+        { id: "bad", name: "Bad", pathText: "only-one-node", protocol: "tcp", port: "443", criticality: "tier1", peakRPSText: "", steadyRPSText: "" },
+      ],
+    });
+    expect(w.journeys).toBeUndefined();
+  });
+
+  it("omits journeys entirely when none are declared", () => {
+    const w = buildWorkload(emptyWorkloadFormValue());
+    expect(w.journeys).toBeUndefined();
+  });
+
   it("drops a requirement row with no id — an empty row is not a real requirement", () => {
     const w = buildWorkload({
       ...emptyWorkloadFormValue(),
