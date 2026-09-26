@@ -185,7 +185,28 @@ workload:
 
   capacity:
     app_node_rps: 3500
+
+  journeys:
+    - id: checkout
+      name: Checkout
+      path: [internet, alb, ecs-app, rds-db]
+      protocol: tcp
+      port: 443
+      criticality: tier1
+      peak_rps: 800
+      steady_rps: 200
 ```
+
+**Journeys (PC-124).** A declared journey names an ordered path of components (or
+`internet` as a sentinel first hop) a real request takes, plus its own `peak_rps`/
+`steady_rps` — the input PC-125 (structural flow) and PC-126 (load/utilisation) both
+consume. Every value is stated; a journey missing `peak_rps` still gets structural
+flow but load results are `not_assessable`, naming the missing field. Per-component
+service capacity is **not** a second field — it reuses `capacity` above, keyed by
+`core.JourneyCapacityKey(NodeType)` (e.g. `managed_database_rps`), the same
+declared-only discipline the Capacity semantics paragraph below already establishes.
+Authored either in `workload.yaml` directly or via the canvas NFR form's own Journeys
+editor, including picking a path by clicking components on the canvas in order.
 
 **Capacity semantics.** Instance *count* answers redundancy (derivable from the graph);
 node *capacity* answers whether survivors carry declared peak (only from the
