@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import type { Node } from "@xyflow/react";
-import type { CanvasNodeData } from "./types";
+import type { CanvasNodeData, CanvasSecurityGroupRule } from "./types";
 import { SIZING_FIELDS, type SizingFieldDef } from "./sizingFields";
 import { listPricingSnapshots, getPricingSnapshot, listServiceCatalog, type PricingSnapshot, type ServiceCatalogEntry } from "./api";
 
@@ -97,6 +97,91 @@ function instanceTypesFor(snapshot: PricingSnapshot | null, kind: SizingFieldDef
 const labelStyle: React.CSSProperties = { display: "block", fontSize: 11, fontWeight: 600, marginTop: 10, marginBottom: 2 };
 const inputStyle: React.CSSProperties = { width: "100%", fontSize: 12, padding: "4px 6px", boxSizing: "border-box" };
 
+const rowStyle: React.CSSProperties = { display: "flex", gap: 4, alignItems: "center", marginBottom: 4 };
+
+// SecurityGroupRulesEditor is PC-137's own new panel section — authored ONLY on a
+// network_boundary node (the same structural NodeType core.MaxImplementedCapability
+// Level maps aws_security_group to), matching how a component is attached to a
+// security group in this app: a plain depends_on edge drawn from the component TO
+// this node (no new attachment UI — the canvas already draws edges). Every field is
+// stated input, written verbatim into CanvasNodeData.securityGroupRules — no
+// SG-evaluation logic here at all (that stays exclusively PC-112's, server-side).
+function SecurityGroupRulesEditor({
+  rules,
+  onChange,
+}: {
+  rules: CanvasSecurityGroupRule[];
+  onChange: (rules: CanvasSecurityGroupRule[]) => void;
+}) {
+  const updateRule = (i: number, patch: Partial<CanvasSecurityGroupRule>) => {
+    const next = rules.slice();
+    next[i] = { ...next[i], ...patch };
+    onChange(next);
+  };
+  const removeRule = (i: number) => onChange(rules.filter((_, idx) => idx !== i));
+  const addRule = () => onChange([...rules, { direction: "ingress", protocol: "tcp" }]);
+
+  return (
+    <div style={{ marginTop: 10, paddingTop: 8, borderTop: "1px solid #e2e8f0" }}>
+      <label style={labelStyle}>Security group rules (PC-137)</label>
+      <p style={{ fontSize: 10, color: "#94a3b8", margin: "0 0 4px" }}>
+        Attach a component to this security group by drawing a depends_on edge from
+        it to this node. No rule at all means not_assessable at the SG step for any
+        component attached here — never a guessed allow or deny.
+      </p>
+      {rules.map((r, i) => (
+        <div key={i} style={{ marginBottom: 6, paddingBottom: 6, borderBottom: "1px dashed #cbd5e1" }}>
+          <div style={rowStyle}>
+            <select style={inputStyle} value={r.direction} onChange={(e) => updateRule(i, { direction: e.target.value as CanvasSecurityGroupRule["direction"] })}>
+              <option value="ingress">ingress</option>
+              <option value="egress">egress</option>
+            </select>
+            <button onClick={() => removeRule(i)}>×</button>
+          </div>
+          <div style={rowStyle}>
+            <input
+              style={{ ...inputStyle, width: 60 }}
+              placeholder="protocol"
+              value={r.protocol}
+              onChange={(e) => updateRule(i, { protocol: e.target.value })}
+            />
+            <input
+              style={{ ...inputStyle, width: 55 }}
+              type="number"
+              placeholder="from"
+              value={r.from_port ?? ""}
+              onChange={(e) => updateRule(i, { from_port: e.target.value === "" ? undefined : Number(e.target.value) })}
+            />
+            <input
+              style={{ ...inputStyle, width: 55 }}
+              type="number"
+              placeholder="to"
+              value={r.to_port ?? ""}
+              onChange={(e) => updateRule(i, { to_port: e.target.value === "" ? undefined : Number(e.target.value) })}
+            />
+          </div>
+          <input
+            style={{ ...inputStyle, marginTop: 4 }}
+            placeholder="cidr_blocks (comma-separated)"
+            value={(r.cidr_blocks ?? []).join(", ")}
+            onChange={(e) => {
+              const cidrs = e.target.value.split(",").map((c) => c.trim()).filter((c) => c !== "");
+              updateRule(i, { cidr_blocks: cidrs.length > 0 ? cidrs : undefined, source_security_group: cidrs.length > 0 ? undefined : r.source_security_group });
+            }}
+          />
+          <input
+            style={{ ...inputStyle, marginTop: 4 }}
+            placeholder="or source_security_group (another SG node's ID)"
+            value={r.source_security_group ?? ""}
+            onChange={(e) => updateRule(i, { source_security_group: e.target.value || undefined, cidr_blocks: e.target.value ? undefined : r.cidr_blocks })}
+          />
+        </div>
+      ))}
+      <button onClick={addRule}>+ rule</button>
+    </div>
+  );
+}
+
 // Inspector is PC-110's own new panel: sizing fields for the currently-selected
 // node, per NodeType (SIZING_FIELDS). Absent from this codebase before this ticket —
 // there was no per-node inspector of any kind (capability entry has no UI either;
@@ -108,10 +193,12 @@ export function Inspector({
   node,
   onChange,
   onServiceChange,
+  onSecurityGroupRulesChange,
 }: {
   node: Node<CanvasNodeData>;
   onChange: (nodeID: string, sizing: Record<string, string>) => void;
   onServiceChange: (nodeID: string, serviceID: string) => void;
+  onSecurityGroupRulesChange: (nodeID: string, rules: CanvasSecurityGroupRule[]) => void;
 }) {
   const fields = SIZING_FIELDS[node.data.nodeType];
   const { snapshot, loading } = usePricingSnapshot();
@@ -166,6 +253,13 @@ export function Inspector({
           </option>
         ))}
       </select>
+
+      {node.data.nodeType === "network_boundary" && (
+        <SecurityGroupRulesEditor
+          rules={node.data.securityGroupRules ?? []}
+          onChange={(rules) => onSecurityGroupRulesChange(node.id, rules)}
+        />
+      )}
 
       {!fields || fields.length === 0 ? (
         <p style={{ fontSize: 11, color: "#94a3b8" }}>

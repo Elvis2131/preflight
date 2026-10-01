@@ -37,6 +37,28 @@ export interface CanvasNode {
   // capability_level at all and every journey through it is honestly
   // not_assessable (core/trace.go's own capability gate).
   service_id?: string;
+  // security_group_rules: PC-137's own addition — real, structured Security Group
+  // rules authored on this node, mirroring core.CanvasSecurityGroupRule field for
+  // field. A structured list, not a string map like capability/sizing, since one
+  // rule is a small record (direction, protocol, ports, source). A component
+  // attaches to this security group via a depends_on edge — the same edge type
+  // this app already uses for every other structural relationship, no new
+  // attachment mechanism. Absent (never an empty array) means the architect has
+  // not authored any rule for this node yet — core/trace.go's own sg_dest_ingress
+  // step reports not_assessable for a component with no security group attached
+  // at all, never a guessed allow or deny.
+  security_group_rules?: CanvasSecurityGroupRule[];
+}
+
+// CanvasSecurityGroupRule mirrors core.CanvasSecurityGroupRule (core/canvas.go,
+// PC-137) field for field — the wire shape for one authored Security Group rule.
+export interface CanvasSecurityGroupRule {
+  direction: "ingress" | "egress";
+  protocol: string;
+  from_port?: number;
+  to_port?: number;
+  cidr_blocks?: string[];
+  source_security_group?: string;
 }
 
 export interface CanvasEdge {
@@ -76,6 +98,7 @@ export interface CanvasNodeData extends Record<string, unknown> {
   capability: Record<string, string>;
   sizing?: Record<string, string>;
   serviceID?: string;
+  securityGroupRules?: CanvasSecurityGroupRule[];
   simState?: SimState;
   journeyOnPath?: boolean;
   utilization?: number | null;

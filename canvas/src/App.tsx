@@ -24,7 +24,7 @@ import {
   type NodeType,
   type EdgeType,
 } from "./goldenVocabulary";
-import type { CanvasNodeData, CanvasEdgeData } from "./types";
+import type { CanvasNodeData, CanvasEdgeData, CanvasSecurityGroupRule } from "./types";
 import { serialize } from "./serialize";
 import { GoldenNode } from "./GoldenNode";
 import { Inspector } from "./Inspector";
@@ -313,6 +313,17 @@ function CanvasInner() {
     [setNodes],
   );
 
+  // updateNodeSecurityGroupRules (PC-137) is the Inspector's SecurityGroupRulesEditor
+  // own write path — same immutable-map pattern as updateNodeSizing/updateNodeServiceID.
+  const updateNodeSecurityGroupRules = useCallback(
+    (nodeID: string, rules: CanvasSecurityGroupRule[]) => {
+      setNodes((nds) =>
+        nds.map((n) => (n.id === nodeID ? { ...n, data: { ...n.data, securityGroupRules: rules } } : n)),
+      );
+    },
+    [setNodes],
+  );
+
   const onConnect = useCallback(
     (connection: Connection) => {
       setEdges((eds) =>
@@ -578,7 +589,12 @@ function CanvasInner() {
         </div>
       </div>
       {selectedNode && (
-        <Inspector node={selectedNode} onChange={updateNodeSizing} onServiceChange={updateNodeServiceID} />
+        <Inspector
+          node={selectedNode}
+          onChange={updateNodeSizing}
+          onServiceChange={updateNodeServiceID}
+          onSecurityGroupRulesChange={updateNodeSecurityGroupRules}
+        />
       )}
       {showJourneyPanel && (
         <div style={{ width: 320, borderLeft: "1px solid #e2e8f0", overflowY: "auto" }}>

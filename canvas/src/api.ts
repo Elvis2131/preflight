@@ -6,7 +6,8 @@
 import type { CanvasDocument } from "./types";
 import type { Workload } from "./workloadTypes";
 
-export const ASSESSD_BASE_URL = "http://localhost:8080";
+// Overridable for a dev machine where 8080 is taken (VITE_ASSESSD_URL=http://localhost:8099).
+export const ASSESSD_BASE_URL: string = import.meta.env.VITE_ASSESSD_URL ?? "http://localhost:8080";
 
 export interface AssessmentEnvelope {
   state: "assessed" | "not_assessable";

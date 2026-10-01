@@ -49,12 +49,32 @@ func SecurityGroupProfile(nodes []Node, edges []Edge, resourceID string) SGProfi
 	profile := SGProfile{SGIDs: sgIDs}
 	for _, sgID := range sgIDs {
 		node := byID[sgID]
-		rawRules, _ := node.RawAttributes["security_group_rules"].([]map[string]any)
-		for _, raw := range rawRules {
+		for _, raw := range rawSGRules(node.RawAttributes["security_group_rules"]) {
 			profile.Rules = append(profile.Rules, toSGRule(raw))
 		}
 	}
 	return profile
+}
+
+// rawSGRules reads the rule list in either of its two real shapes: []map[string]any
+// when the IR is still the in-memory value ingest just built, []any of
+// map[string]any once it has been through the session store's JSON round trip. A
+// type assertion for only the first silently turned every stored SG into "attached,
+// zero rules" — an implicit deny the architect never authored (PC-137).
+func rawSGRules(v any) []map[string]any {
+	switch rules := v.(type) {
+	case []map[string]any:
+		return rules
+	case []any:
+		out := make([]map[string]any, 0, len(rules))
+		for _, r := range rules {
+			if m, ok := r.(map[string]any); ok {
+				out = append(out, m)
+			}
+		}
+		return out
+	}
+	return nil
 }
 
 func toSGRule(raw map[string]any) SGRule {

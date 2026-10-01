@@ -104,6 +104,34 @@ describe("serialize", () => {
     expect(Object.prototype.hasOwnProperty.call(doc.nodes[0], "service_id")).toBe(false);
   });
 
+  it("includes security_group_rules when the architect authored at least one (PC-137)", () => {
+    const nodes: Node<CanvasNodeData>[] = [
+      {
+        id: "sg1",
+        type: "golden",
+        position: { x: 0, y: 0 },
+        data: {
+          nodeType: "network_boundary",
+          label: "DB SG",
+          capability: {},
+          securityGroupRules: [{ direction: "ingress", protocol: "tcp", from_port: 5432, to_port: 5432, cidr_blocks: ["0.0.0.0/0"] }],
+        },
+      },
+    ];
+    const doc = serialize(nodes, []);
+    expect(doc.nodes[0].security_group_rules).toEqual([
+      { direction: "ingress", protocol: "tcp", from_port: 5432, to_port: 5432, cidr_blocks: ["0.0.0.0/0"] },
+    ]);
+  });
+
+  it("omits security_group_rules entirely when none were authored — never an empty array", () => {
+    const nodes: Node<CanvasNodeData>[] = [
+      { id: "sg1", type: "golden", position: { x: 0, y: 0 }, data: { nodeType: "network_boundary", label: "SG", capability: {} } },
+    ];
+    const doc = serialize(nodes, []);
+    expect(Object.prototype.hasOwnProperty.call(doc.nodes[0], "security_group_rules")).toBe(false);
+  });
+
   it("strips all UI-only fields from edges and maps source/target to from/to", () => {
     const edges: Edge<CanvasEdgeData>[] = [
       {

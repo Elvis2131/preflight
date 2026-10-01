@@ -6,8 +6,8 @@ import type { CanvasNodeData, CanvasEdgeData, CanvasDocument } from "./types";
 // it." React Flow's own Node/Edge carry position, selected, dragging, sourceHandle,
 // draggable, and more (verified directly against @xyflow/system's real NodeBase/
 // EdgeBase type declarations, not assumed) — every one of those is deliberately left
-// out below. Only id/type/label/capability/sizing/service_id (nodes) and
-// id/type/from/to (edges) ever cross into the serialized document.
+// out below. Only id/type/label/capability/sizing/service_id/security_group_rules
+// (nodes) and id/type/from/to (edges) ever cross into the serialized document.
 export function serialize(
   nodes: Node<CanvasNodeData>[],
   edges: Edge<CanvasEdgeData>[],
@@ -27,6 +27,13 @@ export function serialize(
       // one — omitted, never an empty string, so "no service chosen yet" stays
       // indistinguishable-by-design from "chosen but blank" (there is no such state).
       ...(n.data.serviceID ? { service_id: n.data.serviceID } : {}),
+      // security_group_rules (PC-137) is only included when at least one rule was
+      // actually authored — an empty array would still be honest (ingest treats
+      // both the same), but omitting it keeps a node nobody ever gave a rule
+      // looking identical to how it looked before this ticket.
+      ...(n.data.securityGroupRules && n.data.securityGroupRules.length > 0
+        ? { security_group_rules: n.data.securityGroupRules }
+        : {}),
     })),
     edges: edges.map((e) => ({
       id: e.id,
