@@ -65,3 +65,11 @@ npm run dev       # http://localhost:5173
 npm run build      # tsc -b && vite build
 npm test           # vitest
 ```
+
+---
+
+**Superseded by the workspace's Analyze mode (PC-104).** The scorecard timeline, graph and
+diff in this standalone viewer now live in `canvas/src/analyze/` as the **Analyze** mode of
+the single workspace, following the workspace's own session instead of a pasted
+`session_id`. This directory is left in place (nothing was deleted) and still builds, but
+new work belongs in `canvas/`.

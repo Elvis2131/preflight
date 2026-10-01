@@ -30,6 +30,8 @@ import { GoldenNode } from "./GoldenNode";
 import { Inspector } from "./Inspector";
 import { CONTAINER_SIZE, containerRank, reevaluate } from "./containment";
 import { templateToCanvasState } from "./templateLoader";
+import { MODES, capabilities, type Mode } from "./modes";
+import { AnalyzeView } from "./analyze/AnalyzeView";
 import { listTemplates, getTemplate, type TemplateMeta } from "./api";
 import { assessCanvas, simulateNodeLoss, simulateBaseline, describeSimError, type SimulateResponse } from "./api";
 import { ReportView } from "./ReportView";
@@ -92,10 +94,16 @@ function CanvasInner() {
   const sessionIDRef = useRef(crypto.randomUUID());
   const [workloadForm, setWorkloadForm] = useState<WorkloadFormValue>(emptyWorkloadFormValue());
   const [showWorkloadForm, setShowWorkloadForm] = useState(true);
-  // mode (PC-123): Design is this file's own pre-existing canvas; Report is a thin
-  // view over PC-120/122's own already-computed results — switching modes changes
-  // nothing about the canvas state underneath it.
-  const [mode, setMode] = useState<"design" | "report">("design");
+  // mode (PC-104): one workspace, five modes (Design / Simulate / Failure Lab / Analyze /
+  // Report). Authoring is Design's alone (modes.ts encodes who may do what); the others
+  // only read what the server computed. Every mode shares THIS component's state — the
+  // canvas, the workload form, the session id and latestVersion below — so switching
+  // modes can never lose the design or which session/version is being looked at.
+  const [mode, setMode] = useState<Mode>("design");
+  const caps = capabilities(mode);
+  // latestVersion is the newest version this session has stored (set whenever a mode
+  // assesses the current design); null until something has been assessed.
+  const [latestVersion, setLatestVersion] = useState<number | null>(null);
   const [selectedNodeID, setSelectedNodeID] = useState<string | null>(null);
   const [simBusy, setSimBusy] = useState(false);
   const [simError, setSimError] = useState<string | null>(null);
@@ -271,6 +279,7 @@ function CanvasInner() {
       const doc = serialize(nodes, edges);
       const workload = buildWorkload(workloadForm);
       const assessed = await assessCanvas(sessionIDRef.current, doc, workload);
+      setLatestVersion(assessed.version_number);
       const sim = await simulateNodeLoss(
         sessionIDRef.current,
         assessed.version_number,
@@ -296,6 +305,7 @@ function CanvasInner() {
       const doc = serialize(nodes, edges);
       const workload = buildWorkload(workloadForm);
       const assessed = await assessCanvas(sessionIDRef.current, doc, workload);
+      setLatestVersion(assessed.version_number);
       const sim = await simulateBaseline(sessionIDRef.current, assessed.version_number);
       stopAnimation();
       setSimSummary(sim);
@@ -316,6 +326,7 @@ function CanvasInner() {
     const doc = serialize(nodes, edges);
     const workload = buildWorkload(workloadForm);
     const assessed = await assessCanvas(sessionIDRef.current, doc, workload);
+    setLatestVersion(assessed.version_number);
     return assessed.version_number;
   }, [nodes, edges, workloadForm]);
 
@@ -532,26 +543,32 @@ function CanvasInner() {
 
   return (
     <div style={{ display: "flex", flexDirection: "column", height: "100vh", width: "100%" }}>
-      <div style={{ display: "flex", gap: 6, padding: "6px 12px", borderBottom: "1px solid #cbd5e1", background: "#f8fafc" }}>
-        <button
-          onClick={() => setMode("design")}
-          style={{ fontSize: 12, fontWeight: mode === "design" ? 700 : 400, background: mode === "design" ? "#e0e7ff" : undefined }}
-        >
-          Design
-        </button>
-        <button
-          onClick={() => setMode("report")}
-          style={{ fontSize: 12, fontWeight: mode === "report" ? 700 : 400, background: mode === "report" ? "#e0e7ff" : undefined }}
-        >
-          Report
-        </button>
+      <div
+        style={{ display: "flex", gap: 6, padding: "6px 12px", borderBottom: "1px solid #cbd5e1", background: "#f8fafc", alignItems: "center" }}
+        data-testid="mode-bar"
+      >
+        {MODES.map((m) => (
+          <button
+            key={m.id}
+            data-mode={m.id}
+            onClick={() => setMode(m.id)}
+            style={{ fontSize: 12, fontWeight: mode === m.id ? 700 : 400, background: mode === m.id ? "#e0e7ff" : undefined }}
+          >
+            {m.label}
+          </button>
+        ))}
+        <span style={{ marginLeft: "auto", fontSize: 11, color: "#64748b" }} data-testid="session-label">
+          session {sessionIDRef.current.slice(0, 8)} · {latestVersion === null ? "no version assessed yet" : `latest v${latestVersion}`}
+        </span>
       </div>
       {mode === "report" ? (
         <ReportView sessionID={sessionIDRef.current} onReprice={repriceCurrentDesign} />
+      ) : mode === "analyze" ? (
+        <AnalyzeView sessionID={sessionIDRef.current} latestVersion={latestVersion} />
       ) : (
     <div style={{ display: "flex", flex: 1, minHeight: 0, width: "100%" }}>
-      <Palette />
-      {showWorkloadForm && (
+      {caps.showsAuthoringPanels && <Palette />}
+      {caps.showsAuthoringPanels && showWorkloadForm && (
         <div style={{ width: 300, borderRight: "1px solid #e2e8f0", overflowY: "auto" }}>
           <WorkloadForm
             value={workloadForm}
@@ -564,6 +581,7 @@ function CanvasInner() {
       )}
       <div style={{ flex: 1, display: "flex", flexDirection: "column" }}>
         <div style={{ padding: 8, borderBottom: "1px solid #e2e8f0", display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
+          {caps.canEditDesign && (
           <label style={{ fontSize: 12 }}>
             Next edge type:{" "}
             <select
@@ -577,7 +595,8 @@ function CanvasInner() {
               ))}
             </select>
           </label>
-          {templateList.length > 0 && (
+          )}
+          {caps.canEditDesign && templateList.length > 0 && (
             <label style={{ fontSize: 12 }}>
               Template:{" "}
               <select value="" onChange={(e) => void loadTemplate(e.target.value)} data-testid="template-picker">
@@ -591,16 +610,22 @@ function CanvasInner() {
             </label>
           )}
           {templateError && <span style={{ fontSize: 11, color: "#dc2626" }}>{templateError}</span>}
+          {caps.canEditDesign && (
           <button onClick={() => setShowJSON((v) => !v)} style={{ fontSize: 12 }}>
             {showJSON ? "Hide" : "Show"} CanvasDocument JSON
           </button>
+          )}
           <span style={{ fontSize: 11, color: "#64748b" }}>
             {nodes.length} node(s), {edges.length} edge(s)
           </span>
+          {caps.showsAuthoringPanels && (
+          <>
           <span style={{ borderLeft: "1px solid #e2e8f0", height: 20 }} />
           <button onClick={() => setShowWorkloadForm((v) => !v)} style={{ fontSize: 12 }}>
             {showWorkloadForm ? "Hide" : "Show"} Workload form
           </button>
+          </>
+          )}
           {pickingJourneyRowIndex !== null ? (
             <span style={{ fontSize: 12, color: "#7c3aed", fontWeight: 600 }}>
               Picking journey path — click nodes in order (see Workload form)
@@ -612,6 +637,7 @@ function CanvasInner() {
           ) : (
             <span style={{ fontSize: 12, color: "#94a3b8" }}>Click a node to select it</span>
           )}
+          {caps.canInjectFaults && (
           <button
             onClick={killSelectedNode}
             disabled={!selectedNodeID || simBusy}
@@ -619,16 +645,28 @@ function CanvasInner() {
           >
             {simBusy ? "Simulating..." : "Kill selected node"}
           </button>
+          )}
+          {(caps.canInjectFaults || caps.canRunBaseline) && (
           <button onClick={clearSimulation} disabled={!simSummary} style={{ fontSize: 12 }}>
             Clear simulation
           </button>
+          )}
+          {caps.canRunBaseline && (
+          <>
           <span style={{ borderLeft: "1px solid #e2e8f0", height: 20 }} />
           <button onClick={runBaseline} disabled={simBusy || journeys.length === 0} style={{ fontSize: 12 }}>
             Run baseline (no fault)
           </button>
+          {journeys.length === 0 && (
+            <span style={{ fontSize: 11, color: "#94a3b8" }}>Declare a journey in Design (Workload form) to run a baseline.</span>
+          )}
+          </>
+          )}
+          {caps.showsJourneyPanel && (
           <button onClick={() => setShowJourneyPanel((v) => !v)} style={{ fontSize: 12 }}>
             {showJourneyPanel ? "Hide" : "Show"} journey panel
           </button>
+          )}
         </div>
         {(simError || simSummary) && (
           <div
@@ -660,7 +698,7 @@ function CanvasInner() {
             )}
           </div>
         )}
-        <div ref={wrapperRef} style={{ flex: 1, position: "relative" }} onDragOver={onDragOver} onDrop={onDrop}>
+        <div ref={wrapperRef} style={{ flex: 1, position: "relative" }} onDragOver={caps.canEditDesign ? onDragOver : undefined} onDrop={caps.canEditDesign ? onDrop : undefined}>
           <ReactFlow
             nodes={displayNodes}
             edges={displayEdges}
@@ -674,6 +712,11 @@ function CanvasInner() {
             // React Flow's default raises a selected node, which would cover its own
             // children and make them unclickable.
             elevateNodesOnSelect={false}
+            // Authoring is Design's alone (PC-104): in every other mode the canvas is a
+            // read-only picture of what the server computed — selectable, never editable.
+            nodesDraggable={caps.canEditDesign}
+            nodesConnectable={caps.canEditDesign}
+            deleteKeyCode={caps.canEditDesign ? "Backspace" : null}
             fitView
           >
             <Background />
@@ -702,7 +745,7 @@ function CanvasInner() {
           )}
         </div>
       </div>
-      {selectedNode && (
+      {selectedNode && caps.showsAuthoringPanels && (
         <Inspector
           node={selectedNode}
           onChange={updateNodeSizing}
@@ -711,7 +754,7 @@ function CanvasInner() {
           onPlacementChange={updateNodePlacement}
         />
       )}
-      {showJourneyPanel && (
+      {showJourneyPanel && caps.showsJourneyPanel && (
         <div style={{ width: 320, borderLeft: "1px solid #e2e8f0", overflowY: "auto" }}>
           <JourneyPanel
             journeys={journeys}
