@@ -28,6 +28,7 @@ import type { CanvasNodeData, CanvasEdgeData, CanvasSecurityGroupRule } from "./
 import { serialize } from "./serialize";
 import { GoldenNode } from "./GoldenNode";
 import { Inspector } from "./Inspector";
+import { CONTAINER_SIZE, containerRank, reevaluate } from "./containment";
 import { assessCanvas, simulateNodeLoss, simulateBaseline, describeSimError, type SimulateResponse } from "./api";
 import { ReportView } from "./ReportView";
 import { WorkloadForm, buildWorkload, emptyWorkloadFormValue, type WorkloadFormValue } from "./WorkloadForm";
@@ -306,11 +307,64 @@ function CanvasInner() {
   // convention for service_id.
   const updateNodeServiceID = useCallback(
     (nodeID: string, serviceID: string) => {
+      const next = nodes.map((n) => {
+        if (n.id !== nodeID) return n;
+        const rank = containerRank(serviceID);
+        // A VPC/subnet becomes a drawn container (PC-105): sized, and layered behind
+        // the nodes dropped inside it (VPC furthest back). Any other service — or none —
+        // returns the node to its ordinary size and layer.
+        const size = CONTAINER_SIZE[serviceID];
+        const { style: _style, zIndex: _z, ...rest } = n;
+        void _style;
+        void _z;
+        return {
+          ...rest,
+          ...(rank > 0 && size ? { style: { width: size.width, height: size.height }, zIndex: -(4 - rank) } : {}),
+          data: { ...n.data, serviceID: serviceID || undefined },
+        };
+      });
+      setNodes(next);
+      // Becoming (or ceasing to be) a container changes what sits inside what.
+      setEdges((eds) => reevaluate(next, eds, next.map((n) => n.id)));
+    },
+    [nodes, setNodes, setEdges],
+  );
+
+  // updateNodePlacement (PC-105) is the Inspector's CIDR/AZ fields' write path — same
+  // immutable-map pattern as the other inspector write paths.
+  const updateNodePlacement = useCallback(
+    (nodeID: string, patch: { availabilityZone?: string; cidrBlock?: string }) => {
       setNodes((nds) =>
-        nds.map((n) => (n.id === nodeID ? { ...n, data: { ...n.data, serviceID: serviceID || undefined } } : n)),
+        nds.map((n) =>
+          n.id === nodeID
+            ? {
+                ...n,
+                data: {
+                  ...n.data,
+                  ...("availabilityZone" in patch ? { availabilityZone: patch.availabilityZone || undefined } : {}),
+                  ...("cidrBlock" in patch ? { cidrBlock: patch.cidrBlock || undefined } : {}),
+                },
+              }
+            : n,
+        ),
       );
     },
     [setNodes],
+  );
+
+  // onNodeDragStop (PC-105): where a node was dropped IS its containment. A dropped
+  // resource gets its contained_in edge to the innermost VPC/subnet under it; dropping
+  // a container re-evaluates everything, since moving it can take nodes in or out.
+  // Geometry only — whether the resulting placement is valid is the server's decision.
+  const onNodeDragStop = useCallback(
+    (_: unknown, dragged: Node<CanvasNodeData>) => {
+      setEdges((eds) => {
+        const current = nodes.map((n) => (n.id === dragged.id ? { ...n, position: dragged.position } : n));
+        const ids = containerRank(dragged.data.serviceID) > 0 ? current.map((n) => n.id) : [dragged.id];
+        return reevaluate(current, eds, ids);
+      });
+    },
+    [nodes, setEdges],
   );
 
   // updateNodeSecurityGroupRules (PC-137) is the Inspector's SecurityGroupRulesEditor
@@ -361,8 +415,10 @@ function CanvasInner() {
         data: { nodeType, label: NODE_TYPE_LABELS[nodeType], capability: {} },
       };
       setNodes((nds) => nds.concat(newNode));
+      // A drop IS a placement (PC-105): a node dropped inside a VPC/subnet is contained_in it.
+      setEdges((eds) => reevaluate(nodes.concat(newNode), eds, [id]));
     },
-    [screenToFlowPosition, setNodes],
+    [screenToFlowPosition, setNodes, setEdges, nodes],
   );
 
   const doc = serialize(nodes, edges);
@@ -560,6 +616,11 @@ function CanvasInner() {
             onEdgesChange={onEdgesChange}
             onConnect={onConnect}
             onNodeClick={onNodeClick}
+            onNodeDragStop={onNodeDragStop}
+            // A selected container must stay BEHIND the resources drawn inside it (PC-105):
+            // React Flow's default raises a selected node, which would cover its own
+            // children and make them unclickable.
+            elevateNodesOnSelect={false}
             fitView
           >
             <Background />
@@ -594,6 +655,7 @@ function CanvasInner() {
           onChange={updateNodeSizing}
           onServiceChange={updateNodeServiceID}
           onSecurityGroupRulesChange={updateNodeSecurityGroupRules}
+          onPlacementChange={updateNodePlacement}
         />
       )}
       {showJourneyPanel && (

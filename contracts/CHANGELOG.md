@@ -10,6 +10,18 @@ Each generated `contracts/*.schema.json` carries its own version in `x-schema-ve
 stamped by `cmd/gen-contracts` — check that field against this file, not the other way
 around, since a schema file is regenerated output, not hand-edited.
 
+## canvas.schema.json 1.4.0 — 2026-10-01 (PC-105: CanvasNode.availability_zone and cidr_block added)
+
+**Additive change to `canvas.schema.json` only.** `CanvasNode` gains two optional
+fields, `availability_zone` (a subnet's one zone — a subnet cannot span zones) and
+`cidr_block` (a VPC's or subnet's IPv4 range), stamped by `ingest/canvas.go` onto
+`RawAttributes["availability_zone"]` / `["cidr_block"]`: the same keys the Terraform path
+already uses, so both producers yield one IR shape. Region ⊃ VPC ⊃ AZ ⊃ Subnet ⊃ resource
+nesting is carried by existing `contained_in` edges plus these attributes — an AZ is an
+attribute of a subnet (as in Terraform), not a node. A document against 1.3.0 needs no
+change. Behaviour change worth knowing: `POST /sessions/{id}/canvas` now rejects invalid
+placement with HTTP 422 `error_code: invalid_placement` (see `core/canvas_placement.go`).
+
 ## workload.schema.json 1.4.0 — 2026-10-01 (PC-131: DeclaredJourney.fallback added)
 
 **Additive change to `workload.schema.json` only** — the other six schemas are

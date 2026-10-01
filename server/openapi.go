@@ -301,7 +301,7 @@ func buildOpenAPISpec() map[string]any {
 							},
 						},
 						"422": map[string]any{
-							"description": "A well-formed request that can't be honored: an invalid workload — file-based or inline (error_code: invalid_workload) — or the canvas is below the Minimum Viable Graph threshold (insufficient_model)",
+							"description": "A well-formed request that can't be honored: an invalid workload — file-based or inline (error_code: invalid_workload) — invalid VPC/subnet placement, naming each broken rule and resource (error_code: invalid_placement, PC-105) — or the canvas is below the Minimum Viable Graph threshold (insufficient_model)",
 							"content": map[string]any{
 								"application/json": map[string]any{
 									"schema": reflectSchema(errorBody{}),

@@ -62,16 +62,19 @@ func IngestCanvas(doc core.CanvasDocument, registry providers.Registry, versionN
 	nodes := make([]core.Node, 0, len(doc.Nodes))
 	for _, n := range doc.Nodes {
 		nodes = append(nodes, core.Node{
-			ID:            n.ID,
-			Type:          n.Type,
-			Resolution:    core.ResolutionKnown,
-			Capability:    buildCanvasCapability(n.Capability),
-			Sizing:        buildCanvasSizing(n.Sizing),
-			RawAttributes: withCanvasSecurityGroupRules(
-				resolveCanvasCapabilityLevel(canvasCapabilityToRawAttributes(n.Capability), registry, n.ServiceID, n.Type),
-				n.SecurityGroupRules,
+			ID:         n.ID,
+			Type:       n.Type,
+			Resolution: core.ResolutionKnown,
+			Capability: buildCanvasCapability(n.Capability),
+			Sizing:     buildCanvasSizing(n.Sizing),
+			RawAttributes: withCanvasPlacement(
+				withCanvasSecurityGroupRules(
+					resolveCanvasCapabilityLevel(canvasCapabilityToRawAttributes(n.Capability), registry, n.ServiceID, n.Type),
+					n.SecurityGroupRules,
+				),
+				n,
 			),
-			Provenance:    prov,
+			Provenance: prov,
 		})
 	}
 
@@ -217,6 +220,26 @@ func resolveCanvasCapabilityLevel(raw map[string]any, registry providers.Registr
 		raw = make(map[string]any, 1)
 	}
 	raw["capability_level"] = string(mapping.CapabilityLevel)
+	return raw
+}
+
+// withCanvasPlacement is PC-105's own addition: stamps a canvas node's declared
+// availability_zone / cidr_block onto RawAttributes under the SAME keys the Terraform
+// path already uses for aws_subnet/aws_vpc, so every downstream reader sees one IR
+// shape from both producers. Absent stays absent — never a defaulted zone or CIDR.
+func withCanvasPlacement(raw map[string]any, n core.CanvasNode) map[string]any {
+	if n.AvailabilityZone == "" && n.CIDRBlock == "" {
+		return raw
+	}
+	if raw == nil {
+		raw = make(map[string]any, 2)
+	}
+	if n.AvailabilityZone != "" {
+		raw["availability_zone"] = n.AvailabilityZone
+	}
+	if n.CIDRBlock != "" {
+		raw["cidr_block"] = n.CIDRBlock
+	}
 	return raw
 }
 

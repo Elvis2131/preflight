@@ -1,6 +1,7 @@
 import { Handle, Position, type NodeProps, type Node } from "@xyflow/react";
 import type { CanvasNodeData } from "./types";
 import { NODE_TYPE_LABELS } from "./goldenVocabulary";
+import { containerRank } from "./containment";
 
 // GoldenNode is the ONE custom node component every golden vocabulary type renders
 // through — deliberately one component, not eleven. The palette restriction (PC-85's
@@ -43,6 +44,34 @@ function utilizationColor(utilization: number): string {
 
 export function GoldenNode({ data, selected }: NodeProps<GoldenNodeType>) {
   const { border, background, opacity } = simStateStyle(data.simState, selected);
+  // A VPC/subnet is drawn as a container (PC-105): a translucent dashed box that fills
+  // the node's own width/height, so resources can be dropped inside it.
+  const rank = containerRank(data.serviceID);
+  if (rank > 0 && (!data.simState || data.simState === "normal")) {
+    return (
+      <div
+        data-container={data.serviceID}
+        style={{
+          width: "100%",
+          height: "100%",
+          boxSizing: "border-box",
+          borderRadius: 8,
+          border: `2px dashed ${selected ? "#2563eb" : rank === 1 ? "#0f766e" : "#64748b"}`,
+          background: rank === 1 ? "rgba(20,184,166,0.06)" : "rgba(100,116,139,0.08)",
+          padding: "6px 10px",
+          fontSize: 12,
+        }}
+      >
+        <Handle type="target" position={Position.Top} />
+        <div style={{ fontWeight: 600 }}>{data.label}</div>
+        <div style={{ color: "#64748b", fontSize: 11 }}>
+          {rank === 1 ? "VPC" : `Subnet${data.availabilityZone ? ` · ${data.availabilityZone}` : ""}`}
+          {data.cidrBlock ? ` · ${data.cidrBlock}` : ""}
+        </div>
+        <Handle type="source" position={Position.Bottom} />
+      </div>
+    );
+  }
   // journeyOnPath (PC-127) is a highlight ADDED via box-shadow, never a border
   // override: PC-88/89's own killed/severed/cascaded border colors are the one true
   // fault signal (see simStateStyle's own doc comment on why they must stay

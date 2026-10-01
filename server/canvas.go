@@ -9,6 +9,7 @@ package server
 import (
 	"fmt"
 	"net/http"
+	"strings"
 	"time"
 
 	"preflight/core"
@@ -74,6 +75,17 @@ func AssessCanvas(store *Store, req AssessCanvasRequest) (AssessResponse, error)
 	workload, err := loadOrValidateWorkload(req.Workload, req.WorkloadPath)
 	if err != nil {
 		return AssessResponse{}, newAPIError(http.StatusUnprocessableEntity, "invalid_workload", "server: load workload: %s", err)
+	}
+
+	// PC-105: placement is decided here, on the server — the browser may highlight a
+	// violation but never decides one. Every violation is named (rule + resource).
+	if violations := core.ValidateCanvasPlacement(req.Canvas); len(violations) > 0 {
+		msgs := make([]string, len(violations))
+		for i, v := range violations {
+			msgs[i] = v.String()
+		}
+		return AssessResponse{}, newAPIError(http.StatusUnprocessableEntity, "invalid_placement",
+			"server: invalid placement (%d violation(s)): %s", len(violations), strings.Join(msgs, "; "))
 	}
 
 	registry, err := loadMergedRegistry()

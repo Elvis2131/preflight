@@ -71,6 +71,19 @@ type CanvasNode struct {
 	// same way Terraform ingest already represents it: a depends_on edge from the
 	// component to this node — no new edge type, no new attachment mechanism.
 	SecurityGroupRules []CanvasSecurityGroupRule `json:"security_group_rules,omitempty" jsonschema:"description=Security Group rules authored on this node (PC-137) — mirrors ingest/securitygroups.go's own normalized rule shape. A component attaches to this security group via a depends_on edge exactly as the Terraform ingest path already represents SG attachment."`
+
+	// AvailabilityZone and CIDRBlock are PC-105's own addition — real placement
+	// facts for the VPC/subnet containers. They are stamped onto RawAttributes under
+	// the SAME keys ("availability_zone", "cidr_block") the Terraform ingest path
+	// already uses for aws_subnet/aws_vpc, so every downstream reader (zone-kill
+	// blast radius, cross-AZ cost, NACL/SG CIDR matching) sees one IR shape from
+	// both producers. The Region ⊃ AZ nesting is NOT a node: in the IR an AZ is an
+	// attribute of a subnet (exactly as in Terraform), and a Region is
+	// Workload.Regions — so the canvas's visual AZ/Region grouping writes these
+	// attributes instead of inventing nodes the Terraform path has no equivalent for.
+	// Absent means unknown, never defaulted (I4).
+	AvailabilityZone string `json:"availability_zone,omitempty" jsonschema:"description=The Availability Zone a subnet resides in (e.g. eu-west-1a) — one value, since a subnet cannot span zones. Absent means unknown."`
+	CIDRBlock        string `json:"cidr_block,omitempty" jsonschema:"description=IPv4 CIDR block of a VPC or subnet. Absent means unknown."`
 }
 
 // CanvasSecurityGroupRule is one Security Group rule authored on the canvas — the

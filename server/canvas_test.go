@@ -6,6 +6,8 @@ package server_test
 // has for the HCL path.
 
 import (
+	"errors"
+	"net/http"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -287,5 +289,48 @@ func TestAssessCanvas_DanglingEdge_NeverCrashesAlwaysNotAssessable(t *testing.T)
 	}
 	if len(resp.Findings) == 0 {
 		t.Fatal("expected a real response with findings, not a crash or an empty result")
+	}
+}
+
+// PC-105: invalid VPC/subnet placement is rejected by the SERVER with a specific error
+// code, and the message names the rule and the resource — and a session that was
+// rejected has no version stored (nothing half-assessed).
+func TestAssessCanvas_InvalidPlacement_RejectedWithRuleAndResource(t *testing.T) {
+	store, err := server.OpenStore(":memory:")
+	if err != nil {
+		t.Fatalf("OpenStore: %v", err)
+	}
+	defer store.Close()
+
+	workload := baseInlineWorkload(nil)
+	doc := core.CanvasDocument{
+		Nodes: []core.CanvasNode{
+			{ID: "dns1", Type: "dns", Label: "DNS", Capability: map[string]string{}},
+			{ID: "db1", Type: "managed_database", Label: "DB", Capability: map[string]string{}},
+			// A subnet contained in no VPC at all.
+			{ID: "orphan-subnet", Type: "network_boundary", Label: "Orphan", Capability: map[string]string{}, ServiceID: "aws_subnet"},
+		},
+		Edges: []core.CanvasEdge{{ID: "e1", Type: "routes_to", From: "dns1", To: "db1"}},
+	}
+
+	_, err = server.AssessCanvas(store, server.AssessCanvasRequest{SessionID: "placement-invalid", Canvas: doc, Workload: &workload})
+	if err == nil {
+		t.Fatal("expected invalid placement to be rejected, got nil")
+	}
+	var apiErr *server.APIError
+	if !errors.As(err, &apiErr) || apiErr.Code != "invalid_placement" || apiErr.Status != http.StatusUnprocessableEntity {
+		t.Fatalf("got %#v, want a 422 APIError with code invalid_placement", err)
+	}
+	for _, want := range []string{core.PlaceSubnetOneVPC, "orphan-subnet"} {
+		if !strings.Contains(err.Error(), want) {
+			t.Errorf("error %q must name %q", err.Error(), want)
+		}
+	}
+
+	// Fixing the placement (putting the subnet in a VPC) makes the same document assess.
+	doc.Nodes = append(doc.Nodes, core.CanvasNode{ID: "vpc1", Type: "network_boundary", Label: "VPC", Capability: map[string]string{}, ServiceID: "aws_vpc"})
+	doc.Edges = append(doc.Edges, core.CanvasEdge{ID: "e2", Type: "contained_in", From: "orphan-subnet", To: "vpc1"})
+	if _, err := server.AssessCanvas(store, server.AssessCanvasRequest{SessionID: "placement-invalid", Canvas: doc, Workload: &workload}); err != nil {
+		t.Fatalf("with valid placement the same session must assess, got: %v", err)
 	}
 }

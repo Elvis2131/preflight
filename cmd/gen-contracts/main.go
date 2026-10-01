@@ -45,7 +45,7 @@ func main() {
 		{"workload.schema.json", core.Workload{}, "1.4.0"}, // PC-131: DeclaredJourney.fallback — see CHANGELOG.md
 		{"finding.schema.json", core.Finding{}, "1.2.0"}, // PC-18: EvidenceRef.Attribute added — see CHANGELOG.md
 		{"adr.schema.json", adrAndWaiver{}, "1.0.0"},
-		{"canvas.schema.json", core.CanvasDocument{}, "1.3.0"}, // PC-86 groundwork: sixth frozen contract — see CHANGELOG.md
+		{"canvas.schema.json", core.CanvasDocument{}, "1.4.0"}, // PC-86 groundwork: sixth frozen contract — see CHANGELOG.md
 		{"report.schema.json", core.Report{}, "1.4.0"},         // PC-120: seventh frozen contract — see CHANGELOG.md
 	}
 

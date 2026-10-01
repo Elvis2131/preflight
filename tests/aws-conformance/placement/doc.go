@@ -1,6 +1,6 @@
-// Package placement will hold AWS conformance tests for subnet/AZ placement rules
-// (SUBNET-AZ-*) — the Architect Workspace's own "real placement rules" (PC-96). This
-// directory exists now (PC-119: the conformance harness and its layout) so that work
-// writes directly against the tests/aws-conformance/harness format from day one. No
-// tests exist here yet because that placement logic doesn't.
+// Package placement holds PC-105's AWS conformance tests for VPC/subnet/AZ placement
+// rules — the Architect Workspace's "real placement rules" (PC-96). Every test cites
+// the official AWS documentation sentence its rule rests on (tests/aws-conformance/
+// harness). Rules that could not be verified against AWS's own documentation are
+// deliberately absent: see core/canvas_placement.go's own header.
 package placement

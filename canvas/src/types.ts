@@ -48,6 +48,13 @@ export interface CanvasNode {
   // step reports not_assessable for a component with no security group attached
   // at all, never a guessed allow or deny.
   security_group_rules?: CanvasSecurityGroupRule[];
+  // availability_zone/cidr_block: PC-105's own addition — placement facts for VPC/subnet
+  // containers, mirroring core.CanvasNode field for field. A subnet's one zone (a subnet
+  // cannot span zones) and a VPC's/subnet's IPv4 range. Absent means unknown, never
+  // defaulted. The Region ⊃ VPC ⊃ AZ ⊃ Subnet ⊃ resource nesting travels as contained_in
+  // edges plus these attributes — an AZ is an attribute of a subnet, not a node.
+  availability_zone?: string;
+  cidr_block?: string;
 }
 
 // CanvasSecurityGroupRule mirrors core.CanvasSecurityGroupRule (core/canvas.go,
@@ -99,6 +106,8 @@ export interface CanvasNodeData extends Record<string, unknown> {
   sizing?: Record<string, string>;
   serviceID?: string;
   securityGroupRules?: CanvasSecurityGroupRule[];
+  availabilityZone?: string;
+  cidrBlock?: string;
   simState?: SimState;
   journeyOnPath?: boolean;
   utilization?: number | null;

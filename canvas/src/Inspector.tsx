@@ -194,11 +194,13 @@ export function Inspector({
   onChange,
   onServiceChange,
   onSecurityGroupRulesChange,
+  onPlacementChange,
 }: {
   node: Node<CanvasNodeData>;
   onChange: (nodeID: string, sizing: Record<string, string>) => void;
   onServiceChange: (nodeID: string, serviceID: string) => void;
   onSecurityGroupRulesChange: (nodeID: string, rules: CanvasSecurityGroupRule[]) => void;
+  onPlacementChange: (nodeID: string, patch: { availabilityZone?: string; cidrBlock?: string }) => void;
 }) {
   const fields = SIZING_FIELDS[node.data.nodeType];
   const { snapshot, loading } = usePricingSnapshot();
@@ -253,6 +255,34 @@ export function Inspector({
           </option>
         ))}
       </select>
+
+      {(node.data.serviceID === "aws_vpc" || node.data.serviceID === "aws_subnet") && (
+        <div data-testid="placement-editor">
+          <label style={labelStyle}>CIDR block (PC-105)</label>
+          <input
+            style={inputStyle}
+            placeholder="e.g. 10.0.1.0/24"
+            value={node.data.cidrBlock ?? ""}
+            onChange={(e) => onPlacementChange(node.id, { cidrBlock: e.target.value })}
+          />
+          {node.data.serviceID === "aws_subnet" && (
+            <>
+              <label style={labelStyle}>Availability Zone</label>
+              <input
+                style={inputStyle}
+                placeholder="e.g. eu-west-1a"
+                value={node.data.availabilityZone ?? ""}
+                onChange={(e) => onPlacementChange(node.id, { availabilityZone: e.target.value })}
+              />
+            </>
+          )}
+          <p style={{ fontSize: 11, color: "#64748b" }}>
+            Draw resources inside this container to place them (contained_in). A subnet lives in exactly one
+            zone and one VPC. Blank means unknown — never defaulted; the server decides whether a placement is
+            valid.
+          </p>
+        </div>
+      )}
 
       {node.data.nodeType === "network_boundary" && (
         <SecurityGroupRulesEditor
