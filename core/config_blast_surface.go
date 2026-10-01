@@ -93,7 +93,7 @@ func ComputeConfigurationBlastSurface(ir *IR, j DeclaredJourney, killed map[stri
 				if !ok {
 					continue
 				}
-				raw, _ := node.RawAttributes["security_group_rules"].([]map[string]any)
+				raw := rawRuleMaps(node.RawAttributes["security_group_rules"])
 				for _, r := range raw {
 					rule := toSGRule(r)
 					c := configRuleCandidate{sgNodeID: sgID, sgRule: &rule}

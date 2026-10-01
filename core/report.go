@@ -161,7 +161,7 @@ type Report struct {
 	// itself stays a pure function of the stored version.
 	Scenarios   []ScenarioResult   `json:"scenarios"`
 	Assumptions []ReportAssumption `json:"assumptions"`
-	Provenance       Provenance                         `json:"provenance" validate:"required" jsonschema:"required"`
+	Provenance  Provenance         `json:"provenance" validate:"required" jsonschema:"required"`
 }
 
 // Validate checks this Report against the same struct tags contracts/

@@ -52,10 +52,10 @@ func NACLProfileForSubnet(nodes []Node, edges []Edge, subnetID string) (NACLProf
 		if !ok {
 			continue
 		}
-		rawRules, hasRules := n.RawAttributes["nacl_rules"].([]map[string]any)
-		if !hasRules {
+		if !hasRawRules(n.RawAttributes["nacl_rules"]) {
 			continue
 		}
+		rawRules := rawRuleMaps(n.RawAttributes["nacl_rules"])
 		profile := NACLProfile{NACLID: n.ID}
 		for _, raw := range rawRules {
 			profile.Rules = append(profile.Rules, toNACLRule(raw))

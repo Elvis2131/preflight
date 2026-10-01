@@ -38,7 +38,7 @@ func mutateNodeRawRuleList(ir *IR, nodeID, key string, mutate func([]map[string]
 		if n.ID != nodeID {
 			continue
 		}
-		raw, _ := n.RawAttributes[key].([]map[string]any)
+		raw := rawRuleMaps(n.RawAttributes[key])
 		mutated, ok := mutate(raw)
 		if !ok {
 			return ir, false
