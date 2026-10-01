@@ -7,7 +7,8 @@
 | Source | AWS Architecture Icons, <https://aws.amazon.com/architecture/icons/> |
 | Package version | `Icon-package_07312026` (the quarterly release dated 2026-07-31; its folders are suffixed `_07312026`) |
 | Obtained | Downloaded by the project owner from the source above and placed in the repository's `ui/` directory (the zip is deliberately **not** committed: see `.gitignore`) |
-| Committed here | Only the 19 icons the workspace actually uses (listed in `SHA256SUMS`), copied **byte for byte** |
+| Committed here | The service, resource, category and boundary icons used by the expanded AWS library (listed in `SHA256SUMS`), copied **byte for byte** |
+| Archive paths | `SOURCE-PATHS.json` records each asset's exact location in the source package |
 
 ## What AWS says, and what could and could not be verified
 
@@ -30,7 +31,7 @@ Verified on AWS's general Trademark Guidelines (<https://aws.amazon.com/trademar
 - **Unaltered.** Icons are copied byte for byte and drawn at a fixed square size, so proportion is never changed; none is recoloured, cropped, redrawn or combined with other marks. `SHA256SUMS` records each file's digest and a test fails if any file differs from it.
 - **No implied endorsement.** Icons appear only on canvas nodes, the service palette and the Region/VPC/subnet groupings, to say *which AWS service a node represents*. Preflight is not an AWS product and nothing in the UI says or implies AWS sponsors, endorses or verified a design.
 - **Presentation only.** The mapping from a service to its icon (`canvas/src/awsIcons.ts`) is a lookup keyed by the capability registry's service ID. Nothing about assessment, simulation or any verdict depends on it.
-- **No icon is better than a wrong one.** A service with no matching official icon (security group, route table, DB/ElastiCache subnet group, WAF association) is drawn as a labelled generic shape, never as an icon for a different service.
+- **Correct identity.** Services use their official service icons; resource variants use their own resource icon or their parent service's icon. Entries without a dedicated icon in this release use the corresponding AWS category icon, with a tooltip identifying it as a category icon. Unknown entries retain a generic mark. Icons never imply that a service has a backend model.
 - **The report diagram stays label-based.** The server-rendered report SVG (`render/`, PC-81) does not embed icons: doing so would make the Graphviz output depend on external image files and their paths and would bloat it, while the golden SVG/HTML fixtures rely on that output being byte-stable. Recorded in `render/testdata/README.md`; the golden fixtures are byte-identical with or without this directory.
 
 ## Removing the icons

@@ -45,9 +45,10 @@ function size(n: Node<CanvasNodeData>): { w: number; h: number } {
 }
 
 // innermostContainer returns the id of the deepest container whose rectangle holds the
-// centre of `node`, among containers that may legally parent it by NESTING ORDER only
-// (a VPC holds subnets and resources; a subnet holds resources; nothing holds a VPC).
-// Ties on depth go to the smaller rectangle. null when it sits in none.
+// centre of `node`. Auto-placement is deliberately conservative: a subnet may be
+// auto-contained by a VPC, and ordinary resources may be auto-contained by a subnet.
+// A resource dropped straight onto a VPC is left unlinked so the user can decide whether
+// to draw a relationship.
 export function innermostContainer(node: Node<CanvasNodeData>, all: Node<CanvasNodeData>[]): string | null {
   const { w, h } = size(node);
   const cx = node.position.x + w / 2;
@@ -57,6 +58,7 @@ export function innermostContainer(node: Node<CanvasNodeData>, all: Node<CanvasN
   for (const c of all) {
     const rank = containerRank(c.data.serviceID);
     if (c.id === node.id || rank === 0 || rank >= myRank) continue;
+    if (myRank === LEAF_RANK && rank !== RANK.aws_subnet) continue;
     const cs = size(c);
     const inside =
       cx > c.position.x && cx < c.position.x + cs.w && cy > c.position.y && cy < c.position.y + cs.h;

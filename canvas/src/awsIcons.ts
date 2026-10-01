@@ -1,36 +1,27 @@
 // awsIcons.ts (PC-109): the service → official AWS icon lookup. PRESENTATION ONLY — keyed by
-// the capability registry's service ID (the same resource_type providers.Registry uses);
+// registry resource IDs and the design catalogue's explicit UI-only service identities;
 // nothing about assessment, simulation or any verdict depends on it. The icons are AWS's own,
 // from the AWS Architecture Icons package (Icon-package_07312026), copied byte for byte into
 // public/aws-icons/ — see public/aws-icons/ICONS-LICENSE.md for the licence position, what
 // was and was not verified, and the rules this file keeps (never altered, never implying AWS
 // endorsement, and NO icon rather than a wrong one).
 
+import { AWS_DIRECTORY_SERVICES } from "./awsServiceDirectory";
+import { awsOnlyCatalog } from "./awsCatalog";
+import { AWS_SERVICE_ICON_FILES, AWS_CATEGORY_ICON_FILES, AWS_CORE_CATEGORY_ICON_FILES } from "./awsServiceIconFiles";
+import type { NodeType } from "./goldenVocabulary";
+
+const directoryLabels = new Map(AWS_DIRECTORY_SERVICES.map((s) => [s.resource_type, s.display_name]));
+const servicesByID = new Map(awsOnlyCatalog([]).map((s) => [s.resource_type, s]));
+
 export const ICON_PACKAGE = {
   version: "07312026",
   source: "https://aws.amazon.com/architecture/icons/",
 } as const;
 
-// service_id → icon file. A service with no matching official icon is deliberately ABSENT
-// (security group, route table, DB / ElastiCache subnet groups, WAF association): it is drawn
-// as a labelled generic shape, never as an icon for a different service.
-export const SERVICE_ICON_FILES: Readonly<Record<string, string>> = {
-  aws_lambda_function: "Arch_AWS-Lambda_48.svg",
-  aws_dynamodb_table: "Arch_Amazon-DynamoDB_48.svg",
-  aws_eks_cluster: "Arch_Amazon-Elastic-Kubernetes-Service_48.svg",
-  aws_elasticache_replication_group: "Arch_Amazon-ElastiCache_48.svg",
-  aws_db_instance: "Arch_Amazon-RDS_48.svg",
-  aws_lb: "Arch_Elastic-Load-Balancing_48.svg",
-  aws_route53_record: "Arch_Amazon-Route-53_48.svg",
-  aws_s3_bucket: "Arch_Amazon-Simple-Storage-Service_48.svg",
-  aws_sqs_queue: "Arch_Amazon-Simple-Queue-Service_48.svg",
-  aws_sns_topic: "Arch_Amazon-Simple-Notification-Service_48.svg",
-  aws_wafv2_web_acl: "Arch_AWS-WAF_48.svg",
-  aws_iam_role: "Arch_AWS-Identity-and-Access-Management_48.svg",
-  aws_internet_gateway: "Res_Amazon-VPC_Internet-Gateway_48.svg",
-  aws_nat_gateway: "Res_Amazon-VPC_NAT-Gateway_48.svg",
-  aws_network_acl: "Res_Amazon-VPC_Network-Access-Control-List_48.svg",
-};
+// Resource variants may share the parent service's icon. Model support is
+// resolved separately by the backend; this table controls presentation only.
+export const SERVICE_ICON_FILES = AWS_SERVICE_ICON_FILES;
 
 // The group icons AWS draws on VPC / subnet / Region boundaries.
 export const GROUP_ICON_FILES = {
@@ -40,9 +31,22 @@ export const GROUP_ICON_FILES = {
   privateSubnet: "Private-subnet_32.svg",
 } as const;
 
-// Friendly palette names for services that have an icon (the registry has only resource
-// types). A service without an entry is shown by its resource_type.
+// Friendly names for the core infrastructure resources and common abbreviations.
+// Other names come from the AWS product directory.
 export const SERVICE_LABELS: Readonly<Record<string, string>> = {
+  aws_instance: "Amazon EC2",
+  aws_autoscaling_group: "EC2 Auto Scaling",
+  aws_ecs_service: "Amazon ECS",
+  aws_ecr_repository: "Amazon ECR",
+  aws_rds_cluster: "Amazon Aurora",
+  aws_docdb_cluster: "Amazon DocumentDB",
+  aws_keyspaces_table: "Amazon Keyspaces",
+  aws_dsql_cluster: "Amazon Aurora DSQL",
+  aws_kms_key: "AWS KMS",
+  aws_acm_certificate: "AWS Certificate Manager",
+  aws_sfn_state_machine: "AWS Step Functions",
+  aws_cloudwatch_event_bus: "Amazon EventBridge",
+  aws_msk_cluster: "Amazon MSK",
   aws_lambda_function: "AWS Lambda",
   aws_dynamodb_table: "Amazon DynamoDB",
   aws_eks_cluster: "Amazon EKS",
@@ -70,12 +74,28 @@ function url(file: string): string {
   return `${import.meta.env.BASE_URL}aws-icons/${file}`;
 }
 
-// iconForService returns the icon URL for a service, or null when there is no official icon
-// for it — the caller then draws the labelled generic shape.
-export function iconForService(serviceID: string | undefined): string | null {
+// A dedicated service/resource icon takes priority over an explicitly labelled
+// category icon. Unknown identities return null for the caller's generic mark.
+export function iconDetailsForService(serviceID: string | undefined): { src: string; kind: "service" | "category" | "group"; title: string } | null {
   if (!serviceID) return null;
-  const f = SERVICE_ICON_FILES[serviceID];
-  return f ? url(f) : null;
+  const label = labelForService(serviceID);
+  if (serviceID === "aws_vpc") return { src: groupIcon("vpc"), kind: "group", title: label };
+  if (serviceID === "aws_subnet") return { src: groupIcon("privateSubnet"), kind: "group", title: label };
+  const file = SERVICE_ICON_FILES[serviceID];
+  if (file) return { src: url(file), kind: "service", title: label };
+  const service = servicesByID.get(serviceID);
+  if (!service) return null;
+  const categoryFile = (service.category && AWS_CATEGORY_ICON_FILES[service.category]) || AWS_CORE_CATEGORY_ICON_FILES[service.node_type as NodeType];
+  if (!categoryFile) return null;
+  return {
+    src: url(categoryFile),
+    kind: "category",
+    title: `${label} · AWS category icon (no dedicated icon in this release)`,
+  };
+}
+
+export function iconForService(serviceID: string | undefined): string | null {
+  return iconDetailsForService(serviceID)?.src ?? null;
 }
 
 export function groupIcon(kind: keyof typeof GROUP_ICON_FILES): string {
@@ -83,5 +103,5 @@ export function groupIcon(kind: keyof typeof GROUP_ICON_FILES): string {
 }
 
 export function labelForService(serviceID: string): string {
-  return SERVICE_LABELS[serviceID] ?? serviceID;
+  return SERVICE_LABELS[serviceID] ?? directoryLabels.get(serviceID) ?? serviceID;
 }

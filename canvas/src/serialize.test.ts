@@ -96,6 +96,13 @@ describe("serialize", () => {
     expect(doc.nodes[0].service_id).toBe("aws_db_instance");
   });
 
+  it("preserves directory service labels and core types without inventing provider resource IDs", () => {
+    const nodes: Node<CanvasNodeData>[] = [
+      { id: "ai", type: "golden", position: { x: 0, y: 0 }, data: { nodeType: "external_dependency", label: "Amazon Bedrock", capability: {}, serviceID: "aws_service:bedrock" } },
+    ];
+    expect(serialize(nodes, []).nodes[0]).toEqual({ id: "ai", type: "external_dependency", label: "Amazon Bedrock", capability: {} });
+  });
+
   it("omits service_id entirely when no service was picked — never a guessed default", () => {
     const nodes: Node<CanvasNodeData>[] = [
       { id: "n1", type: "golden", position: { x: 0, y: 0 }, data: { nodeType: "managed_database", label: "DB", capability: {} } },

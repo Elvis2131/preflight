@@ -197,7 +197,7 @@ export function getPricingSnapshot(id: string, baseURL: string = ASSESSD_BASE_UR
 
 // ServiceCatalogEntry mirrors server.ServiceCatalogEntry (server/catalog.go, PC-136)
 // field-for-field — the real merged providers.Registry's own node mappings (edge
-// mappings excluded server-side), never an invented list of AWS/Azure services.
+// mappings excluded server-side), never an invented list of services.
 export interface ServiceCatalogEntry {
   resource_type: string;
   node_type: string;

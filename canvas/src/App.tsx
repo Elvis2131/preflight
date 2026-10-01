@@ -20,6 +20,8 @@ import {
   NODE_TYPES,
   NODE_TYPE_LABELS,
   EDGE_TYPES,
+  EDGE_TYPE_LABELS,
+  EDGE_TYPE_GUIDES,
   DEFAULT_EDGE_TYPE,
   type NodeType,
   type EdgeType,
@@ -35,8 +37,9 @@ import { AnalyzeView } from "./analyze/AnalyzeView";
 import { listTemplates, getTemplate, simulateFaults, evaluateScenarios, deriveCanvas, listServiceCatalog, type ServiceCatalogEntry, type TemplateMeta, type Fault, type ScenarioResult, type SubnetFact } from "./api";
 import { FailureLab } from "./FailureLab";
 import { GroupingNode } from "./GroupingNode";
-import { AwsIcon } from "./AwsIcon";
-import { iconForService, labelForService } from "./awsIcons";
+import { labelForService } from "./awsIcons";
+import { ServiceMark } from "./ServiceMark";
+import { awsOnlyCatalog, type AWSServiceCatalogEntry } from "./awsCatalog";
 import { buildGroupings } from "./groupings";
 import { killedTargets } from "./faultBuilder";
 import { assessCanvas, simulateNodeLoss, simulateBaseline, describeSimError, type SimulateResponse } from "./api";
@@ -51,28 +54,24 @@ function freshID(prefix: string): string {
   return `${prefix}-${nextID++}`;
 }
 
-// Palette (PC-85 / PC-109). The golden vocabulary stays the COMPLETE list of node TYPES — no
-// other type exists here, by design. Below it, an "AWS services" section lists the services
-// the capability registry actually models (GET /catalog/services — never an invented list),
-// each with its official AWS icon, or a labelled generic shape when AWS publishes no matching
-// icon. Dragging a service creates a node of that service's type with the service already
-// chosen; icons are presentation only and change nothing about assessment.
+// Core types organise the library; only services can be placed. The directory
+// supplies design choices while the backend registry supplies actual model coverage.
 function Palette() {
   const [services, setServices] = useState<ServiceCatalogEntry[]>([]);
   const [query, setQuery] = useState("");
   useEffect(() => {
     let cancelled = false;
     listServiceCatalog()
-      .then((l) => !cancelled && setServices(l))
-      .catch(() => undefined); // no backend: the type palette alone, as before
+      .then((l) => !cancelled && setServices(awsOnlyCatalog(l)))
+      .catch(() => !cancelled && setServices(awsOnlyCatalog([])));
     return () => {
       cancelled = true;
     };
   }, []);
 
-  const onDragStart = (event: React.DragEvent, nodeType: NodeType, serviceID?: string) => {
+  const onDragStart = (event: React.DragEvent, nodeType: NodeType, serviceID: string) => {
     event.dataTransfer.setData("application/preflight-node-type", nodeType);
-    if (serviceID) event.dataTransfer.setData("application/preflight-service-id", serviceID);
+    event.dataTransfer.setData("application/preflight-service-id", serviceID);
     event.dataTransfer.effectAllowed = "move";
   };
 
@@ -87,97 +86,105 @@ function Palette() {
   };
 
   // Sorted by display label, so the list never depends on the server's iteration order.
-  const sortedServices = [...services].sort((a, b) => labelForService(a.resource_type).localeCompare(labelForService(b.resource_type)));
+  const sortedServices = awsOnlyCatalog(services).sort((a, b) => labelForService(a.resource_type).localeCompare(labelForService(b.resource_type)));
   const normalizedQuery = query.trim().toLowerCase();
-  const visibleTypes = NODE_TYPES.filter((nt) => NODE_TYPE_LABELS[nt].toLowerCase().includes(normalizedQuery));
-  const visibleServices = sortedServices.filter((svc) =>
-    !normalizedQuery || labelForService(svc.resource_type).toLowerCase().includes(normalizedQuery) || svc.resource_type.toLowerCase().includes(normalizedQuery),
-  );
+  const componentGroups = NODE_TYPES.map((nt) => {
+    const coreMatches = NODE_TYPE_LABELS[nt].toLowerCase().includes(normalizedQuery);
+    const groupServices = sortedServices.filter((svc) => svc.node_type === nt);
+    const services = groupServices.filter(
+      (svc) =>
+        !normalizedQuery ||
+        coreMatches ||
+        labelForService(svc.resource_type).toLowerCase().includes(normalizedQuery) ||
+        svc.display_name?.toLowerCase().includes(normalizedQuery) ||
+        svc.category?.toLowerCase().includes(normalizedQuery) ||
+        svc.resource_type.toLowerCase().includes(normalizedQuery),
+    );
+    return { nodeType: nt, coreMatches, services };
+  }).filter((g) => !normalizedQuery || g.coreMatches || g.services.length > 0);
 
   return (
-    <aside className="workspace-panel" style={{ width: 220, borderRight: "1px solid #e2e8f0", padding: 16, overflowY: "auto" }}>
+    <aside className="workspace-panel service-library" aria-label="AWS service library">
       <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", gap: 8 }}>
-        <h2 style={{ fontSize: 14, margin: "0 0 4px" }}>Build</h2>
-        <span style={{ color: "#8b95a7", fontSize: 10 }}>drag to place</span>
+        <h2 style={{ fontSize: 14, margin: "0 0 4px" }}>AWS services</h2>
+        <span style={{ color: "#8b95a7", fontSize: 10 }}>{sortedServices.length} available</span>
       </div>
       <p style={{ fontSize: 11, color: "#697386", margin: "0 0 12px", lineHeight: 1.45 }}>
-        Add a component or service to the canvas. Every item is backed by the engine’s real vocabulary.
+        Browse a group, then drag an AWS service onto the canvas.
       </p>
       <input
         value={query}
         onChange={(e) => setQuery(e.target.value)}
-        placeholder="Search components"
-        aria-label="Search components"
+        placeholder="Search AWS services…"
+        aria-label="Search AWS services"
         style={{ width: "100%", boxSizing: "border-box", padding: "8px 10px", marginBottom: 16, border: "1px solid #e4e8ee", borderRadius: 8, background: "#f8fafc" }}
       />
       <div className="palette-section-label">Core components</div>
-      {visibleTypes.map((nt) => (
-        <div key={nt} draggable onDragStart={(e) => onDragStart(e, nt)} style={itemStyle}>
-          {NODE_TYPE_LABELS[nt]}
-        </div>
-      ))}
-      {visibleTypes.length === 0 && <div style={{ color: "#8b95a7", fontSize: 11, padding: "4px 0 12px" }}>No matching core components.</div>}
-      {visibleServices.length > 0 && (
-        <div data-testid="service-palette">
-          <ServiceGroup
-            title="AWS services"
-            note="Services this engine models. Drag one to add a node with that service chosen. A service AWS publishes no icon for is shown with a plain label."
-            services={visibleServices.filter((x) => x.resource_type.startsWith("aws_"))}
+      <div data-testid="service-palette">
+        {componentGroups.map((group) => (
+          <ComponentServiceGroup
+            key={group.nodeType}
+            nodeType={group.nodeType}
+            services={group.services}
+            searching={!!normalizedQuery}
             onDragStart={onDragStart}
             itemStyle={itemStyle}
           />
-          <ServiceGroup
-            title="Other services"
-            note="Modelled by the engine but not AWS: the AWS icon set does not apply, so these are plain labels."
-            services={visibleServices.filter((x) => !x.resource_type.startsWith("aws_"))}
-            onDragStart={onDragStart}
-            itemStyle={itemStyle}
-          />
-        </div>
-      )}
+        ))}
+      </div>
+      {componentGroups.length === 0 && <div style={{ color: "#8b95a7", fontSize: 11, padding: "4px 0 12px" }}>No matching components or AWS services.</div>}
     </aside>
   );
 }
 
-function ServiceGroup({
-  title,
-  note,
+function ComponentServiceGroup({
+  nodeType,
   services,
+  searching,
   onDragStart,
   itemStyle,
 }: {
-  title: string;
-  note: string;
-  services: ServiceCatalogEntry[];
-  onDragStart: (e: React.DragEvent, nodeType: NodeType, serviceID?: string) => void;
+  nodeType: NodeType;
+  services: AWSServiceCatalogEntry[];
+  searching: boolean;
+  onDragStart: (e: React.DragEvent, nodeType: NodeType, serviceID: string) => void;
   itemStyle: React.CSSProperties;
 }) {
-  if (services.length === 0) return null;
-  return (
-    <div data-group={title}>
-      <h2 style={{ fontSize: 14, margin: "14px 0 4px" }}>{title}</h2>
-      <p style={{ fontSize: 11, color: "#64748b", margin: "0 0 8px" }}>{note}</p>
-      {services.map((svc) => {
-        const icon = iconForService(svc.resource_type);
-        return (
-          <div
-            key={svc.resource_type}
-            draggable
-            onDragStart={(e) => onDragStart(e, svc.node_type as NodeType, svc.resource_type)}
-            style={{ ...itemStyle, display: "flex", alignItems: "center", gap: 8 }}
-            data-service={svc.resource_type}
-            title={svc.resource_type}
-          >
-            {icon ? (
-              <AwsIcon src={icon} size={22} />
-            ) : (
-              <span aria-hidden style={{ width: 22, height: 22, flex: "none", border: "1px dashed #94a3b8", borderRadius: 3 }} />
-            )}
-            <span>{labelForService(svc.resource_type)}</span>
-          </div>
-        );
-      })}
+  const serviceCards = (items: AWSServiceCatalogEntry[]) => items.map((svc) => (
+    <div
+      key={svc.resource_type}
+      draggable
+      onDragStart={(e) => onDragStart(e, svc.node_type as NodeType, svc.resource_type)}
+      style={{ ...itemStyle, display: "flex", alignItems: "center", gap: 8 }}
+      data-service={svc.resource_type}
+      title={`${labelForService(svc.resource_type)} · Drag to place${svc.capability_level === "UNMODELED" ? " · Service-specific checks not available yet" : ""}`}
+    >
+      <ServiceMark serviceID={svc.resource_type} size={22} />
+      <span>{labelForService(svc.resource_type)}</span>
     </div>
+  ));
+  const supportingGroups = Array.from(new Set(services.map((svc) => svc.category ?? "Other services"))).sort();
+  return (
+    <details key={`${nodeType}-${searching}`} open={searching} className="palette-component-group" data-group={nodeType}>
+      <summary
+        draggable={false}
+        className="palette-group-heading"
+        data-component={nodeType}
+      >
+        <span>{NODE_TYPE_LABELS[nodeType]}</span>
+        <span className="palette-count">{services.length}</span>
+      </summary>
+      {services.length > 0 && (
+        <div className="palette-service-list">
+          {nodeType === "external_dependency" ? supportingGroups.map((category) => (
+            <details key={`${category}-${searching}`} open={searching} className="palette-supporting-group">
+              <summary>{category}</summary>
+              {serviceCards(services.filter((svc) => (svc.category ?? "Other services") === category))}
+            </details>
+          )) : serviceCards(services)}
+        </div>
+      )}
+    </details>
   );
 }
 
@@ -518,7 +525,12 @@ function CanvasInner() {
         return {
           ...rest,
           ...(rank > 0 && size ? { style: { width: size.width, height: size.height }, zIndex: -(4 - rank) } : {}),
-          data: { ...n.data, serviceID: serviceID || undefined },
+          data: {
+            ...n.data,
+            serviceID: serviceID || undefined,
+            label: serviceID && n.data.label === (n.data.serviceID ? labelForService(n.data.serviceID) : NODE_TYPE_LABELS[n.data.nodeType])
+              ? labelForService(serviceID) : n.data.label,
+          },
         };
       });
       setNodes(next);
@@ -625,10 +637,10 @@ function CanvasInner() {
     (event: React.DragEvent) => {
       event.preventDefault();
       const nodeType = event.dataTransfer.getData("application/preflight-node-type") as NodeType;
-      if (!nodeType) return;
-      // A service dragged from the "AWS services" palette arrives with its service already
-      // chosen (PC-109); a plain type does not.
-      const serviceID = event.dataTransfer.getData("application/preflight-service-id") || undefined;
+      if (!NODE_TYPES.includes(nodeType)) return;
+      // Reject plain component types: only an AWS service can be placed.
+      const serviceID = event.dataTransfer.getData("application/preflight-service-id");
+      if (!serviceID.startsWith("aws_")) return;
 
       const position = screenToFlowPosition({ x: event.clientX, y: event.clientY });
       const id = freshID(nodeType);
@@ -787,6 +799,95 @@ function CanvasInner() {
       ) : mode === "analyze" ? (
         <AnalyzeView sessionID={sessionIDRef.current} latestVersion={latestVersion} />
       ) : (
+    <>
+      <div className="canvas-toolbar" role="toolbar" aria-label="Architecture tools">
+        <div className="toolbar-main-row">
+          {caps.canEditDesign && (
+            <>
+              <label className="toolbar-field template-field">
+                <span>Start from a template</span>
+                <select
+                  value=""
+                  aria-label="Architecture template"
+                  disabled={templateList.length === 0}
+                  onChange={(e) => void loadTemplate(e.target.value)}
+                  data-testid="template-picker"
+                >
+                  <option value="">{templateList.length ? "Choose an architecture…" : "Templates unavailable"}</option>
+                  {templateList.map((t) => <option key={t.id} value={t.id} title={t.description}>{t.name}</option>)}
+                </select>
+              </label>
+              <label className="toolbar-field connection-field">
+                <span>Connection</span>
+                <select
+                  value={pendingEdgeType}
+                  aria-label="Connection type"
+                  aria-describedby="connection-guide"
+                  data-testid="connection-type"
+                  onChange={(e) => setPendingEdgeType(e.target.value as EdgeType)}
+                >
+                  {EDGE_TYPES.map((et) => <option key={et} value={et}>{EDGE_TYPE_LABELS[et]}</option>)}
+                </select>
+              </label>
+              <div className="toolbar-actions" aria-label="Canvas panels">
+                <button
+                  onClick={() => setShowWorkloadForm((v) => !v)}
+                  aria-pressed={showWorkloadForm}
+                  title="Set traffic, capacity and requirements for your design"
+                >Workload</button>
+                <button
+                  onClick={() => setShowJSON((v) => !v)}
+                  aria-pressed={showJSON}
+                  data-testid="canvas-json-toggle"
+                  title="View the architecture document"
+                >View JSON</button>
+              </div>
+              <button className="primary-action toolbar-test-action" onClick={() => setMode("simulate")}>
+                Test design <span aria-hidden>→</span>
+              </button>
+            </>
+          )}
+          {caps.canInjectFaults && (
+            <button onClick={killSelectedNode} disabled={!selectedNodeID || simBusy} className="danger-action">
+              {simBusy ? "Simulating..." : "Kill selected node"}
+            </button>
+          )}
+          {caps.canRunBaseline && (
+            <button onClick={runBaseline} disabled={simBusy || journeys.length === 0} className="primary-action" data-testid="run-baseline">
+              Run baseline (no fault)
+            </button>
+          )}
+          {(caps.canInjectFaults || caps.canRunBaseline) && (
+            <button onClick={clearSimulation} disabled={!simSummary}>Clear simulation</button>
+          )}
+          {caps.showsJourneyPanel && (
+            <button onClick={() => setShowJourneyPanel((v) => !v)} aria-pressed={showJourneyPanel}>
+              Journey panel
+            </button>
+          )}
+        </div>
+        <div className="toolbar-context-row">
+          {caps.canEditDesign ? (
+            <span id="connection-guide">
+              <span className="connection-guide-arrow" aria-hidden>↗</span>
+              Drag between the dots on two services. {EDGE_TYPE_GUIDES[pendingEdgeType]}
+            </span>
+          ) : journeys.length === 0 && caps.canRunBaseline ? (
+            <span>Add a journey in Design → Workload to run a baseline.</span>
+          ) : (
+            <span>Select a service on the canvas to inspect a failure.</span>
+          )}
+          <span className="canvas-count">{nodes.length} services · {edges.length} connections</span>
+        </div>
+        {templateError && <div className="toolbar-error" role="alert">{templateError}</div>}
+        {(pickingJourneyRowIndex !== null || selectedNodeID) && (
+          <div className="toolbar-selection" role="status">
+            {pickingJourneyRowIndex !== null
+              ? "Picking journey path — click services in order."
+              : <>Selected: <strong>{selectedNodeLabel ?? selectedNodeID}</strong></>}
+          </div>
+        )}
+      </div>
     <div className="workspace">
       {caps.showsAuthoringPanels && <Palette />}
       {caps.showsAuthoringPanels && showWorkloadForm && (
@@ -801,95 +902,6 @@ function CanvasInner() {
         </div>
       )}
       <div className="canvas-column">
-        <div className="canvas-toolbar" style={{ display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
-          {caps.canEditDesign && (
-          <label style={{ fontSize: 12 }}>
-            Next edge type:{" "}
-            <select
-              value={pendingEdgeType}
-              onChange={(e) => setPendingEdgeType(e.target.value as EdgeType)}
-            >
-              {EDGE_TYPES.map((et) => (
-                <option key={et} value={et}>
-                  {et}
-                </option>
-              ))}
-            </select>
-          </label>
-          )}
-          {caps.canEditDesign && templateList.length > 0 && (
-            <label style={{ fontSize: 12 }}>
-              Template:{" "}
-              <select value="" onChange={(e) => void loadTemplate(e.target.value)} data-testid="template-picker">
-                <option value="">load a reference architecture…</option>
-                {templateList.map((t) => (
-                  <option key={t.id} value={t.id} title={t.description}>
-                    {t.name}
-                  </option>
-                ))}
-              </select>
-            </label>
-          )}
-          {templateError && <span style={{ fontSize: 11, color: "#dc2626" }}>{templateError}</span>}
-          {caps.canEditDesign && (
-          <button onClick={() => setShowJSON((v) => !v)} style={{ fontSize: 12 }}>
-            {showJSON ? "Hide" : "Show"} CanvasDocument JSON
-          </button>
-          )}
-          <span style={{ fontSize: 11, color: "#64748b" }}>
-            {nodes.length} node(s), {edges.length} edge(s)
-          </span>
-          {caps.showsAuthoringPanels && (
-          <>
-          <span style={{ borderLeft: "1px solid #e2e8f0", height: 20 }} />
-          <button onClick={() => setShowWorkloadForm((v) => !v)} style={{ fontSize: 12 }}>
-            {showWorkloadForm ? "Hide" : "Show"} Workload form
-          </button>
-          </>
-          )}
-          {pickingJourneyRowIndex !== null ? (
-            <span style={{ fontSize: 12, color: "#7c3aed", fontWeight: 600 }}>
-              Picking journey path — click nodes in order (see Workload form)
-            </span>
-          ) : selectedNodeID ? (
-            <span style={{ fontSize: 12 }}>
-              Selected: <strong>{selectedNodeLabel ?? selectedNodeID}</strong>
-            </span>
-          ) : (
-            <span style={{ fontSize: 12, color: "#94a3b8" }}>Click a node to select it</span>
-          )}
-          {caps.canInjectFaults && (
-          <button
-            onClick={killSelectedNode}
-            disabled={!selectedNodeID || simBusy}
-            className="danger-action"
-            style={{ fontSize: 12, background: "#fee2e2", border: "1px solid #dc2626" }}
-          >
-            {simBusy ? "Simulating..." : "Kill selected node"}
-          </button>
-          )}
-          {(caps.canInjectFaults || caps.canRunBaseline) && (
-          <button onClick={clearSimulation} disabled={!simSummary} style={{ fontSize: 12 }}>
-            Clear simulation
-          </button>
-          )}
-          {caps.canRunBaseline && (
-          <>
-          <span style={{ borderLeft: "1px solid #e2e8f0", height: 20 }} />
-          <button onClick={runBaseline} disabled={simBusy || journeys.length === 0} className="primary-action" style={{ fontSize: 12 }}>
-            Run baseline (no fault)
-          </button>
-          {journeys.length === 0 && (
-            <span style={{ fontSize: 11, color: "#94a3b8" }}>Declare a journey in Design (Workload form) to run a baseline.</span>
-          )}
-          </>
-          )}
-          {caps.showsJourneyPanel && (
-          <button onClick={() => setShowJourneyPanel((v) => !v)} style={{ fontSize: 12 }}>
-            {showJourneyPanel ? "Hide" : "Show"} journey panel
-          </button>
-          )}
-        </div>
         {(simError || simSummary) && (
           <div
             className="status-strip"
@@ -1006,6 +1018,7 @@ function CanvasInner() {
         </div>
       )}
     </div>
+    </>
       )}
     </div>
   );

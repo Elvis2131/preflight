@@ -217,7 +217,7 @@ export function WorkloadForm({
   onStartPickPath?: (rowIndex: number) => void;
   onStopPickPath?: () => void;
 }) {
-  const [showRequirementHelp, setShowRequirementHelp] = useState(false);
+  const [showRequirementHelp, setShowRequirementHelp] = useState(true);
 
   const update = (patch: Partial<WorkloadFormValue>) => onChange({ ...value, ...patch });
 
@@ -239,12 +239,12 @@ export function WorkloadForm({
 
   return (
     <div className="workload-panel" style={{ padding: 16, fontSize: 12 }}>
-      <h3 style={{ fontSize: 13, margin: "0 0 8px" }}>Workload (NFR form)</h3>
-      <p style={{ fontSize: 11, color: "#64748b", margin: "0 0 10px" }}>
-        Same schema as workload.yaml (PRD §4) — no separate or looser shape. A capacity
-        field left blank is <code>capacity_unknown</code>, exactly as an omitted key in
-        a hand-written YAML file would be.
-      </p>
+      <h3 style={{ fontSize: 13, margin: "0 0 8px" }}>Workload</h3>
+      <div className="guide-card">
+        Tell Preflight what this architecture must survive, what it should optimize
+        for, and how much traffic it needs to carry. Blank numeric fields mean
+        "unknown", so the backend will ask for evidence instead of guessing.
+      </div>
 
       <label style={labelStyle}>name</label>
       <input style={inputStyle} value={value.name} onChange={(e) => update({ name: e.target.value })} />
@@ -307,10 +307,11 @@ export function WorkloadForm({
       ))}
 
       <h4 style={{ fontSize: 12, margin: "14px 0 4px" }}>Capacity</h4>
-      <p style={{ fontSize: 10, color: "#94a3b8", margin: "0 0 6px" }}>
-        Leave the value blank to leave this capacity <strong>undeclared</strong> — it
-        will NOT be sent as zero.
-      </p>
+      <div className="guide-card compact">
+        Capacity is the amount of traffic the remaining healthy components can handle.
+        Example: <strong>app_node_rps = 800</strong> means the app tier can carry 800
+        requests per second. Leave it blank when you do not know yet.
+      </div>
       {value.capacityRows.map((row, i) => (
         <div key={i} style={rowStyle}>
           <input
@@ -326,7 +327,7 @@ export function WorkloadForm({
           <input
             style={{ ...inputStyle, width: 80 }}
             value={row.valueText}
-            placeholder="(blank = unknown)"
+            placeholder="e.g. 800"
             onChange={(e) => {
               const rows = value.capacityRows.slice();
               rows[i] = { ...rows[i], valueText: e.target.value };
@@ -345,34 +346,35 @@ export function WorkloadForm({
       </button>
 
       <h4 style={{ fontSize: 12, margin: "14px 0 4px" }}>
-        Requirements{" "}
+        Constraints and preferences{" "}
         <button style={{ fontSize: 10 }} onClick={() => setShowRequirementHelp((v) => !v)}>
-          ?
+          {showRequirementHelp ? "Hide guide" : "Show guide"}
         </button>
       </h4>
       {showRequirementHelp && (
-        <p style={{ fontSize: 10, color: "#64748b", margin: "0 0 6px" }}>
-          hard = a constraint whose violation is a FAILING finding. preference = a
-          ranked goal that trades against other preferences rather than failing
-          outright — it needs a rank so preferences can be ordered against each other.
-        </p>
+        <div className="guide-card compact">
+          <strong>Constraints</strong> are must-haves, like "RTO under 4 hours" or
+          "customer data encrypted". Missing one becomes a failing finding.{" "}
+          <strong>Preferences</strong> are ranked goals, like "lower latency before
+          lower cost"; give rank 1 to the most important preference.
+        </div>
       )}
 
       <div style={{ display: "flex", gap: 10 }}>
         <div style={{ flex: 1, border: "1px solid #fca5a5", borderRadius: 4, padding: 6, background: "#fef2f2" }}>
           <div style={{ fontSize: 11, fontWeight: 700, color: "#b91c1c", marginBottom: 4 }}>
-            HARD (constraint)
+            Constraints
           </div>
           {hardReqs.map(({ r, i }) => (
             <RequirementRowEditor key={i} row={r} onChange={(patch) => updateRow(i, patch)} onRemove={() => removeRow(i)} />
           ))}
           <button onClick={() => update({ requirementRows: [...value.requirementRows, { ...emptyRequirementRow(), priority: "hard" }] })}>
-            + hard requirement
+            + constraint
           </button>
         </div>
         <div style={{ flex: 1, border: "1px solid #93c5fd", borderRadius: 4, padding: 6, background: "#eff6ff" }}>
           <div style={{ fontSize: 11, fontWeight: 700, color: "#1d4ed8", marginBottom: 4 }}>
-            PREFERENCE (ranked goal)
+            Preferences
           </div>
           {preferenceReqs.map(({ r, i }) => (
             <RequirementRowEditor key={i} row={r} onChange={(patch) => updateRow(i, patch)} onRemove={() => removeRow(i)} />
@@ -382,17 +384,17 @@ export function WorkloadForm({
               update({ requirementRows: [...value.requirementRows, { ...emptyRequirementRow(), priority: "preference" }] })
             }
           >
-            + preference requirement
+            + preference
           </button>
         </div>
       </div>
 
-      <h4 style={{ fontSize: 12, margin: "14px 0 4px" }}>Journeys (PC-124/127)</h4>
-      <p style={{ fontSize: 10, color: "#94a3b8", margin: "0 0 6px" }}>
-        Path is a comma-separated list of canvas node IDs (or "internet" as the first
-        hop). peak_rps/steady_rps left blank stay undeclared — traffic/load results
-        report not_assessable for that journey, never a guessed number.
-      </p>
+      <h4 style={{ fontSize: 12, margin: "14px 0 4px" }}>User journeys</h4>
+      <div className="guide-card compact">
+        A journey is the path traffic follows, such as internet, load balancer, app,
+        database. Use "Pick path on canvas" to click the nodes in order, then add
+        peak traffic if you know it.
+      </div>
       {value.journeyRows.map((row, i) => (
         <div key={i} style={{ marginBottom: 6, paddingBottom: 6, borderBottom: "1px dashed #cbd5e1" }}>
           <div style={rowStyle}>
@@ -540,7 +542,7 @@ function RequirementRowEditor({
       <div style={rowStyle}>
         <input
           style={{ ...inputStyle, flex: 1 }}
-          placeholder="id"
+          placeholder="short name"
           value={row.id}
           onChange={(e) => onChange({ id: e.target.value })}
         />
@@ -548,7 +550,7 @@ function RequirementRowEditor({
       </div>
       <input
         style={{ ...inputStyle, marginBottom: 4 }}
-        placeholder="value"
+        placeholder={row.priority === "hard" ? "must be true, e.g. RTO under 4h" : "goal, e.g. lowest latency"}
         value={row.value}
         onChange={(e) => onChange({ value: e.target.value })}
       />
@@ -556,7 +558,7 @@ function RequirementRowEditor({
         <input
           style={inputStyle}
           type="number"
-          placeholder="rank (required for preference)"
+          placeholder="rank, 1 = most important"
           value={row.rankText}
           onChange={(e) => onChange({ rankText: e.target.value })}
         />

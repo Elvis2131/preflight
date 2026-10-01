@@ -24,9 +24,9 @@ describe("innermostContainer (PC-105 geometry only)", () => {
     expect(innermostContainer(db, [vpc, subnet, otherSubnet, db])).toBe("sub");
   });
 
-  it("a resource inside the VPC but outside every subnet is contained by the VPC", () => {
+  it("a resource inside the VPC but outside every subnet is not auto-linked to the VPC", () => {
     const lb = node("lb", 100, 300);
-    expect(innermostContainer(lb, [vpc, subnet, otherSubnet, lb])).toBe("vpc");
+    expect(innermostContainer(lb, [vpc, subnet, otherSubnet, lb])).toBeNull();
   });
 
   it("a resource outside every container is contained by none", () => {

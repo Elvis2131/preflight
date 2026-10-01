@@ -3,9 +3,10 @@ import type { Node } from "@xyflow/react";
 import type { CanvasNodeData, CanvasSecurityGroupRule, CanvasRoute, CanvasNACLRule } from "./types";
 import { SIZING_FIELDS, type SizingFieldDef } from "./sizingFields";
 import { resolveRegion, rowInRegion, REGION_PRICED_TYPES } from "./region";
-import { AwsIcon } from "./AwsIcon";
-import { iconForService, labelForService } from "./awsIcons";
+import { labelForService } from "./awsIcons";
 import { listPricingSnapshots, getPricingSnapshot, listServiceCatalog, type PricingSnapshot, type ServiceCatalogEntry } from "./api";
+import { ServiceMark } from "./ServiceMark";
+import { awsOnlyCatalog } from "./awsCatalog";
 
 // SERVICE_FOR_INSTANCE_TYPE_KIND maps a SizingFieldDef's own instanceTypeKind to the
 // real AWS Price List `service` name PC-117's own cost engine matches against
@@ -57,12 +58,10 @@ function usePricingSnapshot(): { snapshot: PricingSnapshot | null; loading: bool
   return { snapshot, loading };
 }
 
-// useServiceCatalog fetches the real registry's own node mappings once (PC-136's
-// GET /catalog/services) — empty on any failure, never thrown to the caller: this
-// picker is a convenience over free text, the same "no hard dependency" discipline
-// usePricingSnapshot above already established for the instance-type picker.
+// useServiceCatalog fetches the backend mappings once and merges them with the local
+// AWS catalog, so the design UI remains useful while the backend is being restarted.
 function useServiceCatalog(): { entries: ServiceCatalogEntry[]; loading: boolean } {
-  const [entries, setEntries] = useState<ServiceCatalogEntry[]>([]);
+  const [entries, setEntries] = useState<ServiceCatalogEntry[]>(awsOnlyCatalog([]));
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -70,9 +69,9 @@ function useServiceCatalog(): { entries: ServiceCatalogEntry[]; loading: boolean
     (async () => {
       try {
         const list = await listServiceCatalog();
-        if (!cancelled) setEntries(list);
+        if (!cancelled) setEntries(awsOnlyCatalog(list));
       } catch {
-        // Network/backend unavailable — fall back to free text silently.
+        if (!cancelled) setEntries(awsOnlyCatalog([]));
       } finally {
         if (!cancelled) setLoading(false);
       }
@@ -367,11 +366,11 @@ export function Inspector({
   const resolvedRegion = regionResolution.resolved ? regionResolution.region : null;
 
   // servicesForNodeType (PC-136): only entries whose OWN node_type matches the
-  // selected node's declared NodeType are offered — the same discipline
+  // selected node's declared NodeType are offered. The UI is AWS-only for now.
   // resolveCanvasCapabilityLevel enforces server-side (a mismatched ServiceID is
   // never trusted), applied here so the picker cannot even present a choice that
   // would fail server-side resolution.
-  const servicesForNodeType = serviceEntries.filter((e) => e.node_type === node.data.nodeType);
+  const servicesForNodeType = serviceEntries.filter((e) => e.node_type === node.data.nodeType && e.resource_type.startsWith("aws_"));
 
   const setField = (key: string, value: string) => {
     const next = { ...sizing };
@@ -397,14 +396,13 @@ export function Inspector({
         )}
       </label>
       <p style={{ fontSize: 10, color: "#94a3b8", margin: "0 0 4px" }}>
-        Which real AWS/Azure service this node represents (PC-136). A journey through
-        a node with no service picked stays not_assessable — this engine only
-        resolves a capability level for a real, chosen service, never a guess from
-        the structural type alone.
+        Pick the AWS service this box represents. Without a service, the backend
+        cannot know the real capability level, so checks that depend on it stay
+        not_assessable.
       </p>
-      {iconForService(node.data.serviceID) && (
+      {node.data.serviceID && (
         <div style={{ display: "flex", alignItems: "center", gap: 6, margin: "0 0 4px", fontSize: 12 }}>
-          <AwsIcon src={iconForService(node.data.serviceID)!} size={24} />
+          <ServiceMark serviceID={node.data.serviceID} size={24} />
           <span>{labelForService(node.data.serviceID!)}</span>
         </div>
       )}
@@ -416,10 +414,17 @@ export function Inspector({
         <option value="">— none selected —</option>
         {servicesForNodeType.map((s) => (
           <option key={s.resource_type} value={s.resource_type}>
-            {s.resource_type}
+            {labelForService(s.resource_type)}
           </option>
         ))}
       </select>
+
+      {node.data.serviceID && serviceEntries.find((s) => s.resource_type === node.data.serviceID)?.capability_level === "UNMODELED" && (
+        <div className="guide-card compact" role="note">
+          Available for architecture design. Results use the core component model;
+          checks that require this service’s specific behaviour remain unknown.
+        </div>
+      )}
 
       {(node.data.serviceID === "aws_vpc" || node.data.serviceID === "aws_subnet") && (
         <div data-testid="placement-editor">
@@ -442,9 +447,9 @@ export function Inspector({
             </>
           )}
           <p style={{ fontSize: 11, color: "#64748b" }}>
-            Draw resources inside this container to place them (contained_in). A subnet lives in exactly one
-            zone and one VPC. Blank means unknown — never defaulted; the server decides whether a placement is
-            valid.
+            Subnets can be placed inside a VPC. Resources are placed by dropping them
+            inside a subnet or by drawing a contained_in edge yourself. Blank values
+            stay unknown; the backend decides whether the placement is valid.
           </p>
         </div>
       )}

@@ -3,7 +3,8 @@ import type { CanvasNodeData } from "./types";
 import { NODE_TYPE_LABELS } from "./goldenVocabulary";
 import { containerRank } from "./containment";
 import { AwsIcon } from "./AwsIcon";
-import { iconForService, groupIcon, labelForService } from "./awsIcons";
+import { groupIcon } from "./awsIcons";
+import { ServiceMark } from "./ServiceMark";
 
 // GoldenNode is the ONE custom node component every golden vocabulary type renders
 // through — deliberately one component, not eleven. The palette restriction (PC-85's
@@ -110,9 +111,7 @@ export function GoldenNode({ data, selected }: NodeProps<GoldenNodeType>) {
     >
       <Handle type="target" position={Position.Top} />
       <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-        {iconForService(data.serviceID) && (
-          <AwsIcon src={iconForService(data.serviceID)!} title={data.serviceID ? labelForService(data.serviceID) : undefined} />
-        )}
+        {data.serviceID && <ServiceMark serviceID={data.serviceID} />}
         <div>
           <div style={{ fontWeight: 600 }}>{data.label}</div>
           <div style={{ color: "#64748b", fontSize: 11 }}>{NODE_TYPE_LABELS[data.nodeType]}</div>

@@ -38,6 +38,24 @@ export const EDGE_TYPES = [
 
 export type EdgeType = (typeof EDGE_TYPES)[number];
 
+export const EDGE_TYPE_LABELS: Record<EdgeType, string> = {
+  depends_on: "Depends on",
+  routes_to: "Routes traffic to",
+  "reads/writes": "Reads / writes data",
+  authenticates_via: "Authenticates through",
+  replicates_to: "Replicates data to",
+  contained_in: "Placed inside",
+};
+
+export const EDGE_TYPE_GUIDES: Record<EdgeType, string> = {
+  depends_on: "Connect a service to another service it needs to work.",
+  routes_to: "Connect the service sending traffic to the service receiving it.",
+  "reads/writes": "Connect an application to the database or storage it uses.",
+  authenticates_via: "Connect a service to the identity service it uses to sign in.",
+  replicates_to: "Connect the source database or store to its replica.",
+  contained_in: "Connect a resource to the subnet or VPC that contains it.",
+};
+
 // NODE_TYPE_LABELS: a human-readable label per node type, for the palette. Purely
 // presentational — never part of the serialized CanvasDocument (see types.ts).
 export const NODE_TYPE_LABELS: Record<NodeType, string> = {

@@ -1,5 +1,6 @@
 import type { Node, Edge } from "@xyflow/react";
 import type { CanvasNodeData, CanvasEdgeData, CanvasDocument } from "./types";
+import { isDirectoryService } from "./awsCatalog";
 
 // serialize is the ONE function permitted to turn React Flow's live state into a
 // CanvasDocument — PC-85's own acceptance criterion: "no UI-only fields leaking into
@@ -26,7 +27,7 @@ export function serialize(
       // service_id (PC-136) is only included once the architect has actually picked
       // one — omitted, never an empty string, so "no service chosen yet" stays
       // indistinguishable-by-design from "chosen but blank" (there is no such state).
-      ...(n.data.serviceID ? { service_id: n.data.serviceID } : {}),
+      ...(n.data.serviceID && !isDirectoryService(n.data.serviceID) ? { service_id: n.data.serviceID } : {}),
       // security_group_rules (PC-137) is only included when at least one rule was
       // actually authored — an empty array would still be honest (ingest treats
       // both the same), but omitting it keeps a node nobody ever gave a rule

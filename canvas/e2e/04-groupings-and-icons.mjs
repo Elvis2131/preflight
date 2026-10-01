@@ -9,7 +9,12 @@ const groups = async () => (await page.locator("[data-grouping]").evaluateAll((e
 
 // palette
 const items = await page.locator('[data-testid="service-palette"] [data-service]').evaluateAll((els) => els.map((e) => ({ icon: !!e.querySelector("img") })));
-check("the service palette lists registry services, some with official icons", items.length > 15 && items.some((i) => i.icon) && items.some((i) => !i.icon));
+check("every AWS service in the palette has an official service, resource or category icon", items.length > 250 && items.every((i) => i.icon));
+const grouped = await page.locator('[data-testid="service-palette"]').evaluate((root) => {
+  const group = (type) => Array.from(root.querySelectorAll(`[data-group="${type}"] [data-service]`)).map((e) => e.getAttribute("data-service"));
+  return { compute: group("compute"), network: group("network_boundary") };
+});
+check("AWS services are grouped under their core components", grouped.compute.includes("aws_lambda_function") && grouped.network.includes("aws_vpc") && grouped.network.includes("aws_security_group"), JSON.stringify(grouped));
 
 await loadTemplate(page, "three-tier-vpc");
 await page.waitForTimeout(800);
@@ -21,11 +26,11 @@ check("groupings are not interactive", (await page.locator("[data-grouping]").fi
 const icons = await page.locator(".react-flow__node img").evaluateAll((els) => els.map((e) => e.getAttribute("src").split("/").pop()));
 check("official icons are drawn on services and groups", ["Amazon-RDS", "Elastic-Load", "Internet-Gateway", "Public-subnet", "Private-subnet", "Virtual-private"].every((k) => icons.some((s) => s.includes(k))));
 
-await page.click("text=Show CanvasDocument JSON");
+await page.getByTestId("canvas-json-toggle").click();
 await page.waitForTimeout(300);
 const doc = JSON.parse(await page.locator("pre").innerText());
 check("no grouping node leaks into the CanvasDocument", doc.nodes.every((n) => !n.id.startsWith("grouping:")));
-await page.click("text=Hide CanvasDocument JSON");
+await page.getByTestId("canvas-json-toggle").click();
 
 await select(page, "aws_route_table.public");
 await page.locator('[data-testid="routes-editor"] button:has-text("×")').first().click();
