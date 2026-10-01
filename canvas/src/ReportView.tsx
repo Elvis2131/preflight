@@ -114,6 +114,37 @@ function ReportSummary({ report, onRepriced }: { report: Report; onRepriced?: ()
         )}
       </div>
 
+      {(report.scenarios ?? []).length > 0 && (
+        <div style={cardStyle} data-testid="report-scenarios">
+          <strong>Saved failure scenarios</strong>
+          <p style={{ fontSize: 10, color: "#64748b", margin: "4px 0" }}>
+            Each is re-run against this version by the server — never carried over from an earlier result.
+          </p>
+          <table style={tableStyle}>
+            <thead>
+              <tr>
+                <th style={thtdStyle}>Scenario</th>
+                <th style={thtdStyle}>Verdict</th>
+                <th style={thtdStyle}>Failed journeys</th>
+                <th style={thtdStyle}>Degraded journeys</th>
+              </tr>
+            </thead>
+            <tbody>
+              {(report.scenarios ?? []).map((sc) => (
+                <tr key={sc.name}>
+                  <td style={thtdStyle}>{sc.name}</td>
+                  <td style={{ ...thtdStyle, ...(sc.verdict.state === "assessed" ? {} : notAssessableStyle) }}>
+                    {sc.verdict.state === "assessed" ? String(sc.verdict.value) : `not assessable: ${sc.verdict.reason}`}
+                  </td>
+                  <td style={thtdStyle}>{sc.failed_journeys.join(", ")}</td>
+                  <td style={thtdStyle}>{sc.degraded_journeys.join(", ")}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+
       <div style={cardStyle}>
         <strong>Cost</strong>
         <p style={{ fontSize: 10, background: "#fef3c7", border: "1px solid #d97706", padding: 6, margin: "6px 0" }}>

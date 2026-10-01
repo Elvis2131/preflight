@@ -388,6 +388,50 @@
         "recoverability"
       ]
     },
+    "Fault": {
+      "properties": {
+        "type": {
+          "type": "string"
+        },
+        "target": {
+          "type": "string"
+        },
+        "destination_cidr": {
+          "type": "string",
+          "description": "Required only for route_removal — the destination_cidr of the specific route to remove from Target (a route table ID). Empty for every other fault type."
+        },
+        "iam_remove_statement_sid": {
+          "type": "string",
+          "description": "Required only for iam_policy_change when removing a statement — the Sid of the statement to remove from the policy document named by Target."
+        },
+        "iam_add_deny_statement": {
+          "$ref": "#/$defs/PolicyStatement",
+          "description": "Required only for iam_policy_change when adding a deny — a new statement appended to the policy document named by Target. Effect is always forced to Deny regardless of what is supplied here"
+        },
+        "sg_rule_remove": {
+          "$ref": "#/$defs/SGRule",
+          "description": "Required only for sg_rule_change when removing a rule — the exact rule (direction"
+        },
+        "sg_rule_add": {
+          "$ref": "#/$defs/SGRule",
+          "description": "Required only for sg_rule_change when adding a rule — appended verbatim to the security group named by Target."
+        },
+        "nacl_rule_remove": {
+          "$ref": "#/$defs/NACLRule",
+          "description": "Required only for nacl_rule_change when removing a rule — the exact rule to remove from the NACL named by Target."
+        },
+        "nacl_rule_add": {
+          "$ref": "#/$defs/NACLRule",
+          "description": "Required only for nacl_rule_change when adding a rule — appended verbatim to the NACL named by Target."
+        }
+      },
+      "additionalProperties": false,
+      "type": "object",
+      "required": [
+        "type",
+        "target"
+      ]
+    },
     "Finding": {
       "properties": {
         "id": {
@@ -496,6 +540,93 @@
         "Allowed",
         "Reason",
         "GroupIndex"
+      ]
+    },
+    "NACLRule": {
+      "properties": {
+        "Number": {
+          "type": "integer"
+        },
+        "Direction": {
+          "type": "string"
+        },
+        "Protocol": {
+          "type": "string"
+        },
+        "FromPort": {
+          "type": "integer"
+        },
+        "ToPort": {
+          "type": "integer"
+        },
+        "CIDR": {
+          "type": "string"
+        },
+        "Allow": {
+          "type": "boolean"
+        }
+      },
+      "additionalProperties": false,
+      "type": "object",
+      "required": [
+        "Number",
+        "Direction",
+        "Protocol",
+        "FromPort",
+        "ToPort",
+        "CIDR",
+        "Allow"
+      ]
+    },
+    "PolicyStatement": {
+      "properties": {
+        "sid": {
+          "type": "string"
+        },
+        "effect": {
+          "type": "string",
+          "enum": [
+            "Allow",
+            "Deny"
+          ]
+        },
+        "principal": {
+          "description": "Preserved exactly as declared — a string"
+        },
+        "action": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array",
+          "description": "Preserved verbatim"
+        },
+        "not_action": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "resource": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array",
+          "description": "Preserved verbatim"
+        },
+        "not_resource": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "condition": {
+          "type": "object"
+        }
+      },
+      "additionalProperties": false,
+      "type": "object",
+      "required": [
+        "effect"
       ]
     },
     "Provenance": {
@@ -768,6 +899,92 @@
         "available"
       ]
     },
+    "SGRule": {
+      "properties": {
+        "Direction": {
+          "type": "string"
+        },
+        "Protocol": {
+          "type": "string"
+        },
+        "FromPort": {
+          "type": "integer"
+        },
+        "ToPort": {
+          "type": "integer"
+        },
+        "CIDRs": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "SourceSG": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": false,
+      "type": "object",
+      "required": [
+        "Direction",
+        "Protocol",
+        "FromPort",
+        "ToPort",
+        "CIDRs",
+        "SourceSG"
+      ]
+    },
+    "ScenarioResult": {
+      "properties": {
+        "name": {
+          "type": "string"
+        },
+        "faults": {
+          "items": {
+            "$ref": "#/$defs/Fault"
+          },
+          "type": "array"
+        },
+        "verdict": {
+          "$ref": "#/$defs/AssessmentEnvelope"
+        },
+        "severed_paths": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "cascade": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "failed_journeys": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "degraded_journeys": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        }
+      },
+      "additionalProperties": false,
+      "type": "object",
+      "required": [
+        "name",
+        "faults",
+        "verdict",
+        "severed_paths",
+        "cascade",
+        "failed_journeys",
+        "degraded_journeys"
+      ]
+    },
     "UsageBasedCostEntry": {
       "properties": {
         "JourneyID": {
@@ -870,6 +1087,12 @@
       },
       "type": "array"
     },
+    "scenarios": {
+      "items": {
+        "$ref": "#/$defs/ScenarioResult"
+      },
+      "type": "array"
+    },
     "assumptions": {
       "items": {
         "$ref": "#/$defs/ReportAssumption"
@@ -894,9 +1117,10 @@
     "traffic",
     "cost",
     "delta",
+    "scenarios",
     "assumptions",
     "provenance"
   ],
   "x-changelog": "contracts/CHANGELOG.md",
-  "x-schema-version": "1.4.0"
+  "x-schema-version": "1.5.0"
 }

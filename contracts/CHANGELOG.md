@@ -10,6 +10,15 @@ Each generated `contracts/*.schema.json` carries its own version in `x-schema-ve
 stamped by `cmd/gen-contracts` — check that field against this file, not the other way
 around, since a schema file is regenerated output, not hand-edited.
 
+## report.schema.json 1.5.0 — 2026-10-01 (PC-131: Report.scenarios added)
+
+**Additive change to `report.schema.json` only.** `Report` gains `scenarios`: the session's
+saved Failure Lab scenarios, each evaluated against THIS report's version at report time
+(`name`, `faults`, the simulate `verdict`, `severed_paths`, `cascade`, `failed_journeys`,
+`degraded_journeys`). Always an array, `[]` when none are saved. Saved scenarios are
+definitions only; no result is ever stored, so a report always reflects the current design.
+A reader of a 1.4.0 document treats absence as "no scenarios".
+
 ## canvas.schema.json 1.4.0 — 2026-10-01 (PC-105: CanvasNode.availability_zone and cidr_block added)
 
 **Additive change to `canvas.schema.json` only.** `CanvasNode` gains two optional

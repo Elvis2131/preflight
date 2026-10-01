@@ -85,6 +85,13 @@ CREATE TABLE IF NOT EXISTS versions (
 	created_at     TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now')),
 	PRIMARY KEY (session_id, version_number)
 );
+CREATE TABLE IF NOT EXISTS scenarios (
+	session_id  TEXT NOT NULL REFERENCES sessions(id),
+	name        TEXT NOT NULL,
+	faults_json TEXT NOT NULL,
+	created_at  TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now')),
+	PRIMARY KEY (session_id, name)
+);
 `
 	_, err := s.db.Exec(schema)
 	if err != nil {

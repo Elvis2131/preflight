@@ -66,7 +66,15 @@ func GetReport(store *Store, sessionID string, versionNumber int) (core.Report, 
 	}
 
 	graphSVG := graphOrFailureMessage(stored.IR)
-	return core.BuildReport(sessionID, versionNumber, graphSVG, stored.IR, stored.Workload, stored.Findings, stored.Scorecard, stored.Cost, priceTable, delta), nil
+	report := core.BuildReport(sessionID, versionNumber, graphSVG, stored.IR, stored.Workload, stored.Findings, stored.Scorecard, stored.Cost, priceTable, delta)
+
+	// PC-131: saved Failure Lab scenarios, re-evaluated NOW against THIS version — the
+	// report must reflect the current design, never a stored earlier result.
+	saved, err := store.ListScenarios(sessionID)
+	if err != nil {
+		return core.Report{}, err
+	}
+	return report.WithScenarios(stored.IR, stored.Workload, saved), nil
 }
 
 // GetReportHandler serves GET /sessions/{id}/versions/{n}/report, registered with Go

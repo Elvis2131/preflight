@@ -154,7 +154,13 @@ type Report struct {
 	Traffic          ReportTrafficSection               `json:"traffic" validate:"required" jsonschema:"required"`
 	Cost             ReportCostSection                  `json:"cost" validate:"required" jsonschema:"required"`
 	Delta            []DeltaEntry                       `json:"delta"`
-	Assumptions      []ReportAssumption                 `json:"assumptions"`
+	// Scenarios is PC-131's own addition: the session's saved Failure Lab scenarios,
+	// each evaluated NOW against THIS report's version (never replayed from an earlier
+	// result). Empty (never null) when none are saved. Filled by the caller that can
+	// read saved definitions (server.GetReport) via Report.WithScenarios — BuildReport
+	// itself stays a pure function of the stored version.
+	Scenarios   []ScenarioResult   `json:"scenarios"`
+	Assumptions []ReportAssumption `json:"assumptions"`
 	Provenance       Provenance                         `json:"provenance" validate:"required" jsonschema:"required"`
 }
 
@@ -162,6 +168,13 @@ type Report struct {
 // report.schema.json is generated from.
 func (r Report) Validate() error {
 	return validate.Struct(r)
+}
+
+// WithScenarios returns r with its saved scenarios evaluated against r's own version.
+func (r Report) WithScenarios(ir *IR, workload Workload, saved []SavedScenario) Report {
+	prov := NewProvenance(KindDerived, "core/report:scenarios")
+	r.Scenarios = EvaluateScenarios(ir, workload, saved, prov)
+	return r
 }
 
 // BuildReport assembles PC-120's report from an already-assessed version's own
@@ -250,6 +263,7 @@ func BuildReport(sessionID string, versionNumber int, graphSVG string, ir *IR, w
 		SessionID: sessionID, VersionNumber: versionNumber, Graph: graphSVG,
 		ExecutiveSummary: summary, Inventory: inventory, NFRConformance: nfr, Compliance: compliance,
 		FailureModes: failureModes, Traffic: traffic, Cost: costSection, Delta: delta,
+		Scenarios:  []ScenarioResult{},
 		Provenance: prov,
 	}
 	report.Assumptions = gatherReportAssumptions(report)

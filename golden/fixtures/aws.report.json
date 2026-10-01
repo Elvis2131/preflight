@@ -1829,6 +1829,7 @@
     "usage_based_charges": []
   },
   "delta": [],
+  "scenarios": [],
   "assumptions": [],
   "provenance": {
     "kind": "derived",

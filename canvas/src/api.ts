@@ -328,6 +328,9 @@ export interface Report {
   traffic: ReportTrafficSection;
   cost: ReportCostSection;
   delta: DeltaEntry[];
+  // scenarios (PC-131): saved Failure Lab scenarios evaluated by the server against THIS
+  // report's version — shown verbatim, never recomputed here.
+  scenarios?: ScenarioResult[];
   assumptions: ReportAssumption[];
 }
 
@@ -453,4 +456,69 @@ export async function getTemplate(id: string): Promise<Template> {
   const res = await fetch(`${ASSESSD_BASE_URL}/templates/${encodeURIComponent(id)}`);
   if (!res.ok) throw new Error(`getTemplate(${id}): HTTP ${res.status}`);
   return res.json();
+}
+
+// Failure Lab scenarios (PC-131). A fault is NAMED here (type + target, plus the exact
+// rule for a rule removal); what it breaks is the server's decision. Field names of the
+// rule mirror core.SGRule, which has no json tags.
+export interface FaultSGRule {
+  Direction: string;
+  Protocol: string;
+  FromPort: number;
+  ToPort: number;
+  CIDRs?: string[];
+  SourceSG?: string;
+}
+
+export interface Fault {
+  type: string;
+  target: string;
+  sg_rule_remove?: FaultSGRule;
+}
+
+export interface SavedScenario {
+  name: string;
+  faults: Fault[];
+}
+
+export interface ScenarioResult extends SavedScenario {
+  verdict: AssessmentEnvelope;
+  severed_paths: string[];
+  cascade: string[];
+  failed_journeys: string[];
+  degraded_journeys: string[];
+}
+
+export function simulateFaults(
+  sessionID: string,
+  versionNumber: number,
+  faults: Fault[],
+  baseURL: string = ASSESSD_BASE_URL,
+): Promise<SimulateResponse> {
+  return postJSON(`${baseURL}/simulate`, { session_id: sessionID, version_number: versionNumber, faults });
+}
+
+export function listScenarios(sessionID: string, baseURL: string = ASSESSD_BASE_URL): Promise<SavedScenario[]> {
+  return getJSON(`${baseURL}/sessions/${sessionID}/scenarios`);
+}
+
+export async function saveScenario(sessionID: string, sc: SavedScenario, baseURL: string = ASSESSD_BASE_URL): Promise<SavedScenario> {
+  const res = await fetch(`${baseURL}/sessions/${sessionID}/scenarios/${encodeURIComponent(sc.name)}`, {
+    method: "PUT",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ faults: sc.faults }),
+  });
+  if (!res.ok) throw new Error(`saveScenario: ${res.status} ${await res.text()}`);
+  return res.json();
+}
+
+export async function deleteScenario(sessionID: string, name: string, baseURL: string = ASSESSD_BASE_URL): Promise<void> {
+  const res = await fetch(`${baseURL}/sessions/${sessionID}/scenarios/${encodeURIComponent(name)}`, { method: "DELETE" });
+  if (!res.ok && res.status !== 404) throw new Error(`deleteScenario: ${res.status} ${await res.text()}`);
+}
+
+// evaluateScenarios asks the server to re-run every saved scenario against one stored
+// version, now — never a stored result.
+export function evaluateScenarios(sessionID: string, versionNumber: number, baseURL: string = ASSESSD_BASE_URL): Promise<ScenarioResult[]> {
+  return getJSON(`${baseURL}/sessions/${sessionID}/versions/${versionNumber}/scenarios`);
 }

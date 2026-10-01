@@ -32,7 +32,9 @@ import { CONTAINER_SIZE, containerRank, reevaluate } from "./containment";
 import { templateToCanvasState } from "./templateLoader";
 import { MODES, capabilities, type Mode } from "./modes";
 import { AnalyzeView } from "./analyze/AnalyzeView";
-import { listTemplates, getTemplate, type TemplateMeta } from "./api";
+import { listTemplates, getTemplate, simulateFaults, evaluateScenarios, type TemplateMeta, type Fault, type ScenarioResult } from "./api";
+import { FailureLab } from "./FailureLab";
+import { killedTargets } from "./faultBuilder";
 import { assessCanvas, simulateNodeLoss, simulateBaseline, describeSimError, type SimulateResponse } from "./api";
 import { ReportView } from "./ReportView";
 import { WorkloadForm, buildWorkload, emptyWorkloadFormValue, workloadToFormValue, type WorkloadFormValue } from "./WorkloadForm";
@@ -224,7 +226,8 @@ function CanvasInner() {
   // DISTINCT states, not merged into one "affected" look, so the exact set PC-88's own
   // acceptance criterion checks (severed_paths) stays a legible, separate signal.
   const applySimResult = useCallback(
-    (sim: SimulateResponse, killedID: string) => {
+    (sim: SimulateResponse, killedIDs: string | string[]) => {
+      const killed = new Set(Array.isArray(killedIDs) ? killedIDs : [killedIDs]);
       stopAnimation();
       const severed = new Set(sim.severed_paths ?? []);
       const order = sim.cascade ?? [];
@@ -249,7 +252,7 @@ function CanvasInner() {
           nds.map((n) => {
             if (!revealed.has(n.id)) return n;
             let simState: CanvasNodeData["simState"] = "cascaded";
-            if (n.id === killedID) simState = "killed";
+            if (killed.has(n.id)) simState = "killed";
             else if (severed.has(n.id)) simState = "severed";
             return { ...n, data: { ...n.data, simState } };
           }),
@@ -315,6 +318,52 @@ function CanvasInner() {
       setSimBusy(false);
     }
   }, [nodes, edges, workloadForm, stopAnimation]);
+
+  // Failure Lab scenarios (PC-131). Running assesses the CURRENT design fresh (a new
+  // version), then asks the server to simulate the declared faults against it — the
+  // canvas only ever names faults, never decides what they break.
+  const [scenarioResults, setScenarioResults] = useState<ScenarioResult[] | null>(null);
+  const [scenarioResultsVersion, setScenarioResultsVersion] = useState<number | null>(null);
+
+  const runFaults = useCallback(
+    async (faults: Fault[]) => {
+      setSimBusy(true);
+      setSimError(null);
+      try {
+        const doc = serialize(nodes, edges);
+        const workload = buildWorkload(workloadForm);
+        const assessed = await assessCanvas(sessionIDRef.current, doc, workload);
+        setLatestVersion(assessed.version_number);
+        const sim = await simulateFaults(sessionIDRef.current, assessed.version_number, faults);
+        applySimResult(sim, killedTargets(faults));
+      } catch (err) {
+        setSimError(describeSimError(err));
+      } finally {
+        setSimBusy(false);
+      }
+    },
+    [nodes, edges, workloadForm, applySimResult],
+  );
+
+  // rerunAllScenarios re-evaluates every SAVED scenario against the design as it is now:
+  // assess the current canvas (a new version), then have the server run each saved
+  // definition against that version. Nothing here replays an earlier result.
+  const rerunAllScenarios = useCallback(async () => {
+    setSimBusy(true);
+    setSimError(null);
+    try {
+      const doc = serialize(nodes, edges);
+      const workload = buildWorkload(workloadForm);
+      const assessed = await assessCanvas(sessionIDRef.current, doc, workload);
+      setLatestVersion(assessed.version_number);
+      setScenarioResults(await evaluateScenarios(sessionIDRef.current, assessed.version_number));
+      setScenarioResultsVersion(assessed.version_number);
+    } catch (err) {
+      setSimError(describeSimError(err));
+    } finally {
+      setSimBusy(false);
+    }
+  }, [nodes, edges, workloadForm]);
 
   // repriceCurrentDesign (PC-123) re-runs assessCanvas against the CURRENT canvas
   // state, no explicit price_snapshot_id — the server's own already-documented
@@ -753,6 +802,20 @@ function CanvasInner() {
           onSecurityGroupRulesChange={updateNodeSecurityGroupRules}
           onPlacementChange={updateNodePlacement}
         />
+      )}
+      {caps.canInjectFaults && (
+        <div style={{ width: 340, borderLeft: "1px solid #e2e8f0", overflowY: "auto" }}>
+          <FailureLab
+            sessionID={sessionIDRef.current}
+            nodes={nodes}
+            regions={buildWorkload(workloadForm).regions ?? []}
+            busy={simBusy}
+            onRun={(f) => void runFaults(f)}
+            onRerunAll={() => void rerunAllScenarios()}
+            results={scenarioResults}
+            resultsVersion={scenarioResultsVersion}
+          />
+        </div>
       )}
       {showJourneyPanel && caps.showsJourneyPanel && (
         <div style={{ width: 320, borderLeft: "1px solid #e2e8f0", overflowY: "auto" }}>

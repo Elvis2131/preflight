@@ -101,7 +101,11 @@ code{background:#f1f5f9;padding:0 .2rem}
 </tr>{{end}}</table>
 {{else}}<p class="reason not-assessable">Not available: {{.FailureModes.UnavailableReason}}</p>{{end}}
 
-<h2>Traffic and capacity</h2>
+{{if .Scenarios}}<h2>Saved failure scenarios</h2>
+<p class="reason">Each scenario is re-run against this version; results are never carried over from an earlier one.</p>
+<table><tr><th>scenario</th><th>verdict</th><th>failed journeys</th><th>degraded journeys</th><th>severed paths</th></tr>
+{{range .Scenarios}}<tr><td>{{.Name}}</td><td>{{if eq .Verdict.State "assessed"}}{{.Verdict.Value}}{{else}}not assessable: {{.Verdict.Reason}}{{end}}</td><td>{{range .FailedJourneys}}{{.}} {{end}}</td><td>{{range .DegradedJourneys}}{{.}} {{end}}</td><td>{{range .SeveredPaths}}{{.}} {{end}}</td></tr>{{end}}</table>
+{{end}}<h2>Traffic and capacity</h2>
 {{if .Traffic.Available}}
 <table><tr><th>Journey</th><th>Flows</th><th>Blocked at</th><th>Reason</th></tr>
 {{range .Traffic.Flows}}<tr><td>{{.JourneyID}}</td><td>{{.Flows}}</td><td>{{.BlockedAt}}</td><td class="reason">{{.BlockedReason}}</td></tr>{{end}}
