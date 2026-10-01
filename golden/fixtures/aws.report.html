@@ -986,7 +986,7 @@ satisfied
 <span class="reason">not_assessable: impact dimension not evaluated by this check</span>
 </td>
 <td class="not-assessable">
-<span class="reason">not_assessable: journey &#34;checkout&#34; does not structurally flow today (Blocked at aws_subnet.public_a (nacl_check): destination subnet has no resolvable associated NACL) — a configuration blast surface is not meaningful without a working baseline</span>
+<span class="reason">not_assessable: journey &#34;checkout&#34; does not structurally flow today (Blocked at aws_eks_cluster.payments (sg_dest_ingress): no rule matched (implicit deny — AWS security groups support allow rules only)) — a configuration blast surface is not meaningful without a working baseline</span>
 </td>
 </tr><tr>
 <td><code>finding.resilience.configuration-blast-surface.settlement</code><br>Journey &#34;Settlement: EKS -&gt; SQS&#34;: configuration blast surface (single rule changes that would break it)</td>
@@ -1004,7 +1004,7 @@ satisfied
 <h2>Traffic and capacity</h2>
 
 <table><tr><th>Journey</th><th>Flows</th><th>Blocked at</th><th>Reason</th></tr>
-<tr><td>checkout</td><td>false</td><td>aws_lb.payments</td><td class="reason">Blocked at aws_subnet.public_a (nacl_check): destination subnet has no resolvable associated NACL</td></tr><tr><td>settlement</td><td>false</td><td>aws_sqs_queue.settlement</td><td class="reason">Blocked at aws_sqs_queue.settlement (route_selection): destination has no resolvable effective route table</td></tr>
+<tr><td>checkout</td><td>false</td><td>aws_eks_cluster.payments</td><td class="reason">Blocked at aws_eks_cluster.payments (sg_dest_ingress): no rule matched (implicit deny — AWS security groups support allow rules only)</td></tr><tr><td>settlement</td><td>false</td><td>aws_sqs_queue.settlement</td><td class="reason">Blocked at aws_sqs_queue.settlement (route_selection): destination has no resolvable effective route table</td></tr>
 </table>
 
 

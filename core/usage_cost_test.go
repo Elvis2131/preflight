@@ -236,7 +236,7 @@ func TestComputeUsageBasedCost_LBDataProcessed(t *testing.T) {
 // underlying baseline itself does not flow" are two different honest reasons for the
 // same zero-entries outcome, and this test pins down which one golden/aws
 // demonstrates).
-func TestGoldenUsageCost_Checkout_BaselineDoesNotFlow_HonestlyEmpty(t *testing.T) {
+func TestGoldenUsageCost_Checkout_OnlyTheReachedHopIsCosted(t *testing.T) {
 	ir := realGoldenIR(t)
 	workload := loadGoldenWorkload(t)
 
@@ -250,16 +250,20 @@ func TestGoldenUsageCost_Checkout_BaselineDoesNotFlow_HonestlyEmpty(t *testing.T
 		t.Fatal("expected golden/workload.yaml's checkout journey to declare avg_request_bytes")
 	}
 
-	baseline := core.ComputeJourneyFlow(ir, checkout, nil)
-	if baseline.Flows {
-		t.Skip("golden/aws's checkout journey now flows at baseline — PC-125's own documented zero-NACL gap must have been closed; this test's own premise no longer holds and should be revisited with a positive-priced-example assertion instead")
-	}
-
-	results := core.ComputeUsageBasedCost(ir, workload, usageCostPriceTable(), nil)
-	for _, r := range results {
-		if r.JourneyID == "checkout" {
-			t.Errorf("checkout produced a usage-cost entry despite not structurally flowing at baseline: %+v", r)
+	// PC-149: internet -> ALB is Allowed (default NACL, assumed); ALB -> EKS blocks at
+	// the workload SG. Only the first hop carries traffic, so only it is costed.
+	kinds := map[core.UsageCostKind]int{}
+	for _, r := range core.ComputeUsageBasedCost(ir, workload, usageCostPriceTable(), nil) {
+		if r.JourneyID != "checkout" {
+			continue
 		}
+		if r.HopFrom != core.JourneyInternetSentinel || r.HopTo != "aws_lb.payments" {
+			t.Errorf("checkout costed a hop past the blocked one: %+v", r)
+		}
+		kinds[r.Kind]++
+	}
+	if kinds[core.UsageCostInternetEgress] != 1 || kinds[core.UsageCostLBDataProcessed] != 1 || len(kinds) != 2 {
+		t.Errorf("want exactly one internet_egress and one lb_data_processed entry for internet->ALB, got %v", kinds)
 	}
 }
 

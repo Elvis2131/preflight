@@ -148,3 +148,85 @@ func TestNACL_RuleNumberRange_001(t *testing.T) {
 		t.Fatalf("%s: authorable range is %d-%d, AWS documents 1-32766", spec.ID, core.NACLRuleNumberMin, core.NACLRuleNumberMax)
 	}
 }
+
+// flowIRWithoutNACLs is two subnets in one VPC, each with an instance, and NO NACL of
+// any kind in the design.
+func flowIRWithoutNACLs() *core.IR {
+	prov := core.NewProvenance(core.KindStated, "conformance")
+	mk := func(id string, t core.NodeType, raw map[string]any) core.Node {
+		return core.Node{ID: id, Type: t, Resolution: core.ResolutionKnown, Provenance: prov, RawAttributes: raw}
+	}
+	nodes := []core.Node{
+		mk("vpc", core.NodeTypeNetworkBoundary, nil),
+		mk("subnetA", core.NodeTypeNetworkBoundary, map[string]any{"cidr_block": "10.0.1.0/24"}),
+		mk("subnetB", core.NodeTypeNetworkBoundary, map[string]any{"cidr_block": "10.0.2.0/24"}),
+		mk("rtA", core.NodeTypeNetworkBoundary, nil),
+		mk("rtB", core.NodeTypeNetworkBoundary, nil),
+		mk("target", core.NodeTypeNetworkBoundary, nil),
+		mk("app", core.NodeTypeCompute, map[string]any{"capability_level": string(core.CapabilityRequestSimulation)}),
+		mk("db", core.NodeTypeManagedDatabase, map[string]any{"capability_level": string(core.CapabilityFailureSimulation)}),
+		mk("sgApp", core.NodeTypeNetworkBoundary, map[string]any{"security_group_rules": []map[string]any{{"direction": "egress", "protocol": "-1", "cidr_blocks": []any{"0.0.0.0/0"}}}}),
+		mk("sgDb", core.NodeTypeNetworkBoundary, map[string]any{"security_group_rules": []map[string]any{{"direction": "ingress", "protocol": "tcp", "from_port": 5432, "to_port": 5432, "cidr_blocks": []any{"10.0.1.0/24"}}}}),
+	}
+	e := func(id string, t core.EdgeType, from, to string) core.Edge {
+		return core.Edge{ID: id, Type: t, From: from, To: to, Resolution: core.ResolutionKnown, Provenance: prov}
+	}
+	return &core.IR{SchemaVersion: "1.4.0", VersionNumber: 1, VersionHash: "h", Nodes: nodes, Edges: []core.Edge{
+		e("1", core.EdgeTypeContainedIn, "app", "subnetA"), e("2", core.EdgeTypeContainedIn, "db", "subnetB"),
+		e("3", core.EdgeTypeContainedIn, "subnetA", "vpc"), e("4", core.EdgeTypeContainedIn, "subnetB", "vpc"),
+		e("5", core.EdgeTypeDependsOn, "subnetA", "rtA"), e("6", core.EdgeTypeDependsOn, "subnetB", "rtB"),
+		e("7", core.EdgeTypeRoutesTo, "rtA", "target"), e("8", core.EdgeTypeRoutesTo, "rtB", "target"),
+		e("9", core.EdgeTypeDependsOn, "app", "sgApp"), e("10", core.EdgeTypeDependsOn, "db", "sgDb"),
+	}}
+}
+
+func TestNACL_DefaultAssociation_001(t *testing.T) {
+	spec := harness.Verify(t, harness.Spec{
+		ID:            "NACL-DEFAULT-ASSOC-001",
+		Rule:          "Each subnet must be associated with a network ACL; a subnet that is not explicitly associated with one is automatically associated with the VPC's default network ACL.",
+		Source:        "https://docs.aws.amazon.com/vpc/latest/userguide/vpc-network-acls.html",
+		Scenario:      "Two subnets in one VPC, no NACL resource and no NACL association anywhere in the design.",
+		Configuration: "subnetA and subnetB contained in one VPC; no aws_network_acl, no association; SGs permit tcp/5432 from subnetA to the database",
+		Request:       "Resolve the NACL for subnetB, then trace app -> db on tcp/5432.",
+		Expected:      "subnetB resolves to the default NACL (assumed, nothing declared) instead of being not_assessable, and the trace reaches Allowed with the NACL steps tagged assumed.",
+	})
+	ir := flowIRWithoutNACLs()
+	res, ok := core.ResolveSubnetNACL(ir.Nodes, ir.Edges, "subnetB")
+	if !ok || res.Source != core.NACLAssumedDefault {
+		t.Fatalf("%s (%s): got %+v ok=%v — see %s", spec.ID, spec.Rule, res, ok, spec.Source)
+	}
+	tr := core.BuildTrace(ir, "app", "db", "", "tcp", 5432)
+	if !tr.Allowed {
+		t.Fatalf("%s (%s): trace not Allowed: %+v", spec.ID, spec.Rule, tr.Steps)
+	}
+	for _, s := range tr.Steps {
+		if (s.Step == "nacl_source_egress" || s.Step == "nacl_dest_ingress") && s.Provenance.Kind != core.KindAssumed {
+			t.Errorf("%s: %s must be tagged assumed (the default NACL is assumed unmodified), got %q", spec.ID, s.Step, s.Provenance.Kind)
+		}
+	}
+}
+
+func TestNACL_DefaultRules_001(t *testing.T) {
+	spec := harness.Verify(t, harness.Spec{
+		ID:            "NACL-DEFAULT-RULES-001",
+		Rule:          "The default network ACL is configured to allow all traffic in and out of its subnets (rule 100 allows all IPv4 traffic, plus the * deny that every NACL carries); a custom network ACL, by contrast, starts with no allow rules and so denies everything.",
+		Source:        "https://docs.aws.amazon.com/vpc/latest/userguide/default-network-acl.html",
+		Scenario:      "The assumed default NACL versus an associated custom NACL with no rules, same traffic.",
+		Configuration: "default: nothing declared; custom: one NACL node with zero rules associated to subnetB",
+		Request:       "Evaluate tcp/5432 from subnetA into subnetB.",
+		Expected:      "Allowed under the default NACL (matched rule 100); denied by the zero-rule custom NACL.",
+	})
+	def := flowIRWithoutNACLs()
+	if tr := core.BuildTrace(def, "app", "db", "", "tcp", 5432); !tr.Allowed {
+		t.Fatalf("%s (%s): the default NACL must allow this traffic: %+v", spec.ID, spec.Rule, tr.Steps)
+	}
+
+	custom := flowIRWithoutNACLs()
+	prov := core.NewProvenance(core.KindStated, "conformance")
+	custom.Nodes = append(custom.Nodes, core.Node{ID: "customNacl", Type: core.NodeTypeNetworkBoundary, Resolution: core.ResolutionKnown, Provenance: prov,
+		RawAttributes: map[string]any{"nacl_rules": []map[string]any{}}})
+	custom.Edges = append(custom.Edges, core.Edge{ID: "c1", Type: core.EdgeTypeDependsOn, From: "subnetB", To: "customNacl", Resolution: core.ResolutionKnown, Provenance: prov})
+	if tr := core.BuildTrace(custom, "app", "db", "", "tcp", 5432); tr.Allowed {
+		t.Fatalf("%s (%s): a custom NACL with no rules must deny everything — do not confuse it with the default: %+v", spec.ID, spec.Rule, tr.Steps)
+	}
+}

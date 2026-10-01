@@ -1083,12 +1083,12 @@
     },
     "evidence": [
       {
-        "description": "journey \"checkout\" does not structurally flow today (Blocked at aws_subnet.public_a (nacl_check): destination subnet has no resolvable associated NACL) — a configuration blast surface is not meaningful without a working baseline"
+        "description": "journey \"checkout\" does not structurally flow today (Blocked at aws_eks_cluster.payments (sg_dest_ingress): no rule matched (implicit deny — AWS security groups support allow rules only)) — a configuration blast surface is not meaningful without a working baseline"
       }
     ],
     "outcome": {
       "state": "not_assessable",
-      "reason": "journey \"checkout\" does not structurally flow today (Blocked at aws_subnet.public_a (nacl_check): destination subnet has no resolvable associated NACL) — a configuration blast surface is not meaningful without a working baseline",
+      "reason": "journey \"checkout\" does not structurally flow today (Blocked at aws_eks_cluster.payments (sg_dest_ingress): no rule matched (implicit deny — AWS security groups support allow rules only)) — a configuration blast surface is not meaningful without a working baseline",
       "provenance": {
         "kind": "derived",
         "source": "core/config_blast_surface:checkout"

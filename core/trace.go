@@ -21,8 +21,8 @@ import "fmt"
 type TraceDecision string
 
 const (
-	TraceAllow        TraceDecision = "allow"
-	TraceDeny         TraceDecision = "deny"
+	TraceAllow         TraceDecision = "allow"
+	TraceDeny          TraceDecision = "deny"
 	TraceNotAssessable TraceDecision = "not_assessable"
 )
 
@@ -135,8 +135,11 @@ func BuildTrace(ir *IR, sourceID, destID, sourceCIDR, protocol string, port int)
 	trace := Trace{Source: sourceID, Destination: destID, Protocol: protocol, Port: port}
 
 	reached := true
+	// stepProv lets a step carry a provenance other than derived (PC-149: an assumed
+	// default NACL); steps reset it to prov afterwards.
+	stepProv := prov
 	step := func(name, component, operation string, decision TraceDecision, reason, rule string) TraceStep {
-		s := TraceStep{Step: name, Component: component, Operation: operation, Decision: decision, Reason: reason, RuleCited: rule, Reached: reached, Provenance: prov}
+		s := TraceStep{Step: name, Component: component, Operation: operation, Decision: decision, Reason: reason, RuleCited: rule, Reached: reached, Provenance: stepProv}
 		trace.Steps = append(trace.Steps, s)
 		if reached && decision != TraceAllow {
 			reached = false
@@ -212,7 +215,8 @@ func BuildTrace(ir *IR, sourceID, destID, sourceCIDR, protocol string, port int)
 	// the outcome.
 	naclApplies := destHasSubnet && (sourceID == "" || (sourceHasSubnet && sourceSubnetID != destSubnetID))
 	if naclApplies {
-		destNACL, destHasNACL := NACLProfileForSubnet(ir.Nodes, ir.Edges, destSubnetID)
+		destRes, destHasNACL := ResolveSubnetNACL(ir.Nodes, ir.Edges, destSubnetID)
+		destNACL := destRes.Profile
 		if !destHasNACL {
 			step("nacl_check", destSubnetID, "resolve the associated NACL for the destination subnet", TraceNotAssessable, "destination subnet has no resolvable associated NACL", "")
 			return finalize(trace)
@@ -222,9 +226,15 @@ func BuildTrace(ir *IR, sourceID, destID, sourceCIDR, protocol string, port int)
 			{Number: NACLCatchAll, Direction: "egress", Protocol: "-1", CIDR: "0.0.0.0/0", Allow: true},
 		}}
 		sourceSubnetLabel := "internet"
+		sourceAssumed := false
+		destAssumed := destRes.Source == NACLAssumedDefault
+		assumedProv := NewProvenance(KindAssumed, "core/trace:"+destSubnetID+":default-nacl").WithReason(NACLAssumedDefaultReason)
 		if sourceID != "" {
 			var sourceHasNACL bool
-			sourceNACL, sourceHasNACL = NACLProfileForSubnet(ir.Nodes, ir.Edges, sourceSubnetID)
+			sourceRes, ok := ResolveSubnetNACL(ir.Nodes, ir.Edges, sourceSubnetID)
+			sourceHasNACL = ok
+			sourceNACL = sourceRes.Profile
+			sourceAssumed = sourceRes.Source == NACLAssumedDefault
 			if !sourceHasNACL {
 				step("nacl_check", sourceSubnetID, "resolve the associated NACL for the source subnet", TraceNotAssessable, "source subnet has no resolvable associated NACL", "")
 				return finalize(trace)
@@ -254,15 +264,30 @@ func BuildTrace(ir *IR, sourceID, destID, sourceCIDR, protocol string, port int)
 		if allowed {
 			d = TraceAllow
 		}
-		step("nacl_source_egress", sourceNACL.NACLID, "evaluate source subnet's NACL, outbound", boolDecision(fwd[0].Allowed), fwd[0].Reason, "NACL "+fwd[0].NACLID+" rule "+fwd[0].MatchedRuleNumber)
+		withAssumption := func(reason string, assumed bool) string {
+			if assumed {
+				return reason + "; " + NACLAssumedDefaultReason
+			}
+			return reason
+		}
+		if sourceAssumed {
+			stepProv = assumedProv
+		}
+		step("nacl_source_egress", sourceNACL.NACLID, "evaluate source subnet's NACL, outbound", boolDecision(fwd[0].Allowed), withAssumption(fwd[0].Reason, sourceAssumed), "NACL "+fwd[0].NACLID+" rule "+fwd[0].MatchedRuleNumber)
+		stepProv = prov
+		if destAssumed {
+			stepProv = assumedProv
+		}
 		if fwd[0].Allowed {
-			step("nacl_dest_ingress", destNACL.NACLID, "evaluate destination subnet's NACL, inbound", boolDecision(fwd[1].Allowed), fwd[1].Reason, "NACL "+fwd[1].NACLID+" rule "+fwd[1].MatchedRuleNumber)
+			step("nacl_dest_ingress", destNACL.NACLID, "evaluate destination subnet's NACL, inbound", boolDecision(fwd[1].Allowed), withAssumption(fwd[1].Reason, destAssumed), "NACL "+fwd[1].NACLID+" rule "+fwd[1].MatchedRuleNumber)
 		}
 		if !allowed && fwd[0].Allowed && fwd[1].Allowed {
 			// forward legs both passed; the failure is on the return leg
-			step("nacl_response_path", destNACL.NACLID, "evaluate the stateless return path (destination egress, source ingress, ephemeral ports)", d, "return traffic denied: "+ret[0].Reason+"; "+ret[1].Reason, "")
+			stepProv = prov
+			step("nacl_response_path", destNACL.NACLID, "evaluate the stateless return path (destination egress, source ingress, ephemeral ports)", d, withAssumption("return traffic denied: "+ret[0].Reason+"; "+ret[1].Reason, sourceAssumed || destAssumed), "")
 			return finalize(trace)
 		}
+		stepProv = prov
 		if !allowed {
 			return finalize(trace)
 		}

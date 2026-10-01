@@ -290,7 +290,9 @@ func TestThreeTier_MissingNetworkControlsAreNotAssessable_AndReturnPathIsEvaluat
 		t.Errorf("no route table: route_selection must be not_assessable naming the missing route table, got %+v (present=%v)", s, ok)
 	}
 
-	// No NACL associated with the destination's subnets.
+	// No NACL associated with the destination's subnets (PC-149): AWS associates such a
+	// subnet with the VPC default NACL, which allows all traffic; with nothing declared
+	// the engine applies that default, tagged assumed, and says so in the step reason.
 	noNACL := traceOf(func(tpl *templates.Template) {
 		kept := tpl.Canvas.Edges[:0]
 		for _, e := range tpl.Canvas.Edges {
@@ -301,8 +303,8 @@ func TestThreeTier_MissingNetworkControlsAreNotAssessable_AndReturnPathIsEvaluat
 		}
 		tpl.Canvas.Edges = kept
 	})
-	if s, ok := step(noNACL, "nacl_check"); !ok || s.Decision != core.TraceNotAssessable || !strings.Contains(s.Reason, "NACL") {
-		t.Errorf("no NACL: nacl_check must be not_assessable naming the missing NACL, got %+v (present=%v)", s, ok)
+	if s, ok := step(noNACL, "nacl_dest_ingress"); !ok || s.Decision != core.TraceAllow || s.Provenance.Kind != core.KindAssumed || !strings.Contains(s.Reason, "unmodified") {
+		t.Errorf("no NACL association: nacl_dest_ingress must allow under the assumed default NACL, tagged assumed, stating the unmodified-default assumption; got %+v (present=%v)", s, ok)
 	}
 
 	// Only the EGRESS rule denies: stateless NACLs must fail the journey on the leg that rule governs.

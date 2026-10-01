@@ -52,7 +52,13 @@ func mergeNetworkACLRules(nodes []core.Node, parsed []ParsedResource) {
 	rulesByNACL := map[string][]map[string]any{}
 
 	for _, r := range parsed {
-		if r.Type == "aws_network_acl" {
+		if r.Type == "aws_network_acl" || r.Type == "aws_default_network_acl" {
+			// A NACL with no rule blocks is still a NACL carrying ZERO rules (a custom
+			// NACL denies everything; AWS VPC User Guide, "Custom network ACLs"), which
+			// is different from "no NACL known" — so the key is always present.
+			if _, ok := rulesByNACL[r.Key()]; !ok {
+				rulesByNACL[r.Key()] = []map[string]any{}
+			}
 			for _, direction := range []string{"ingress", "egress"} {
 				for _, nb := range r.NestedBlocks[direction] {
 					rulesByNACL[r.Key()] = append(rulesByNACL[r.Key()], normalizeNACLRule(direction, nb.Attributes))
@@ -79,6 +85,21 @@ func mergeNetworkACLRules(nodes []core.Node, parsed []ParsedResource) {
 				nodes[i].RawAttributes = map[string]any{}
 			}
 			nodes[i].RawAttributes["nacl_rules"] = rules
+		}
+	}
+	// PC-149: mark the VPC default NACL so core can find it for unassociated subnets.
+	defaults := map[string]bool{}
+	for _, r := range parsed {
+		if r.Type == "aws_default_network_acl" {
+			defaults[r.Key()] = true
+		}
+	}
+	for i := range nodes {
+		if defaults[nodes[i].ID] {
+			if nodes[i].RawAttributes == nil {
+				nodes[i].RawAttributes = map[string]any{}
+			}
+			nodes[i].RawAttributes["default_nacl"] = true
 		}
 	}
 }

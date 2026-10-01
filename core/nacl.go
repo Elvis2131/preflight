@@ -90,3 +90,90 @@ func toNACLRule(raw map[string]any) NACLRule {
 	}
 	return rule
 }
+
+// NACLSource says where a subnet's effective NACL came from (PC-149).
+type NACLSource string
+
+const (
+	// NACLExplicit: the subnet is associated with a NACL in the design.
+	NACLExplicit NACLSource = "explicit"
+	// NACLDeclaredDefault: no association, and the design declares the VPC default
+	// NACL's rules (Terraform aws_default_network_acl).
+	NACLDeclaredDefault NACLSource = "declared_default"
+	// NACLAssumedDefault: no association and nothing declared — AWS's documented
+	// default NACL, assumed unmodified. The ONE assumption is NACLAssumedDefaultReason.
+	NACLAssumedDefault NACLSource = "assumed_default"
+)
+
+// NACLAssumedDefaultID is the profile ID of the assumed default NACL.
+const NACLAssumedDefaultID = "default-nacl (assumed)"
+
+// NACLAssumedDefaultReason states the single real assumption, for the trace step.
+const NACLAssumedDefaultReason = "no NACL is associated with this subnet and the design declares no default NACL rules, so AWS's documented default network ACL applies (VPC User Guide, \"Default network ACL for a VPC\": rule 100 allows all inbound and outbound traffic, plus the * deny); ASSUMED unmodified — the design cannot show that nobody changed the default NACL outside it"
+
+// NACLResolution is a subnet's effective NACL and its provenance.
+type NACLResolution struct {
+	Profile NACLProfile
+	Source  NACLSource
+}
+
+// ResolveSubnetNACL applies AWS's association rule (VPC User Guide, "Control subnet
+// traffic with network access control lists": "If you don't explicitly associate a
+// subnet with a network ACL, the subnet is automatically associated with the default
+// network ACL"):
+//  1. an explicit association -> that NACL;
+//  2. none, and the design declares the subnet's VPC default NACL -> those rules;
+//  3. none, and nothing declared -> AWS's documented allow-all default, tagged assumed.
+//
+// ok is false (not_assessable, I4) when an explicit association cannot be ruled out —
+// an unresolved or dangling depends_on edge from the subnet — or when default NACLs
+// are declared but this subnet's VPC cannot be resolved to choose between them.
+func ResolveSubnetNACL(nodes []Node, edges []Edge, subnetID string) (NACLResolution, bool) {
+	if p, ok := NACLProfileForSubnet(nodes, edges, subnetID); ok {
+		return NACLResolution{Profile: p, Source: NACLExplicit}, true
+	}
+	byID := map[string]Node{}
+	for _, n := range nodes {
+		byID[n.ID] = n
+	}
+	for _, e := range edges {
+		if e.Type == EdgeTypeDependsOn && e.From == subnetID {
+			if _, ok := byID[e.To]; !ok || e.Resolution != ResolutionKnown {
+				return NACLResolution{}, false
+			}
+		}
+	}
+
+	var vpcID string
+	for _, e := range edges {
+		if e.Type == EdgeTypeContainedIn && e.From == subnetID && e.Resolution == ResolutionKnown {
+			if _, ok := byID[e.To]; ok {
+				vpcID = e.To
+				break
+			}
+		}
+	}
+	declaredAny := false
+	for _, n := range nodes {
+		if d, _ := n.RawAttributes["default_nacl"].(bool); !d || !hasRawRules(n.RawAttributes["nacl_rules"]) {
+			continue
+		}
+		declaredAny = true
+		for _, e := range edges {
+			if e.Type == EdgeTypeContainedIn && e.From == n.ID && e.To == vpcID && vpcID != "" {
+				profile := NACLProfile{NACLID: n.ID}
+				for _, raw := range rawRuleMaps(n.RawAttributes["nacl_rules"]) {
+					profile.Rules = append(profile.Rules, toNACLRule(raw))
+				}
+				return NACLResolution{Profile: profile, Source: NACLDeclaredDefault}, true
+			}
+		}
+	}
+	if declaredAny && vpcID == "" {
+		return NACLResolution{}, false
+	}
+	return NACLResolution{Profile: NACLProfile{NACLID: NACLAssumedDefaultID, Rules: []NACLRule{
+		{Number: 100, Direction: "ingress", Protocol: "-1", CIDR: "0.0.0.0/0", Allow: true},
+		{Number: 100, Direction: "egress", Protocol: "-1", CIDR: "0.0.0.0/0", Allow: true},
+	}}, Source: NACLAssumedDefault}, true
+}

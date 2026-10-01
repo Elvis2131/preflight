@@ -5,33 +5,16 @@ package core_test
 // "Removing the one SG rule that allows ECS -> RDS breaks the checkout journey, and
 // the trace names that rule — tested on a golden fixture."
 //
-// GOLDEN-FIXTURE HONESTY NOTE, investigated before writing these tests: golden/aws's
-// own checkout journey (golden/workload.yaml) already does not structurally flow at
-// baseline — PC-125's own TestGoldenWorkload_CheckoutJourney_StructuralFlow_HandVerified
-// proves it blocks at aws_lb.payments citing golden/aws's own real, pre-existing gap:
-// ZERO NACL resources exist anywhere in that bundle. That gap is universal, not
-// specific to the checkout journey's own path — BuildTrace's own nacl_check step runs
-// for EVERY subnet-crossing request, internet-originated included (its own doc
-// comment: "an internet-originated request... still crosses the destination subnet's
-// NACL on the way in"), so ANY full BuildTrace call into ANY golden/aws destination
-// is blocked at nacl_check before it can ever reach an sg_dest_ingress decision.
-// Separately, golden's own "data" subnets (RDS/ElastiCache) also have NO
-// aws_route_table_association at all (PC-125's own doc comment), so a trace into
-// aws_db_instance.payments specifically fails even earlier, at route_selection.
-// Both gaps are real, pre-existing, and unrelated to this ticket — working around
-// them would mean fabricating golden Terraform data that does not exist, which this
-// project's own discipline forbids. So no full, real golden BuildTrace call can ever
-// reach Allowed=true today, regardless of any SG/NACL fault applied.
-//
-// What IS hand-verified against golden, honestly, at the layer that gap does not
-// block: EvaluateConnection/SecurityGroupProfile — the exact SG engine BuildTrace
-// itself calls (PC-112) — correctly flips from allow to deny when the real rule the
-// Card names (aws_security_group.database's own ingress from
-// aws_security_group.workload, security.tf) is removed, for both the named RDS pair
-// and the ALB's own real ingress rule. The complete "removing a rule breaks the
-// WHOLE journey, full BuildTrace pipeline included" semantic — impossible to observe
-// against golden/aws for the structural reason above — is proven end-to-end on the
-// synthetic fixture below, where no such unrelated gap exists.
+// GOLDEN-FIXTURE NOTE (revised under PC-149): golden/aws declares no NACLs, so each
+// subnet is on its VPC's default NACL — AWS's documented allow-all, assumed unmodified
+// — and full BuildTrace calls into golden/aws now reach their SG decisions. The two real
+// golden hops that can be traced end to end are internet -> ALB (tcp/443) and
+// ALB -> workload (tcp/8080); the golden checkout JOURNEY still cannot flow as a whole
+// (it declares one port, tcp/443, for every hop) and EKS -> RDS stops earlier at route
+// selection (golden's data subnets have no explicit route-table association, and the
+// implicit main route table is not modelled — a separate gap). The older tests below
+// that exercise SecurityGroupProfile/EvaluateConnection directly stay valid: that is
+// the exact engine BuildTrace's sg_dest_ingress step calls.
 
 import (
 	"testing"
@@ -279,5 +262,76 @@ func TestTargetDeregistration_NoModelledRegistration_RefusedAndTraceUnchanged(t 
 	// A non-load-balancer target is refused too.
 	if _, ok := core.WithTargetDeregistered(buildFlowTestIR(true, true), "app", "db"); ok {
 		t.Error("a compute node is not a load balancer")
+	}
+}
+
+// PC-130's golden-fixture criterion, re-run under PC-149: removing the ONE real SG rule
+// that admits a hop breaks that hop through the full pipeline, and the trace names the
+// security group step and the group that decided.
+func goldenSGDecision(t *testing.T, ir *core.IR, src, dest string, port int) (core.Trace, core.TraceStep) {
+	t.Helper()
+	cidr := ""
+	if src == "" {
+		cidr = "0.0.0.0/0"
+	}
+	tr := core.BuildTrace(ir, src, dest, cidr, "tcp", port)
+	for _, s := range tr.Steps {
+		if s.Step == "sg_dest_ingress" {
+			return tr, s
+		}
+	}
+	t.Fatalf("no sg_dest_ingress step: %+v", tr.Steps)
+	return tr, core.TraceStep{}
+}
+
+func TestGolden_FullTrace_RemovingTheRealSGRuleBreaksTheHop(t *testing.T) {
+	ir := realGoldenIR(t)
+	cases := []struct {
+		name, src, dest, sg string
+		port                int
+		rule                core.SGRule
+	}{
+		{"internet -> ALB", "", "aws_lb.payments", "aws_security_group.alb", 443,
+			core.SGRule{Direction: "ingress", Protocol: "tcp", FromPort: 443, ToPort: 443, CIDRs: []string{"0.0.0.0/0"}}},
+		{"ALB -> workload", "aws_lb.payments", "aws_eks_cluster.payments", "aws_security_group.workload", 8080,
+			core.SGRule{Direction: "ingress", Protocol: "tcp", FromPort: 8080, ToPort: 8080, SourceSG: "aws_security_group.alb"}},
+	}
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			before, _ := goldenSGDecision(t, ir, c.src, c.dest, c.port)
+			if !before.Allowed {
+				t.Fatalf("baseline hop must reach Allowed on golden/aws: %+v", before.Steps)
+			}
+			mutated, ok := core.WithSGRuleRemoved(ir, c.sg, c.rule)
+			if !ok {
+				t.Fatalf("the real golden rule on %s was not found; check it against security.tf", c.sg)
+			}
+			after, step := goldenSGDecision(t, mutated, c.src, c.dest, c.port)
+			if after.Allowed || step.Decision != core.TraceDeny {
+				t.Fatalf("after removing the only admitting rule the hop must be denied at sg_dest_ingress: %+v", after.Steps)
+			}
+			if !core.BuildTrace(ir, c.src, c.dest, map[bool]string{true: "0.0.0.0/0"}[c.src == ""], "tcp", c.port).Allowed {
+				t.Error("original IR was mutated")
+			}
+		})
+	}
+}
+
+// The same break observed as a journey through Simulate: a golden journey that CAN
+// flow (internet -> ALB on its declared tcp/443) stops flowing under sg_rule_change.
+func TestGolden_Simulate_SGRuleChange_BreaksFlowingJourney(t *testing.T) {
+	ir := realGoldenIR(t)
+	workload := core.Workload{Journeys: []core.DeclaredJourney{
+		{ID: "edge", Name: "edge", Path: []string{core.JourneyInternetSentinel, "aws_lb.payments"}, Protocol: "tcp", Port: 443, Criticality: "tier1"},
+	}}
+	before := core.Simulate(ir, workload, nil, syntheticProv())
+	if len(before.FlowDetail) != 1 || !before.FlowDetail[0].Flows {
+		t.Fatalf("golden internet -> ALB journey must flow at baseline: %+v", before.FlowDetail)
+	}
+	after := core.Simulate(ir, workload, []core.Fault{{Type: "sg_rule_change", Target: "aws_security_group.alb", SGRuleRemove: &core.SGRule{
+		Direction: "ingress", Protocol: "tcp", FromPort: 443, ToPort: 443, CIDRs: []string{"0.0.0.0/0"},
+	}}}, syntheticProv())
+	if len(after.FlowDetail) != 1 || after.FlowDetail[0].Flows {
+		t.Fatalf("after removing the ALB's 443 rule the journey must stop flowing: %+v", after.FlowDetail)
 	}
 }

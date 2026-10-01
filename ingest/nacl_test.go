@@ -9,6 +9,7 @@ import (
 	"path/filepath"
 	"testing"
 
+	"preflight/core"
 	"preflight/ingest"
 )
 
@@ -82,5 +83,38 @@ func TestNACLRules_BothShapes(t *testing.T) {
 		if oov.ResourceType == "aws_network_acl_rule" {
 			t.Error("aws_network_acl_rule must not be reported as out-of-vocabulary")
 		}
+	}
+}
+
+// PC-149: aws_default_network_acl is ingested as a node marked default_nacl, carries its
+// inline rules, is contained_in its VPC — and core then resolves an unassociated subnet
+// to it as the DECLARED default, not the assumed one.
+func TestDefaultNetworkACL_IngestedAndResolvedAsDeclaredDefault(t *testing.T) {
+	reg := loadRegistry(t)
+	result, err := ingest.Ingest(filepath.Join("testdata", "default-nacl-fixture"), reg, 1)
+	if err != nil {
+		t.Fatalf("Ingest: %v", err)
+	}
+	if result.Insufficient != nil {
+		t.Fatalf("got insufficient_model: %+v", result.Insufficient)
+	}
+	var def *core.Node
+	for i := range result.IR.Nodes {
+		if result.IR.Nodes[i].ID == "aws_default_network_acl.d" {
+			def = &result.IR.Nodes[i]
+		}
+	}
+	if def == nil {
+		t.Fatal("aws_default_network_acl.d was not ingested as a node")
+	}
+	if d, _ := def.RawAttributes["default_nacl"].(bool); !d {
+		t.Errorf("default_nacl marker = %v, want true", def.RawAttributes["default_nacl"])
+	}
+	if rules, _ := def.RawAttributes["nacl_rules"].([]map[string]any); len(rules) != 1 {
+		t.Errorf("got %d nacl_rules, want the 1 inline ingress rule", len(rules))
+	}
+	res, ok := core.ResolveSubnetNACL(result.IR.Nodes, result.IR.Edges, "aws_subnet.s")
+	if !ok || res.Source != core.NACLDeclaredDefault || res.Profile.NACLID != "aws_default_network_acl.d" {
+		t.Fatalf("got %+v ok=%v, want the declared default NACL for the unassociated subnet", res, ok)
 	}
 }

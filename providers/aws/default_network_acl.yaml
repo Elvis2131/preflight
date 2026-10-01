@@ -1,0 +1,13 @@
+# aws_default_network_acl -> network_boundary. PC-149: the VPC's own default NACL,
+# adopted into Terraform so its rules can be declared. Per AWS VPC User Guide, "Default
+# network ACL for a VPC" (docs.aws.amazon.com/vpc/latest/userguide/default-network-acl.html,
+# verified 2026-10-02): a subnet with no explicit association uses the default NACL,
+# and the default NACL can be modified by adding or removing rules. Its
+# default_network_acl_id attribute references the owning VPC; that reference becomes a
+# contained_in edge (default NACL -> VPC) because aws_vpc's own mapping sets
+# reference_edge_type: contained_in — the same way a subnet's VPC reference does.
+# Ingest marks the node RawAttributes["default_nacl"]=true and attaches its inline
+# ingress/egress blocks as nacl_rules (ingest/nacl.go).
+resource_type: aws_default_network_acl
+node_type: network_boundary
+capability_level: NETWORK_BEHAVIOR

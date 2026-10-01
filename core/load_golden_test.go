@@ -1,9 +1,9 @@
 package core_test
 
-// PC-126: proves ComputeComponentLoad against the real golden AWS bundle — honestly
-// near-empty, since PC-125's own golden test already established that the real
-// "checkout" journey is blocked on its very first hop (golden/aws has zero NACL
-// resources, PC-113). This is the true, correct result, not a wished-for one.
+// PC-126/PC-149: proves ComputeComponentLoad against the real golden AWS bundle. The
+// checkout journey now reaches its first component (internet -> ALB is Allowed under
+// the assumed default NACL, PC-149) and blocks at the workload's security group, so
+// the ALB carries the journey's declared load and nothing past it does.
 
 import (
 	"testing"
@@ -16,9 +16,19 @@ func TestGoldenWorkload_ComponentLoad_HonestlyReflectsBlockedFlow(t *testing.T) 
 	workload := loadGoldenWorkload(t)
 
 	loads := core.ComputeComponentLoad(ir, workload, nil)
+	sawLB := false
 	for _, l := range loads {
-		if l.NodeID == "aws_lb.payments" || l.NodeID == "aws_eks_cluster.payments" || l.NodeID == "aws_db_instance.payments" {
-			t.Errorf("%s must not appear in the load report — the checkout journey never reaches past its first (blocked) hop, got %+v", l.NodeID, l)
+		switch l.NodeID {
+		case "aws_lb.payments":
+			sawLB = true
+			if l.OfferedRPS != 800 {
+				t.Errorf("aws_lb.payments OfferedRPS = %v, want 800 (checkout peak_rps)", l.OfferedRPS)
+			}
+		case "aws_eks_cluster.payments", "aws_db_instance.payments":
+			t.Errorf("%s must not appear in the load report — checkout is blocked before reaching it, got %+v", l.NodeID, l)
 		}
+	}
+	if !sawLB {
+		t.Error("aws_lb.payments must appear in the load report — the first hop is Allowed")
 	}
 }
