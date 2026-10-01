@@ -2,6 +2,8 @@ import { Handle, Position, type NodeProps, type Node } from "@xyflow/react";
 import type { CanvasNodeData } from "./types";
 import { NODE_TYPE_LABELS } from "./goldenVocabulary";
 import { containerRank } from "./containment";
+import { AwsIcon } from "./AwsIcon";
+import { iconForService, groupIcon, labelForService } from "./awsIcons";
 
 // GoldenNode is the ONE custom node component every golden vocabulary type renders
 // through — deliberately one component, not eleven. The palette restriction (PC-85's
@@ -64,7 +66,10 @@ export function GoldenNode({ data, selected }: NodeProps<GoldenNodeType>) {
         }}
       >
         <Handle type="target" position={Position.Top} />
-        <div style={{ fontWeight: 600 }}>{data.label}</div>
+        <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+          {containerIcon(rank, data) && <AwsIcon src={containerIcon(rank, data)!} size={20} />}
+          <div style={{ fontWeight: 600 }}>{data.label}</div>
+        </div>
         <div style={{ color: "#64748b", fontSize: 11 }}>
           {rank === 1 ? "VPC" : `Subnet${data.availabilityZone ? ` · ${data.availabilityZone}` : ""}`}
           {data.cidrBlock ? ` · ${data.cidrBlock}` : ""}
@@ -104,9 +109,14 @@ export function GoldenNode({ data, selected }: NodeProps<GoldenNodeType>) {
       }}
     >
       <Handle type="target" position={Position.Top} />
-      <div style={{ fontWeight: 600 }}>{data.label}</div>
-      <div style={{ color: "#64748b", fontSize: 11 }}>
-        {NODE_TYPE_LABELS[data.nodeType]}
+      <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+        {iconForService(data.serviceID) && (
+          <AwsIcon src={iconForService(data.serviceID)!} title={data.serviceID ? labelForService(data.serviceID) : undefined} />
+        )}
+        <div>
+          <div style={{ fontWeight: 600 }}>{data.label}</div>
+          <div style={{ color: "#64748b", fontSize: 11 }}>{NODE_TYPE_LABELS[data.nodeType]}</div>
+        </div>
       </div>
       {data.simState && data.simState !== "normal" && (
         <div style={{ fontSize: 10, fontWeight: 600, marginTop: 2, color: "#dc2626" }}>
@@ -157,4 +167,14 @@ function SubnetBadge({ fact }: { fact: NonNullable<CanvasNodeData["subnetFact"]>
       {fact.visibility === "not_assessable" ? "not assessable" : fact.visibility}
     </span>
   );
+}
+
+// containerIcon picks a VPC/subnet's group icon. A subnet's public/private icon follows the
+// SERVER-derived classification (the same source as the badge) — a subnet whose visibility is
+// unknown (no route table) gets no icon rather than a guess.
+function containerIcon(rank: number, data: CanvasNodeData): string | null {
+  if (rank === 1) return groupIcon("vpc");
+  if (data.subnetFact?.visibility === "public") return groupIcon("publicSubnet");
+  if (data.subnetFact?.visibility === "private") return groupIcon("privateSubnet");
+  return null;
 }

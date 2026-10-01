@@ -1,5 +1,7 @@
 import type { NodeProps, Node } from "@xyflow/react";
 import type { GroupingData } from "./groupings";
+import { AwsIcon } from "./AwsIcon";
+import { groupIcon } from "./awsIcons";
 
 // GroupingNode (PC-105) draws a Region or AZ box. It is display-only: no handles, no
 // interaction (pointer-events are off on the node itself), nothing editable — the box
@@ -25,6 +27,7 @@ export function GroupingNode({ data }: NodeProps<GroupingNodeType>) {
       }}
     >
       <div style={{ position: "absolute", ...(isRegion ? { top: 4 } : { bottom: 4 }), left: 10, color: isRegion ? "#6d28d9" : "#0369a1", fontWeight: 700 }}>
+        {isRegion && <span style={{ display: "inline-block", verticalAlign: "middle", marginRight: 4 }}><AwsIcon src={groupIcon("region")} size={16} /></span>}
         {isRegion ? "Region" : "AZ"} · {data.label}
         <span style={{ fontWeight: 400, opacity: 0.7 }}> (derived)</span>
       </div>

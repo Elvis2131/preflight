@@ -54,3 +54,15 @@ machine has to subset, so a checked-in PDF would only be true on the machine tha
 The HTML report (`core.RenderReportHTML`) IS golden-fixture tested and byte-stable
 (`golden/fixtures/aws.report.html`); the PDF is a print of exactly that HTML, with the
 Chromium version pinned and logged in CI like `dot -V`.
+
+## The report diagram does not embed AWS icons (PC-109 decision)
+
+The workspace canvas draws official AWS icons (`canvas/public/aws-icons/`, licence position in
+`ICONS-LICENSE.md`); the server-rendered report SVG deliberately does **not**. Embedding them in
+the Graphviz output would (a) make that output depend on external image files and their paths,
+which the byte-stable golden SVG fixture and the deterministic-render requirement (NFR-1) cannot
+tolerate, and (b) bloat every report with the same artwork. The report diagram therefore stays
+label-based, and the golden SVG/HTML fixtures are byte-identical with or without the icon
+directory (the full suite proves it). If a future ticket wants icons in the report, the
+Graphviz version scope note in `render.go` applies and the fixtures would be regenerated and
+hand-verified.

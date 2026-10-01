@@ -3,6 +3,8 @@ import type { Node } from "@xyflow/react";
 import type { CanvasNodeData, CanvasSecurityGroupRule, CanvasRoute, CanvasNACLRule } from "./types";
 import { SIZING_FIELDS, type SizingFieldDef } from "./sizingFields";
 import { resolveRegion, rowInRegion, REGION_PRICED_TYPES } from "./region";
+import { AwsIcon } from "./AwsIcon";
+import { iconForService, labelForService } from "./awsIcons";
 import { listPricingSnapshots, getPricingSnapshot, listServiceCatalog, type PricingSnapshot, type ServiceCatalogEntry } from "./api";
 
 // SERVICE_FOR_INSTANCE_TYPE_KIND maps a SizingFieldDef's own instanceTypeKind to the
@@ -400,6 +402,12 @@ export function Inspector({
         resolves a capability level for a real, chosen service, never a guess from
         the structural type alone.
       </p>
+      {iconForService(node.data.serviceID) && (
+        <div style={{ display: "flex", alignItems: "center", gap: 6, margin: "0 0 4px", fontSize: 12 }}>
+          <AwsIcon src={iconForService(node.data.serviceID)!} size={24} />
+          <span>{labelForService(node.data.serviceID!)}</span>
+        </div>
+      )}
       <select
         style={inputStyle}
         value={node.data.serviceID ?? ""}

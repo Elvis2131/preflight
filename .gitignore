@@ -20,3 +20,6 @@ override.tf.json
 *.db-shm
 
 .DS_Store
+
+# AWS icon package zip placed in ui/ (licence: canvas/public/aws-icons/ICONS-LICENSE.md) — only the used subset is committed
+ui/*.zip

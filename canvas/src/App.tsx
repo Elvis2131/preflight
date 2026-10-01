@@ -32,9 +32,11 @@ import { CONTAINER_SIZE, containerRank, reevaluate } from "./containment";
 import { templateToCanvasState } from "./templateLoader";
 import { MODES, capabilities, type Mode } from "./modes";
 import { AnalyzeView } from "./analyze/AnalyzeView";
-import { listTemplates, getTemplate, simulateFaults, evaluateScenarios, deriveCanvas, type TemplateMeta, type Fault, type ScenarioResult, type SubnetFact } from "./api";
+import { listTemplates, getTemplate, simulateFaults, evaluateScenarios, deriveCanvas, listServiceCatalog, type ServiceCatalogEntry, type TemplateMeta, type Fault, type ScenarioResult, type SubnetFact } from "./api";
 import { FailureLab } from "./FailureLab";
 import { GroupingNode } from "./GroupingNode";
+import { AwsIcon } from "./AwsIcon";
+import { iconForService, labelForService } from "./awsIcons";
 import { buildGroupings } from "./groupings";
 import { killedTargets } from "./faultBuilder";
 import { assessCanvas, simulateNodeLoss, simulateBaseline, describeSimError, type SimulateResponse } from "./api";
@@ -49,11 +51,42 @@ function freshID(prefix: string): string {
   return `${prefix}-${nextID++}`;
 }
 
+// Palette (PC-85 / PC-109). The golden vocabulary stays the COMPLETE list of node TYPES — no
+// other type exists here, by design. Below it, an "AWS services" section lists the services
+// the capability registry actually models (GET /catalog/services — never an invented list),
+// each with its official AWS icon, or a labelled generic shape when AWS publishes no matching
+// icon. Dragging a service creates a node of that service's type with the service already
+// chosen; icons are presentation only and change nothing about assessment.
 function Palette() {
-  const onDragStart = (event: React.DragEvent, nodeType: NodeType) => {
+  const [services, setServices] = useState<ServiceCatalogEntry[]>([]);
+  useEffect(() => {
+    let cancelled = false;
+    listServiceCatalog()
+      .then((l) => !cancelled && setServices(l))
+      .catch(() => undefined); // no backend: the type palette alone, as before
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const onDragStart = (event: React.DragEvent, nodeType: NodeType, serviceID?: string) => {
     event.dataTransfer.setData("application/preflight-node-type", nodeType);
+    if (serviceID) event.dataTransfer.setData("application/preflight-service-id", serviceID);
     event.dataTransfer.effectAllowed = "move";
   };
+
+  const itemStyle: React.CSSProperties = {
+    padding: "6px 10px",
+    marginBottom: 6,
+    borderRadius: 4,
+    border: "1px solid #cbd5e1",
+    background: "#f8fafc",
+    cursor: "grab",
+    fontSize: 12,
+  };
+
+  // Sorted by display label, so the list never depends on the server's iteration order.
+  const sortedServices = [...services].sort((a, b) => labelForService(a.resource_type).localeCompare(labelForService(b.resource_type)));
 
   return (
     <aside style={{ width: 220, borderRight: "1px solid #e2e8f0", padding: 12, overflowY: "auto" }}>
@@ -63,24 +96,71 @@ function Palette() {
         exist here, by design (PC-85).
       </p>
       {NODE_TYPES.map((nt) => (
-        <div
-          key={nt}
-          draggable
-          onDragStart={(e) => onDragStart(e, nt)}
-          style={{
-            padding: "6px 10px",
-            marginBottom: 6,
-            borderRadius: 4,
-            border: "1px solid #cbd5e1",
-            background: "#f8fafc",
-            cursor: "grab",
-            fontSize: 12,
-          }}
-        >
+        <div key={nt} draggable onDragStart={(e) => onDragStart(e, nt)} style={itemStyle}>
           {NODE_TYPE_LABELS[nt]}
         </div>
       ))}
+      {sortedServices.length > 0 && (
+        <div data-testid="service-palette">
+          <ServiceGroup
+            title="AWS services"
+            note="Services this engine models. Drag one to add a node with that service chosen. A service AWS publishes no icon for is shown with a plain label."
+            services={sortedServices.filter((x) => x.resource_type.startsWith("aws_"))}
+            onDragStart={onDragStart}
+            itemStyle={itemStyle}
+          />
+          <ServiceGroup
+            title="Other services"
+            note="Modelled by the engine but not AWS: the AWS icon set does not apply, so these are plain labels."
+            services={sortedServices.filter((x) => !x.resource_type.startsWith("aws_"))}
+            onDragStart={onDragStart}
+            itemStyle={itemStyle}
+          />
+        </div>
+      )}
     </aside>
+  );
+}
+
+function ServiceGroup({
+  title,
+  note,
+  services,
+  onDragStart,
+  itemStyle,
+}: {
+  title: string;
+  note: string;
+  services: ServiceCatalogEntry[];
+  onDragStart: (e: React.DragEvent, nodeType: NodeType, serviceID?: string) => void;
+  itemStyle: React.CSSProperties;
+}) {
+  if (services.length === 0) return null;
+  return (
+    <div data-group={title}>
+      <h2 style={{ fontSize: 14, margin: "14px 0 4px" }}>{title}</h2>
+      <p style={{ fontSize: 11, color: "#64748b", margin: "0 0 8px" }}>{note}</p>
+      {services.map((svc) => {
+        const icon = iconForService(svc.resource_type);
+        return (
+          <div
+            key={svc.resource_type}
+            draggable
+            onDragStart={(e) => onDragStart(e, svc.node_type as NodeType, svc.resource_type)}
+            style={{ ...itemStyle, display: "flex", alignItems: "center", gap: 8 }}
+            data-service={svc.resource_type}
+            title={svc.resource_type}
+          >
+            {icon ? (
+              <AwsIcon src={icon} size={22} />
+            ) : (
+              <span aria-hidden style={{ width: 22, height: 22, flex: "none", border: "1px dashed #94a3b8", borderRadius: 3 }} />
+            )}
+            <span>{labelForService(svc.resource_type)}</span>
+          </div>
+        );
+      })}
+    </div>
   );
 }
 
@@ -529,14 +609,27 @@ function CanvasInner() {
       event.preventDefault();
       const nodeType = event.dataTransfer.getData("application/preflight-node-type") as NodeType;
       if (!nodeType) return;
+      // A service dragged from the "AWS services" palette arrives with its service already
+      // chosen (PC-109); a plain type does not.
+      const serviceID = event.dataTransfer.getData("application/preflight-service-id") || undefined;
 
       const position = screenToFlowPosition({ x: event.clientX, y: event.clientY });
       const id = freshID(nodeType);
+      const rank = serviceID ? containerRank(serviceID) : 0;
+      const containerSize = serviceID ? CONTAINER_SIZE[serviceID] : undefined;
       const newNode: Node<CanvasNodeData> = {
         id,
         type: "golden",
         position,
-        data: { nodeType, label: NODE_TYPE_LABELS[nodeType], capability: {} },
+        // A VPC / subnet dropped from the palette becomes a drawn container straight away,
+        // exactly as choosing that service in the Inspector does.
+        ...(rank > 0 && containerSize ? { style: { width: containerSize.width, height: containerSize.height }, zIndex: -(4 - rank) } : {}),
+        data: {
+          nodeType,
+          label: serviceID ? labelForService(serviceID) : NODE_TYPE_LABELS[nodeType],
+          capability: {},
+          ...(serviceID ? { serviceID } : {}),
+        },
       };
       setNodes((nds) => nds.concat(newNode));
       // A drop IS a placement (PC-105): a node dropped inside a VPC/subnet is contained_in it.
