@@ -1,0 +1,11 @@
+{
+  "captured_at": "2026-10-01",
+  "region": "us-east-1",
+  "source_note": "Fetched anonymously from AWS public Bulk Price List offer files; compact evidence manifest, not a pricing snapshot.",
+  "rows": [
+    {"source": "https://pricing.us-east-1.amazonaws.com/offers/v1.0/aws/AmazonEC2/current/us-east-1/index.json", "sku": "59S5R83GFPUAGVR5", "usagetype": "NatGateway-Bytes", "operation": "NatGateway", "servicecode": "AmazonEC2"},
+    {"source": "https://pricing.us-east-1.amazonaws.com/offers/v1.0/aws/AWSDataTransfer/current/us-east-1/index.json", "sku": "HQEH3ZWJVT46JHRG", "usagetype": "DataTransfer-Out-Bytes", "operation": "", "servicecode": "AWSDataTransfer"},
+    {"source": "https://pricing.us-east-1.amazonaws.com/offers/v1.0/aws/AWSDataTransfer/current/us-east-1/index.json", "sku": "PNUBVW4CPC8XA46W", "usagetype": "DataTransfer-Regional-Bytes", "operation": "", "servicecode": "AWSDataTransfer"},
+    {"source": "https://pricing.us-east-1.amazonaws.com/offers/v1.0/aws/AWSELB/current/us-east-1/index.json", "usagetype": "LCUUsage", "operation": "LoadBalancing:Application", "servicecode": "AWSELB"}
+  ]
+}

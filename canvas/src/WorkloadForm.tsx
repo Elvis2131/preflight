@@ -238,7 +238,7 @@ export function WorkloadForm({
   }
 
   return (
-    <div style={{ padding: 12, fontSize: 12 }}>
+    <div className="workload-panel" style={{ padding: 16, fontSize: 12 }}>
       <h3 style={{ fontSize: 13, margin: "0 0 8px" }}>Workload (NFR form)</h3>
       <p style={{ fontSize: 11, color: "#64748b", margin: "0 0 10px" }}>
         Same schema as workload.yaml (PRD §4) — no separate or looser shape. A capacity

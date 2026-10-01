@@ -20,7 +20,7 @@ export interface JourneyPanelProps {
 export function JourneyPanel({ journeys, flowDetail, load, latency, selectedJourneyID, onSelectJourney }: JourneyPanelProps) {
   if (journeys.length === 0) {
     return (
-      <div style={{ padding: 12, fontSize: 12, color: "#64748b" }}>
+      <div className="result-panel" style={{ padding: 16, fontSize: 12, color: "#697386" }}>
         No journeys declared — add one in the Workload form to see traffic flow and
         utilization here.
       </div>
@@ -32,7 +32,7 @@ export function JourneyPanel({ journeys, flowDetail, load, latency, selectedJour
   const latEstimate = lat?.state === "assessed" ? (lat.value as JourneyLatencyEstimate) : null;
 
   return (
-    <div style={{ padding: 12, fontSize: 12, overflowY: "auto" }}>
+    <div className="result-panel" style={{ padding: 16, fontSize: 12, overflowY: "auto" }}>
       <h3 style={{ fontSize: 13, margin: "0 0 8px" }}>Journey flow &amp; utilization</h3>
       <label style={{ display: "block", marginBottom: 8 }}>
         Journey:{" "}

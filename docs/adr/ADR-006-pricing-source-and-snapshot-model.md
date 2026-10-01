@@ -72,6 +72,15 @@ assessment path, on its own schedule" property without adding a process.
 
 ### 3. Snapshot scope, v1
 
+**PC-132 usage-type verification (2026-10-01).** A one-off anonymous read of the
+public `current/us-east-1/index.json` files confirmed representative rows for
+`NatGateway-Bytes` (AmazonEC2), `DataTransfer-Out-Bytes` and
+`DataTransfer-Regional-Bytes` (AWSDataTransfer), and `LCUUsage` with
+`operation=LoadBalancing:Application` (AWSELB). The compact capture manifest is
+`cmd/runnerd/internal/pricingfetch/testdata/pc132_usage_type_rows.json`. This
+verifies matcher vocabulary; it does not change the deliberate v1 decision to
+defer fetching the 481MB EC2 offer file or NAT Gateway pricing.
+
 - **Services fetched for real, v1**: `AWSELB` (load balancers), `AmazonS3`,
   `AmazonElastiCache`, `AmazonRDS` — all four verified reachable and parseable against
   the live endpoint while writing this ADR. RDS's 27MB file is decoded fully in

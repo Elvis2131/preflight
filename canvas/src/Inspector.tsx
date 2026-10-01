@@ -384,7 +384,7 @@ export function Inspector({
   };
 
   return (
-    <aside style={{ width: 260, borderLeft: "1px solid #e2e8f0", padding: 12, overflowY: "auto" }}>
+    <aside className="workspace-panel inspector-panel" style={{ width: 260, borderLeft: "1px solid #e2e8f0", padding: 16, overflowY: "auto" }}>
       <h2 style={{ fontSize: 14, margin: "0 0 4px" }}>Inspector</h2>
       <p style={{ fontSize: 11, color: "#64748b", margin: "0 0 8px" }}>
         {node.data.label} <span style={{ color: "#94a3b8" }}>({node.data.nodeType})</span>

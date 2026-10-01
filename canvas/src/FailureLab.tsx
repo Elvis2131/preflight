@@ -87,10 +87,10 @@ export function FailureLab({
   };
 
   return (
-    <div style={{ padding: 12, fontSize: 12 }} data-testid="failure-lab">
+    <div className="result-panel" style={{ padding: 16, fontSize: 12 }} data-testid="failure-lab">
       <h3 style={{ fontSize: 13, margin: "0 0 8px" }}>Failure Lab — scenario</h3>
 
-      <div style={box}>
+      <div className="lab-card" style={box}>
         <div style={small}>Pick a fault from the architecture, then add it. A scenario can combine several.</div>
         <select value={kind} onChange={(e) => setKind(e.target.value as FaultKind)} data-testid="fault-kind" style={{ width: "100%", margin: "6px 0" }}>
           {FAULT_KINDS.map((k) => (
@@ -124,7 +124,7 @@ export function FailureLab({
         </button>
       </div>
 
-      <div style={box}>
+      <div className="lab-card" style={box}>
         <strong>Scenario ({faults.length} fault{faults.length === 1 ? "" : "s"})</strong>
         {faults.length === 0 && <div style={small}>No faults yet.</div>}
         <ul style={{ paddingLeft: 16, margin: "4px 0" }} data-testid="scenario-faults">
@@ -149,7 +149,7 @@ export function FailureLab({
         {error && <div style={{ color: "#dc2626", fontSize: 11, marginTop: 4 }}>{error}</div>}
       </div>
 
-      <div style={box}>
+      <div className="lab-card" style={box}>
         <strong>Saved scenarios ({saved.length})</strong>
         {saved.length === 0 && <div style={small}>None saved for this session.</div>}
         <ul style={{ paddingLeft: 0, listStyle: "none", margin: "4px 0" }} data-testid="saved-scenarios">
@@ -181,7 +181,7 @@ export function FailureLab({
       </div>
 
       {results && (
-        <div style={box} data-testid="scenario-results">
+        <div className="lab-card result-card" style={box} data-testid="scenario-results">
           <strong>Results — current design (v{resultsVersion})</strong>
           <div style={small}>Computed by the server just now, from the saved definitions.</div>
           <ul style={{ listStyle: "none", padding: 0, margin: "4px 0 0" }}>

@@ -59,6 +59,7 @@ function freshID(prefix: string): string {
 // chosen; icons are presentation only and change nothing about assessment.
 function Palette() {
   const [services, setServices] = useState<ServiceCatalogEntry[]>([]);
+  const [query, setQuery] = useState("");
   useEffect(() => {
     let cancelled = false;
     listServiceCatalog()
@@ -76,43 +77,59 @@ function Palette() {
   };
 
   const itemStyle: React.CSSProperties = {
-    padding: "6px 10px",
-    marginBottom: 6,
-    borderRadius: 4,
-    border: "1px solid #cbd5e1",
-    background: "#f8fafc",
+    padding: "9px 10px",
+    marginBottom: 7,
+    borderRadius: 9,
+    border: "1px solid #e4e8ee",
+    background: "#ffffff",
     cursor: "grab",
     fontSize: 12,
   };
 
   // Sorted by display label, so the list never depends on the server's iteration order.
   const sortedServices = [...services].sort((a, b) => labelForService(a.resource_type).localeCompare(labelForService(b.resource_type)));
+  const normalizedQuery = query.trim().toLowerCase();
+  const visibleTypes = NODE_TYPES.filter((nt) => NODE_TYPE_LABELS[nt].toLowerCase().includes(normalizedQuery));
+  const visibleServices = sortedServices.filter((svc) =>
+    !normalizedQuery || labelForService(svc.resource_type).toLowerCase().includes(normalizedQuery) || svc.resource_type.toLowerCase().includes(normalizedQuery),
+  );
 
   return (
-    <aside style={{ width: 220, borderRight: "1px solid #e2e8f0", padding: 12, overflowY: "auto" }}>
-      <h2 style={{ fontSize: 14, margin: "0 0 8px" }}>Golden vocabulary</h2>
-      <p style={{ fontSize: 11, color: "#64748b", margin: "0 0 12px" }}>
-        Drag a type onto the canvas. This is the complete list — no other node types
-        exist here, by design (PC-85).
+    <aside className="workspace-panel" style={{ width: 220, borderRight: "1px solid #e2e8f0", padding: 16, overflowY: "auto" }}>
+      <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", gap: 8 }}>
+        <h2 style={{ fontSize: 14, margin: "0 0 4px" }}>Build</h2>
+        <span style={{ color: "#8b95a7", fontSize: 10 }}>drag to place</span>
+      </div>
+      <p style={{ fontSize: 11, color: "#697386", margin: "0 0 12px", lineHeight: 1.45 }}>
+        Add a component or service to the canvas. Every item is backed by the engine’s real vocabulary.
       </p>
-      {NODE_TYPES.map((nt) => (
+      <input
+        value={query}
+        onChange={(e) => setQuery(e.target.value)}
+        placeholder="Search components"
+        aria-label="Search components"
+        style={{ width: "100%", boxSizing: "border-box", padding: "8px 10px", marginBottom: 16, border: "1px solid #e4e8ee", borderRadius: 8, background: "#f8fafc" }}
+      />
+      <div className="palette-section-label">Core components</div>
+      {visibleTypes.map((nt) => (
         <div key={nt} draggable onDragStart={(e) => onDragStart(e, nt)} style={itemStyle}>
           {NODE_TYPE_LABELS[nt]}
         </div>
       ))}
-      {sortedServices.length > 0 && (
+      {visibleTypes.length === 0 && <div style={{ color: "#8b95a7", fontSize: 11, padding: "4px 0 12px" }}>No matching core components.</div>}
+      {visibleServices.length > 0 && (
         <div data-testid="service-palette">
           <ServiceGroup
             title="AWS services"
             note="Services this engine models. Drag one to add a node with that service chosen. A service AWS publishes no icon for is shown with a plain label."
-            services={sortedServices.filter((x) => x.resource_type.startsWith("aws_"))}
+            services={visibleServices.filter((x) => x.resource_type.startsWith("aws_"))}
             onDragStart={onDragStart}
             itemStyle={itemStyle}
           />
           <ServiceGroup
             title="Other services"
             note="Modelled by the engine but not AWS: the AWS icon set does not apply, so these are plain labels."
-            services={sortedServices.filter((x) => !x.resource_type.startsWith("aws_"))}
+            services={visibleServices.filter((x) => !x.resource_type.startsWith("aws_"))}
             onDragStart={onDragStart}
             itemStyle={itemStyle}
           />
@@ -744,22 +761,24 @@ function CanvasInner() {
   });
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", height: "100vh", width: "100%" }}>
+    <div className="app-shell">
       <div
         style={{ display: "flex", gap: 6, padding: "6px 12px", borderBottom: "1px solid #cbd5e1", background: "#f8fafc", alignItems: "center" }}
         data-testid="mode-bar"
+        className="mode-bar"
       >
+        <strong style={{ marginRight: 12, fontSize: 14, letterSpacing: "-0.02em" }}>Preflight</strong>
         {MODES.map((m) => (
           <button
             key={m.id}
             data-mode={m.id}
             onClick={() => setMode(m.id)}
-            style={{ fontSize: 12, fontWeight: mode === m.id ? 700 : 400, background: mode === m.id ? "#e0e7ff" : undefined }}
+            className={`mode-button${mode === m.id ? " active" : ""}`}
           >
             {m.label}
           </button>
         ))}
-        <span style={{ marginLeft: "auto", fontSize: 11, color: "#64748b" }} data-testid="session-label">
+        <span className="session-pill" style={{ marginLeft: "auto" }} data-testid="session-label">
           session {sessionIDRef.current.slice(0, 8)} · {latestVersion === null ? "no version assessed yet" : `latest v${latestVersion}`}
         </span>
       </div>
@@ -768,10 +787,10 @@ function CanvasInner() {
       ) : mode === "analyze" ? (
         <AnalyzeView sessionID={sessionIDRef.current} latestVersion={latestVersion} />
       ) : (
-    <div style={{ display: "flex", flex: 1, minHeight: 0, width: "100%" }}>
+    <div className="workspace">
       {caps.showsAuthoringPanels && <Palette />}
       {caps.showsAuthoringPanels && showWorkloadForm && (
-        <div style={{ width: 300, borderRight: "1px solid #e2e8f0", overflowY: "auto" }}>
+        <div className="workspace-panel" style={{ width: 300, borderRight: "1px solid #e2e8f0", overflowY: "auto" }}>
           <WorkloadForm
             value={workloadForm}
             onChange={setWorkloadForm}
@@ -781,8 +800,8 @@ function CanvasInner() {
           />
         </div>
       )}
-      <div style={{ flex: 1, display: "flex", flexDirection: "column" }}>
-        <div style={{ padding: 8, borderBottom: "1px solid #e2e8f0", display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
+      <div className="canvas-column">
+        <div className="canvas-toolbar" style={{ display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
           {caps.canEditDesign && (
           <label style={{ fontSize: 12 }}>
             Next edge type:{" "}
@@ -843,6 +862,7 @@ function CanvasInner() {
           <button
             onClick={killSelectedNode}
             disabled={!selectedNodeID || simBusy}
+            className="danger-action"
             style={{ fontSize: 12, background: "#fee2e2", border: "1px solid #dc2626" }}
           >
             {simBusy ? "Simulating..." : "Kill selected node"}
@@ -856,7 +876,7 @@ function CanvasInner() {
           {caps.canRunBaseline && (
           <>
           <span style={{ borderLeft: "1px solid #e2e8f0", height: 20 }} />
-          <button onClick={runBaseline} disabled={simBusy || journeys.length === 0} style={{ fontSize: 12 }}>
+          <button onClick={runBaseline} disabled={simBusy || journeys.length === 0} className="primary-action" style={{ fontSize: 12 }}>
             Run baseline (no fault)
           </button>
           {journeys.length === 0 && (
@@ -872,11 +892,10 @@ function CanvasInner() {
         </div>
         {(simError || simSummary) && (
           <div
+            className="status-strip"
             style={{
-              padding: 8,
-              borderBottom: "1px solid #e2e8f0",
               fontSize: 12,
-              background: simError ? "#fef2f2" : "#f8fafc",
+              background: simError ? "#fff5f5" : undefined,
             }}
           >
             {simError ? (
@@ -900,7 +919,7 @@ function CanvasInner() {
             )}
           </div>
         )}
-        <div ref={wrapperRef} style={{ flex: 1, position: "relative" }} onDragOver={caps.canEditDesign ? onDragOver : undefined} onDrop={caps.canEditDesign ? onDrop : undefined}>
+        <div className="canvas-stage" ref={wrapperRef} onDragOver={caps.canEditDesign ? onDragOver : undefined} onDrop={caps.canEditDesign ? onDrop : undefined}>
           <ReactFlow
             nodes={displayNodes}
             edges={displayEdges}

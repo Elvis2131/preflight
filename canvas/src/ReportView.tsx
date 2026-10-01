@@ -307,7 +307,7 @@ export function ReportView({
   };
 
   return (
-    <div style={{ padding: 12, fontSize: 12, overflowY: "auto", height: "100%" }}>
+    <div className="report-view" style={{ padding: 24, fontSize: 12, overflowY: "auto", height: "100%" }}>
       <h2 style={{ fontSize: 15, margin: "0 0 8px" }}>Report</h2>
       <div style={{ display: "flex", gap: 8, alignItems: "center", marginBottom: 10, flexWrap: "wrap" }}>
         <label>
@@ -341,7 +341,7 @@ export function ReportView({
         </button>
       </div>
 
-      {error && <p style={{ color: "#dc2626", fontSize: 11 }}>Error: {error}</p>}
+      {error && <p className="mode-error" style={{ color: "#a83c3c", fontSize: 11 }}>Error: {error}</p>}
 
       {reportA && !reportB && <ReportSummary report={reportA} onRepriced={reprice} />}
 

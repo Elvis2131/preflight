@@ -63,7 +63,7 @@ export function AnalyzeView({ sessionID, latestVersion }: { sessionID: string; l
 
   if (latestVersion === null) {
     return (
-      <div style={{ padding: 16, fontSize: 13, color: "#64748b" }} data-testid="analyze-empty">
+      <div className="mode-empty" style={{ padding: 16, fontSize: 13, color: "#697386" }} data-testid="analyze-empty">
         Nothing to analyse yet — this session has no assessed version. Run a baseline in Simulate or inject a fault
         in Failure Lab (each assesses the current design), then come back.
       </div>
@@ -74,14 +74,14 @@ export function AnalyzeView({ sessionID, latestVersion }: { sessionID: string; l
   const current = versions?.find((x) => x.version_number === selectedVersion) ?? null;
 
   return (
-    <div style={{ padding: 16, fontSize: 13, maxWidth: 1100, margin: "0 auto", overflowY: "auto", flex: 1 }}>
+    <div className="evidence-view" style={{ padding: 24, fontSize: 13, maxWidth: 1100, margin: "0 auto", overflowY: "auto", flex: 1 }}>
       <h1 style={{ fontSize: 18, margin: "0 0 4px" }}>Analyze — scorecard timeline</h1>
       <p style={{ fontSize: 12, color: "#64748b", margin: "0 0 16px" }}>
         Read-only. Per-finding status across every stored version of this session, coloured by the server's own
         assurance-delta classification — nothing here is combined into a single trend line or score.
         {busy && " Loading…"}
       </p>
-      {error && <div style={{ padding: 8, background: "#fef2f2", color: "#b91c1c", fontSize: 12, marginBottom: 12 }}>{error}</div>}
+      {error && <div className="mode-error" style={{ padding: 10, background: "#fff5f5", color: "#a83c3c", fontSize: 12, marginBottom: 12 }}>{error}</div>}
 
       {rows && versions && versions.length > 0 && (
         <div style={{ overflowX: "auto" }}>

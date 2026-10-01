@@ -8,14 +8,11 @@
 // SKU MATCHING HONESTY NOTE: the usagetype strings this file matches against
 // (NatGateway-Bytes, DataTransfer-Regional-Bytes, DataTransfer-Out-Bytes, LCUUsage)
 // are AWS's own well-documented, standard Cost & Usage Report / Cost Explorer usage
-// type vocabulary (publicly referenced across AWS's own billing documentation and
-// tooling) — but unlike core/cost.go's own existing LoadBalancerUsage/RDS/ElastiCache
-// matches, these were not cross-checked against one specific captured real Price
-// List API response before writing this file (no live snapshot pull was available).
-// Flagged explicitly, the same "uncertain stays unknown, don't silently guess and
-// call it verified" discipline PC-18 already applied to a CIS control ID: verify
-// these against a real pulled snapshot (pricing/testdata or a live pricingfetch run)
-// before trusting this against production billing data.
+// type vocabulary. They were cross-checked against representative rows from the
+// public Bulk Price List files on 2026-10-01; see
+// cmd/runnerd/internal/pricingfetch/testdata/pc132_usage_type_rows.json. The
+// manifest proves spelling and service/operation identity only, not every region or
+// pricing dimension.
 //
 // Monthly volume conversion (steady_rps -> monthly bytes) is tagged Kind=assumed —
 // the Card's own explicit instruction, and (per core/report.go's own doc comment)
