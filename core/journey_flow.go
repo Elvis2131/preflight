@@ -103,6 +103,16 @@ type JourneyFlowResult struct {
 	ReachedByGroup [][]string
 	BlockedAt      string // empty when Flows is true
 	BlockedReason  string // empty when Flows is true
+
+	// Degraded is PC-131's own addition: the primary path does not flow (Flows is
+	// false, BlockedAt/BlockedReason still describe why) BUT the journey declared a
+	// Fallback and that fallback path really does flow under the same fault.
+	// DegradedVia is that fallback's own declared description. Never set for a
+	// journey with no declared fallback — graceful degradation is never assumed.
+	// Load (ComputeComponentLoad) credits only primary-path flow, so a degraded
+	// journey's fallback path carries no modelled load — a stated limit, not a claim.
+	Degraded    bool   `json:",omitempty"`
+	DegradedVia string `json:",omitempty"`
 }
 
 // ComputeJourneyFlow walks j's declared Path hop group by hop group. killed may be
@@ -115,6 +125,27 @@ type JourneyFlowResult struct {
 // the previous position against every declared member of the current one — and Flows
 // as a whole only stops once an ENTIRE position's group has zero reached members.
 func ComputeJourneyFlow(ir *IR, j DeclaredJourney, killed map[string]bool) JourneyFlowResult {
+	result := computeJourneyPathFlow(ir, j, killed)
+	if result.Flows || j.Fallback == nil {
+		return result
+	}
+	// The primary path does not flow. A declared fallback is evaluated by this very
+	// same engine under this very same fault; the journey's own IAMCheck is kept on
+	// it, which can only make "degraded" harder to claim, never easier (I4: when in
+	// doubt, fail rather than overclaim).
+	fb := j
+	fb.Path = j.Fallback.Path
+	fb.Fallback = nil
+	if computeJourneyPathFlow(ir, fb, killed).Flows {
+		result.Degraded = true
+		result.DegradedVia = j.Fallback.Description
+	}
+	return result
+}
+
+// computeJourneyPathFlow is ComputeJourneyFlow's own original body: one declared Path,
+// no fallback logic.
+func computeJourneyPathFlow(ir *IR, j DeclaredJourney, killed map[string]bool) JourneyFlowResult {
 	result := JourneyFlowResult{JourneyID: j.ID, Flows: true}
 
 	groups := make([][]string, len(j.Path))

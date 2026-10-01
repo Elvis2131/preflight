@@ -42,6 +42,9 @@
         },
         "iam_check": {
           "$ref": "#/$defs/JourneyIAMCheck"
+        },
+        "fallback": {
+          "$ref": "#/$defs/JourneyFallback"
         }
       },
       "additionalProperties": false,
@@ -53,6 +56,28 @@
         "protocol",
         "port",
         "criticality"
+      ]
+    },
+    "JourneyFallback": {
+      "properties": {
+        "description": {
+          "type": "string",
+          "minLength": 1,
+          "description": "What the degraded mode is"
+        },
+        "path": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array",
+          "minItems": 2
+        }
+      },
+      "additionalProperties": false,
+      "type": "object",
+      "required": [
+        "description",
+        "path"
       ]
     },
     "JourneyIAMCheck": {
@@ -170,5 +195,5 @@
     "requirements"
   ],
   "x-changelog": "contracts/CHANGELOG.md",
-  "x-schema-version": "1.3.0"
+  "x-schema-version": "1.4.0"
 }

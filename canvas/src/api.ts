@@ -52,6 +52,10 @@ export interface JourneyFlowResult {
   ReachedByGroup: string[][];
   BlockedAt: string;
   BlockedReason: string;
+  // PC-131: set only when the primary path does not flow but the journey's own
+  // declared fallback does (omitted from the wire otherwise). Never computed here.
+  Degraded?: boolean;
+  DegradedVia?: string;
 }
 
 // ComponentLoad mirrors core.ComponentLoad (core/load.go, PC-126) — again no json

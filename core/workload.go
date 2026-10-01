@@ -73,6 +73,21 @@ type DeclaredJourney struct {
 	// resource declared for every intermediate hop, real, separate, larger scope
 	// this ticket does not attempt.
 	IAMCheck *JourneyIAMCheck `json:"iam_check,omitempty" yaml:"iam_check,omitempty"`
+
+	// Fallback is PC-131's own addition: an optional DECLARED degraded mode — an
+	// alternative path this journey is designed to fall back to when its primary path
+	// does not flow (e.g. a queue buffering payment requests while the payment rail
+	// is down). Nil means no fallback was declared, and a journey that does not flow
+	// simply fails: graceful degradation is never assumed (the Card's own rule).
+	Fallback *JourneyFallback `json:"fallback,omitempty" yaml:"fallback,omitempty"`
+}
+
+// JourneyFallback is a journey's declared degraded mode (PC-131). Path uses the same
+// vocabulary as DeclaredJourney.Path and is evaluated by the same flow engine against
+// the same fault — a fallback only counts if it really flows under that fault.
+type JourneyFallback struct {
+	Description string   `json:"description" yaml:"description" validate:"required,min=1" jsonschema:"required,minLength=1,description=What the degraded mode is, e.g. requests buffered in a queue while the payment rail is down."`
+	Path        []string `json:"path" yaml:"path" validate:"required,min=2,dive,required" jsonschema:"required,minItems=2"`
 }
 
 // JourneyIAMCheck names the IAM authorization query to run against a journey's final

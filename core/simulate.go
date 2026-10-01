@@ -341,6 +341,19 @@ func killedNodesForFaults(ir *IR, workload Workload, faults []Fault) (killed map
 				return nil, false, "node_loss target \"" + f.Target + "\" does not exist in this IR — refusing to guess which node was meant"
 			}
 			killed[f.Target] = true
+		case "external_dependency_outage":
+			// PC-131: take an external_dependency node (payment rail, identity
+			// provider, third-party API) down. Only a node that really IS an
+			// external_dependency is accepted — refusing to guess, same as every other
+			// fault here, since "outage" of an ordinary component is node_loss.
+			n, found := nodeByID(ir, f.Target)
+			if !found {
+				return nil, false, "external_dependency_outage target \"" + f.Target + "\" does not exist in this IR — refusing to guess which dependency was meant"
+			}
+			if n.Type != NodeTypeExternalDependency {
+				return nil, false, "external_dependency_outage target \"" + f.Target + "\" is a " + string(n.Type) + ", not an external_dependency — use node_loss for an ordinary component"
+			}
+			killed[f.Target] = true
 		case "nat_gateway_loss":
 			if !nodeExists(ir, f.Target) {
 				return nil, false, "nat_gateway_loss target \"" + f.Target + "\" does not exist in this IR — refusing to guess which NAT gateway was meant"
@@ -351,10 +364,19 @@ func killedNodesForFaults(ir *IR, workload Workload, faults []Fault) (killed map
 			// function's own parameter) was even built — nothing to add to the
 			// killed-node set for any of these; ir already reflects the change.
 		default:
-			return nil, false, "fault type \"" + f.Type + "\" is not implemented — only region_loss, node_loss, nat_gateway_loss, route_removal, iam_policy_change, sg_rule_change, and nacl_rule_change are hand-verified in this version (PC-82, PC-88, PC-129, PC-130, PC-135)"
+			return nil, false, "fault type \"" + f.Type + "\" is not implemented — only region_loss, node_loss, nat_gateway_loss, external_dependency_outage, route_removal, iam_policy_change, sg_rule_change, and nacl_rule_change are hand-verified in this version (PC-82, PC-88, PC-129, PC-130, PC-131, PC-135)"
 		}
 	}
 	return killed, true, ""
+}
+
+func nodeByID(ir *IR, id string) (Node, bool) {
+	for _, n := range ir.Nodes {
+		if n.ID == id {
+			return n, true
+		}
+	}
+	return Node{}, false
 }
 
 func nodeExists(ir *IR, id string) bool {

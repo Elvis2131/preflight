@@ -10,6 +10,28 @@ Each generated `contracts/*.schema.json` carries its own version in `x-schema-ve
 stamped by `cmd/gen-contracts` — check that field against this file, not the other way
 around, since a schema file is regenerated output, not hand-edited.
 
+## workload.schema.json 1.4.0 — 2026-10-01 (PC-131: DeclaredJourney.fallback added)
+
+**Additive change to `workload.schema.json` only** — the other six schemas are
+untouched and remain at their current versions.
+
+`DeclaredJourney` gains one new, optional field: `fallback` (`description`, `path`) —
+a journey's DECLARED degraded mode, e.g. a queue buffering payment requests while the
+payment rail is down. `path` uses the same vocabulary as `DeclaredJourney.path` and is
+evaluated by the same flow engine under the same fault. A journey with no `fallback`
+that does not flow simply fails: graceful degradation is never assumed (PC-131's own
+rule). A caller holding a document against 1.3.0 needs to do nothing — the field is
+optional and absence means "no fallback declared", exactly the prior behaviour.
+
+## report.schema.json 1.4.0 — 2026-10-01 (PC-131: JourneyFlowResult.Degraded/DegradedVia added)
+
+**Additive change to `report.schema.json` only** (consequential to workload 1.4.0
+above: the report embeds journeys and per-journey flow results). `JourneyFlowResult`
+gains two optional fields, `Degraded` and `DegradedVia`: set only when the primary
+path does not flow but the journey's declared `fallback` does. Both are `omitempty`,
+so a document from before this change is still valid and a reader should treat absence
+as `Degraded: false`.
+
 ## canvas.schema.json 1.3.0 — 2026-09-26 (PC-137: CanvasNode.security_group_rules added)
 
 **Additive change to `canvas.schema.json` only** — the other six schemas are

@@ -53,9 +53,14 @@ export function JourneyPanel({ journeys, flowDetail, load, selectedJourneyID, on
 
       {flow && (
         <div style={{ marginBottom: 12 }}>
-          <div style={{ fontWeight: 600, color: flow.Flows ? "#16a34a" : "#dc2626" }}>
+          <div style={{ fontWeight: 600, color: flow.Flows ? "#16a34a" : flow.Degraded ? "#d97706" : "#dc2626" }}>
             {flow.Flows ? "Flows end-to-end" : `Blocked at ${flow.BlockedAt}: ${flow.BlockedReason}`}
           </div>
+          {flow.Degraded && (
+            <div style={{ color: "#d97706", fontSize: 12 }}>
+              Degraded, not failed — the declared fallback flows: {flow.DegradedVia}
+            </div>
+          )}
           <table style={{ width: "100%", marginTop: 6, borderCollapse: "collapse" }}>
             <thead>
               <tr style={{ textAlign: "left", color: "#64748b" }}>
