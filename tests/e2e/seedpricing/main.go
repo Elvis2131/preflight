@@ -28,7 +28,7 @@ func main() {
 	defer st.Close()
 
 	snap := pricing.Snapshot{
-		ID: "e2e-fixture-snapshot", FetchedAt: time.Now(), Source: "fixture snapshot for the browser e2e suite (not a live AWS pull)",
+		ID: "e2e-fixture-snapshot", FetchedAt: time.Date(2026, time.September, 25, 0, 0, 0, 0, time.UTC), Source: "fixture snapshot for the browser e2e suite (not a live AWS pull)",
 		Disclaimer: pricing.AWSDisclaimer,
 		Entries: []pricing.PriceEntry{
 			{Service: "AmazonRDS", Unit: "Hrs", Price: 0.899, Currency: "USD", SKUAttributes: map[string]string{"instanceType": "db.r6g.xlarge", "databaseEngine": "PostgreSQL", "deploymentOption": "Multi-AZ"}},
