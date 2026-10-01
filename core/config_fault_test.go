@@ -198,3 +198,86 @@ func TestSimulate_SGRuleChangeFault_BreaksOnlyDependentJourney(t *testing.T) {
 		t.Fatalf("after the fault, journey should no longer flow: %+v", after.FlowDetail)
 	}
 }
+
+// lbFlowIR is buildFlowTestIR with "app" turned into a load balancer that explicitly
+// serves traffic to "db" (the canvas's own LB routes_to target fact). Everything else
+// — SGs, NACLs, subnets — is the fully-flowing synthetic baseline.
+func lbFlowIR(withTargetEdge bool) *core.IR {
+	ir := buildFlowTestIR(true, true)
+	for i := range ir.Nodes {
+		if ir.Nodes[i].ID == "app" {
+			ir.Nodes[i].Type = core.NodeTypeLoadBalancer
+		}
+	}
+	if withTargetEdge {
+		ir.Edges = append(ir.Edges, core.Edge{ID: "lb-target", Type: core.EdgeTypeRoutesTo, From: "app", To: "db", Resolution: core.ResolutionKnown, Provenance: syntheticProv()})
+	}
+	return ir
+}
+
+func TestTargetDeregistration_BreaksJourney_TraceNamesRegistrationStep(t *testing.T) {
+	ir := lbFlowIR(true)
+	before := core.BuildTrace(ir, "app", "db", "", "tcp", 5432)
+	if !before.Allowed {
+		t.Fatalf("baseline must flow with db registered: %+v", before.Steps)
+	}
+	sawRegistered := false
+	for _, s := range before.Steps {
+		if s.Step == "target_registration" && s.Decision == core.TraceAllow {
+			sawRegistered = true
+		}
+	}
+	if !sawRegistered {
+		t.Error("baseline trace should show an allowing target_registration step")
+	}
+
+	workload := core.Workload{Journeys: []core.DeclaredJourney{{ID: "j1", Name: "j1", Path: []string{"app", "db"}, Protocol: "tcp", Port: 5432, Criticality: "tier1"}}}
+	after := core.Simulate(ir, workload, []core.Fault{{Type: "target_deregistration", Target: "app", DeregisterTarget: "db"}}, syntheticProv())
+	if len(after.FlowDetail) != 1 || after.FlowDetail[0].Flows {
+		t.Fatalf("after deregistration the journey must not flow: %+v", after.FlowDetail)
+	}
+
+	mutated, ok := core.WithTargetDeregistered(ir, "app", "db")
+	if !ok {
+		t.Fatal("WithTargetDeregistered returned ok=false for a real registration")
+	}
+	tr := core.BuildTrace(mutated, "app", "db", "", "tcp", 5432)
+	if tr.Allowed {
+		t.Fatal("trace must deny a deregistered target")
+	}
+	var deciding string
+	for _, s := range tr.Steps {
+		if s.Decision == core.TraceDeny {
+			deciding = s.Step
+		}
+	}
+	if deciding != "target_registration" {
+		t.Errorf("deciding step = %q, want target_registration", deciding)
+	}
+	// Copy-on-write: the original IR still flows.
+	if !core.BuildTrace(ir, "app", "db", "", "tcp", 5432).Allowed {
+		t.Error("original IR was mutated")
+	}
+}
+
+// With no modelled registration (the HCL case) the fault is refused, and a trace
+// makes no registration claim — never a guessed pass or fail (I4).
+func TestTargetDeregistration_NoModelledRegistration_RefusedAndTraceUnchanged(t *testing.T) {
+	ir := lbFlowIR(false)
+	if _, ok := core.WithTargetDeregistered(ir, "app", "db"); ok {
+		t.Error("deregistering an unmodelled registration must be refused")
+	}
+	for _, s := range core.BuildTrace(ir, "app", "db", "", "tcp", 5432).Steps {
+		if s.Step == "target_registration" {
+			t.Errorf("no registration is modelled; trace must not claim one: %+v", s)
+		}
+	}
+	resp := core.Simulate(ir, core.Workload{}, []core.Fault{{Type: "target_deregistration", Target: "app", DeregisterTarget: "db"}}, syntheticProv())
+	if resp.Verdict.State != core.AssessmentStateNotAssessable {
+		t.Errorf("Verdict.State = %q, want not_assessable", resp.Verdict.State)
+	}
+	// A non-load-balancer target is refused too.
+	if _, ok := core.WithTargetDeregistered(buildFlowTestIR(true, true), "app", "db"); ok {
+		t.Error("a compute node is not a load balancer")
+	}
+}

@@ -22,6 +22,13 @@ is never picked. The canvas sets it through the existing free-form `sizing` map 
 as "no component region". Regenerated golden/template IR fixtures differ only in
 `schema_version`.
 
+## report.schema.json 1.7.0 — 2026-10-02 (PC-130: Fault.deregister_target added)
+
+**Additive change to `report.schema.json` only.** The embedded `Fault` gains the optional
+`deregister_target` (the target node ID dropped from the load balancer named by `target`),
+used only by the new `target_deregistration` fault type. No existing field changes; older
+documents validate unchanged. Migration: none required.
+
 ## report.schema.json 1.6.0 — 2026-10-01 (PC-110: cost components record their region)
 
 **Additive change to `report.schema.json` only.** Each cost component gains optional

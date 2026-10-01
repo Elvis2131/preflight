@@ -37,6 +37,9 @@ type Fault struct {
 	SGRuleAdd      *SGRule   `json:"sg_rule_add,omitempty" jsonschema:"description=Required only for sg_rule_change when adding a rule — appended verbatim to the security group named by Target."`
 	NACLRuleRemove *NACLRule `json:"nacl_rule_remove,omitempty" jsonschema:"description=Required only for nacl_rule_change when removing a rule — the exact rule to remove from the NACL named by Target."`
 	NACLRuleAdd    *NACLRule `json:"nacl_rule_add,omitempty" jsonschema:"description=Required only for nacl_rule_change when adding a rule — appended verbatim to the NACL named by Target."`
+	// DeregisterTarget is required only for "target_deregistration": Target names the
+	// load balancer, DeregisterTarget the registered target node ID to drop from it.
+	DeregisterTarget string `json:"deregister_target,omitempty" jsonschema:"description=Required only for target_deregistration — the node ID of the registered target to drop from the load balancer named by Target."`
 }
 
 // Journey is one entry-point-to-stateful-node path's fate under the declared faults —
@@ -302,6 +305,12 @@ func resolveFaults(ir *IR, workload Workload, faults []Fault) (mutatedIR *IR, ki
 				}
 			}
 			mutatedIR = mutated
+		case "target_deregistration":
+			mutated, ok := WithTargetDeregistered(mutatedIR, f.Target, f.DeregisterTarget)
+			if !ok {
+				return nil, nil, false, "target_deregistration target \"" + f.Target + "\" is not a load balancer with a modelled registration of \"" + f.DeregisterTarget + "\" (load-balancer targets are authored on the canvas; HCL bundles carry none) — refusing to guess"
+			}
+			mutatedIR = mutated
 		case "nacl_rule_change":
 			hasRemove := f.NACLRuleRemove != nil
 			hasAdd := f.NACLRuleAdd != nil
@@ -368,12 +377,12 @@ func killedNodesForFaults(ir *IR, workload Workload, faults []Fault) (killed map
 				return nil, false, "nat_gateway_loss target \"" + f.Target + "\" does not exist in this IR — refusing to guess which NAT gateway was meant"
 			}
 			killed[f.Target] = true
-		case "route_removal", "iam_policy_change", "sg_rule_change", "nacl_rule_change":
+		case "route_removal", "iam_policy_change", "sg_rule_change", "nacl_rule_change", "target_deregistration":
 			// Already applied as an IR mutation by resolveFaults, before ir (this
 			// function's own parameter) was even built — nothing to add to the
 			// killed-node set for any of these; ir already reflects the change.
 		default:
-			return nil, false, "fault type \"" + f.Type + "\" is not implemented — only region_loss, node_loss, nat_gateway_loss, external_dependency_outage, route_removal, iam_policy_change, sg_rule_change, and nacl_rule_change are hand-verified in this version (PC-82, PC-88, PC-129, PC-130, PC-131, PC-135)"
+			return nil, false, "fault type \"" + f.Type + "\" is not implemented — only region_loss, node_loss, nat_gateway_loss, external_dependency_outage, route_removal, iam_policy_change, sg_rule_change, nacl_rule_change, and target_deregistration are hand-verified in this version (PC-82, PC-88, PC-129, PC-130, PC-131, PC-135)"
 		}
 	}
 	return killed, true, ""

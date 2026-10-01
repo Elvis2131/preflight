@@ -320,6 +320,20 @@ func BuildTrace(ir *IR, sourceID, destID, sourceCIDR, protocol string, port int)
 		return finalize(trace)
 	}
 
+	// 7b. LB target registration (PC-130): when the source is a load balancer whose
+	// targets are modelled (canvas routes_to edges), the destination must still be one
+	// of them. No modelled registration (HCL bundles) = no claim, never a guessed deny.
+	if sourceID != "" && sourceNode.Type == NodeTypeLoadBalancer {
+		if known, registered := targetRegistration(ir, sourceID, destID); known {
+			if registered {
+				step("target_registration", destID, "check the destination is a registered target of the load balancer", TraceAllow, destID+" is registered with "+sourceID, "")
+			} else {
+				step("target_registration", destID, "check the destination is a registered target of the load balancer", TraceDeny, destID+" is not a registered target of "+sourceID+" (deregistered or never registered)", "LB "+sourceID+" targets")
+				return finalize(trace)
+			}
+		}
+	}
+
 	// 8. target health — structural completeness only (no live account access, P0):
 	// the target resolved to a real, known (not unresolved) node.
 	healthDecision := TraceAllow

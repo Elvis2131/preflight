@@ -429,6 +429,10 @@
         "nacl_rule_add": {
           "$ref": "#/$defs/NACLRule",
           "description": "Required only for nacl_rule_change when adding a rule — appended verbatim to the NACL named by Target."
+        },
+        "deregister_target": {
+          "type": "string",
+          "description": "Required only for target_deregistration — the node ID of the registered target to drop from the load balancer named by Target."
         }
       },
       "additionalProperties": false,
@@ -1128,5 +1132,5 @@
     "provenance"
   ],
   "x-changelog": "contracts/CHANGELOG.md",
-  "x-schema-version": "1.6.0"
+  "x-schema-version": "1.7.0"
 }

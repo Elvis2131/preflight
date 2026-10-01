@@ -6,23 +6,11 @@
 // discipline PC-129/135 established (WithRouteRemoved, WithIAMStatementRemoved):
 // return a copy of ir with only the targeted node's own rule list changed.
 //
-// target_deregistration (the Card's third named fault type — "an LB target group
-// loses members") is NOT implemented here. Investigated before writing any code:
-// golden/aws has a real aws_lb_target_group resource (alb.tf) but NO
-// aws_lb_target_group_attachment and no ECS/EKS service load_balancer block wiring a
-// real target into it anywhere in the bundle — the golden architecture's own real
-// design (EKS + an implied Ingress/ALB-controller-managed target registration) has NO
-// static-literal Terraform fact for "which resource is a registered target," which is
-// exactly CLAUDE.md §15's ingest-scope boundary (dynamic/controller-managed state,
-// not a static literal). There is also no existing IR edge type at all representing
-// "this load balancer serves traffic to this specific target" (BuildTrace's own
-// route/SG/NACL steps never consult target-group membership — network reachability
-// and LB-to-backend registration are orthogonal facts in this IR today). Building
-// that honestly would mean adding a real, separate piece of ingest+IR modelling (a
-// new edge type, three new resource-type mappings, and a new BuildTrace step) with no
-// real golden data to hand-verify it against — exactly the kind of scope expansion
-// this ticket's own Card does not ask for and this session's discipline says not to
-// invent. Left as a real, stated gap, not silently attempted against fabricated data.
+// target_deregistration (the Card's third fault type) is implemented at the bottom of
+// this file, over a fact the CANVAS producer already authors (a routes_to edge from a
+// load balancer to its target). HCL ingest still has no such fact (golden/aws has no
+// aws_lb_target_group_attachment), so for HCL bundles registration stays unknown and
+// the fault is refused rather than guessed.
 package core
 
 import "reflect"
@@ -133,4 +121,66 @@ func fromNACLRule(r NACLRule) map[string]any {
 		"number": r.Number, "direction": r.Direction, "protocol": r.Protocol,
 		"cidr": r.CIDR, "allow": r.Allow, "from_port": r.FromPort, "to_port": r.ToPort,
 	}
+}
+
+// lbTargetEdges returns the routes_to edges that mean "this load balancer serves
+// traffic to that target" — a routes_to edge OUT of a load_balancer node with no
+// destination_cidr (route-table routes always carry one). This is a fact the canvas
+// producer authors explicitly; HCL ingest does not (golden/aws has no
+// aws_lb_target_group_attachment), so for HCL bundles an LB has no such edges and
+// registration is UNKNOWN — never assumed either way (I4).
+func lbTargetEdges(ir *IR, lbID string) []Edge {
+	var out []Edge
+	for _, e := range ir.Edges {
+		if e.Type != EdgeTypeRoutesTo || e.From != lbID {
+			continue
+		}
+		if cidr, _ := e.RawAttributes["destination_cidr"].(string); cidr != "" {
+			continue
+		}
+		out = append(out, e)
+	}
+	return out
+}
+
+// WithTargetDeregistered is PC-130's target_deregistration: a COPY of ir in which the
+// one LB→target registration is retargeted to a sentinel (the same device
+// WithRouteRemoved uses), so the load balancer still HAS registration facts — it
+// simply no longer lists targetID. ok is false, ir unchanged, when lbID is not a
+// load_balancer or has no such registration to remove: refusing to guess.
+func WithTargetDeregistered(ir *IR, lbID, targetID string) (*IR, bool) {
+	n, found := nodeByID(ir, lbID)
+	if !found || n.Type != NodeTypeLoadBalancer {
+		return ir, false
+	}
+	out := &IR{SchemaVersion: ir.SchemaVersion, VersionNumber: ir.VersionNumber, VersionHash: ir.VersionHash, Nodes: ir.Nodes}
+	changed := false
+	for _, e := range ir.Edges {
+		if !changed && e.Type == EdgeTypeRoutesTo && e.From == lbID && e.To == targetID {
+			if cidr, _ := e.RawAttributes["destination_cidr"].(string); cidr == "" {
+				e.To = removedRouteTargetPrefix + e.To
+				changed = true
+			}
+		}
+		out.Edges = append(out.Edges, e)
+	}
+	if !changed {
+		return ir, false
+	}
+	return out, true
+}
+
+// targetRegistration reports, for a hop whose source is a load balancer, whether
+// registration is modelled at all (known) and whether destID is registered.
+func targetRegistration(ir *IR, lbID, destID string) (known, registered bool) {
+	edges := lbTargetEdges(ir, lbID)
+	if len(edges) == 0 {
+		return false, false
+	}
+	for _, e := range edges {
+		if e.To == destID {
+			return true, true
+		}
+	}
+	return true, false
 }
