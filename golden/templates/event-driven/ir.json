@@ -1,0 +1,121 @@
+{
+  "schema_version": "1.3.0",
+  "version_number": 1,
+  "version_hash": "sha256:74b2dff93e89ad835f9f00e14d1e8b2689aac1e93af3fa79cb09d241baa82b79",
+  "nodes": [
+    {
+      "id": "aws_route53_record.ingest",
+      "type": "dns",
+      "resolution": "known",
+      "raw_attributes": {
+        "capability_level": "REQUEST_SIMULATION"
+      },
+      "provenance": {
+        "kind": "stated",
+        "source": "canvas"
+      }
+    },
+    {
+      "id": "aws_lambda_function.producer",
+      "type": "compute",
+      "resolution": "known",
+      "raw_attributes": {
+        "capability_level": "CONFIGURATION"
+      },
+      "provenance": {
+        "kind": "stated",
+        "source": "canvas"
+      }
+    },
+    {
+      "id": "aws_sqs_queue.jobs",
+      "type": "queue/stream",
+      "resolution": "known",
+      "capability": {
+        "encryption_mechanism": "true"
+      },
+      "raw_attributes": {
+        "capability_level": "REQUEST_SIMULATION",
+        "server_side_encryption": "true"
+      },
+      "provenance": {
+        "kind": "stated",
+        "source": "canvas"
+      }
+    },
+    {
+      "id": "aws_lambda_function.consumer",
+      "type": "compute",
+      "resolution": "known",
+      "raw_attributes": {
+        "capability_level": "CONFIGURATION"
+      },
+      "provenance": {
+        "kind": "stated",
+        "source": "canvas"
+      }
+    },
+    {
+      "id": "aws_dynamodb_table.results",
+      "type": "managed_database",
+      "resolution": "known",
+      "capability": {
+        "encryption_mechanism": "true"
+      },
+      "raw_attributes": {
+        "capability_level": "CONFIGURATION",
+        "server_side_encryption": "true"
+      },
+      "provenance": {
+        "kind": "stated",
+        "source": "canvas"
+      }
+    }
+  ],
+  "edges": [
+    {
+      "id": "r1",
+      "type": "routes_to",
+      "from": "aws_route53_record.ingest",
+      "to": "aws_lambda_function.producer",
+      "resolution": "known",
+      "provenance": {
+        "kind": "stated",
+        "source": "canvas"
+      }
+    },
+    {
+      "id": "r2",
+      "type": "reads/writes",
+      "from": "aws_lambda_function.producer",
+      "to": "aws_sqs_queue.jobs",
+      "resolution": "known",
+      "provenance": {
+        "kind": "stated",
+        "source": "canvas"
+      }
+    },
+    {
+      "id": "r3",
+      "type": "reads/writes",
+      "from": "aws_lambda_function.consumer",
+      "to": "aws_sqs_queue.jobs",
+      "resolution": "known",
+      "provenance": {
+        "kind": "stated",
+        "source": "canvas"
+      }
+    },
+    {
+      "id": "r4",
+      "type": "reads/writes",
+      "from": "aws_lambda_function.consumer",
+      "to": "aws_dynamodb_table.results",
+      "resolution": "known",
+      "provenance": {
+        "kind": "stated",
+        "source": "canvas"
+      }
+    }
+  ]
+}

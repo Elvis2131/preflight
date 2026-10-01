@@ -1,0 +1,50 @@
+{
+  "journeys": [
+    {
+      "entry_point": "aws_lb.web",
+      "target": "aws_db_instance.db",
+      "survives": false
+    },
+    {
+      "entry_point": "aws_route53_record.app",
+      "target": "aws_db_instance.db",
+      "survives": false
+    },
+    {
+      "entry_point": "aws_lb.web",
+      "target": "aws_elasticache_replication_group.cache",
+      "survives": true
+    },
+    {
+      "entry_point": "aws_route53_record.app",
+      "target": "aws_elasticache_replication_group.cache",
+      "survives": true
+    }
+  ],
+  "capacity": {
+    "state": "not_assessable",
+    "reason": "capacity_unknown: \"app_node_rps\" was not declared in workload.yaml — surviving instance count alone is never treated as a capacity value (CLAUDE.md §9)",
+    "provenance": {
+      "kind": "derived",
+      "source": "template-fixture"
+    }
+  },
+  "severed_paths": [
+    "aws_db_instance.db"
+  ],
+  "cascade": [
+    "aws_db_instance.db",
+    "aws_db_subnet_group.db"
+  ],
+  "verdict": {
+    "state": "assessed",
+    "value": "degraded",
+    "provenance": {
+      "kind": "derived",
+      "source": "template-fixture"
+    }
+  },
+  "flow_detail": [],
+  "load": [],
+  "latency": []
+}

@@ -1,0 +1,5 @@
+{
+  "id": "three-tier-vpc",
+  "name": "3-tier web app in a VPC",
+  "description": "DNS \u2192 Application Load Balancer across two AZs \u2192 app cluster \u2192 Multi-AZ database and cache, in a VPC with public, private and data subnets in two AZs and one NAT gateway per AZ. Uses only services in the capability registry."
+}

@@ -1,0 +1,5 @@
+{
+  "id": "event-driven",
+  "name": "Event-driven decoupling",
+  "description": "DNS \u2192 producer \u2192 SQS queue \u2190 consumer \u2192 DynamoDB. The queue decouples producer from consumer: losing the consumer leaves the producer's path to the queue intact. Reachability follows edge direction, and a consumer PULLS from the queue, so the results table is not reachable from the entry point in either state."
+}

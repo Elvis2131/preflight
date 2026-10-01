@@ -1,0 +1,14 @@
+{
+  "aws_route53_record.api": {
+    "x": 0,
+    "y": 80
+  },
+  "aws_lambda_function.handler": {
+    "x": 260,
+    "y": 80
+  },
+  "aws_dynamodb_table.items": {
+    "x": 520,
+    "y": 80
+  }
+}

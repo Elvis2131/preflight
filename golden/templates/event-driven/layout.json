@@ -1,0 +1,22 @@
+{
+  "aws_route53_record.ingest": {
+    "x": 0,
+    "y": 80
+  },
+  "aws_lambda_function.producer": {
+    "x": 230,
+    "y": 80
+  },
+  "aws_sqs_queue.jobs": {
+    "x": 460,
+    "y": 80
+  },
+  "aws_lambda_function.consumer": {
+    "x": 690,
+    "y": 80
+  },
+  "aws_dynamodb_table.results": {
+    "x": 920,
+    "y": 80
+  }
+}

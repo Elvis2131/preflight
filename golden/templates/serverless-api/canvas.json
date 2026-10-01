@@ -1,0 +1,41 @@
+{
+  "nodes": [
+    {
+      "id": "aws_route53_record.api",
+      "type": "dns",
+      "label": "DNS",
+      "capability": {},
+      "service_id": "aws_route53_record"
+    },
+    {
+      "id": "aws_lambda_function.handler",
+      "type": "compute",
+      "label": "Handler (Lambda)",
+      "capability": {},
+      "service_id": "aws_lambda_function"
+    },
+    {
+      "id": "aws_dynamodb_table.items",
+      "type": "managed_database",
+      "label": "Items table (DynamoDB)",
+      "capability": {
+        "server_side_encryption": "true"
+      },
+      "service_id": "aws_dynamodb_table"
+    }
+  ],
+  "edges": [
+    {
+      "id": "r1",
+      "type": "routes_to",
+      "from": "aws_route53_record.api",
+      "to": "aws_lambda_function.handler"
+    },
+    {
+      "id": "r2",
+      "type": "reads/writes",
+      "from": "aws_lambda_function.handler",
+      "to": "aws_dynamodb_table.items"
+    }
+  ]
+}

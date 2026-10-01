@@ -1,0 +1,37 @@
+{
+  "journeys": [
+    {
+      "entry_point": "aws_route53_record.ingest",
+      "target": "aws_dynamodb_table.results",
+      "survives": true
+    },
+    {
+      "entry_point": "aws_route53_record.ingest",
+      "target": "aws_sqs_queue.jobs",
+      "survives": true
+    }
+  ],
+  "capacity": {
+    "state": "not_assessable",
+    "reason": "capacity_unknown: \"app_node_rps\" was not declared in workload.yaml — surviving instance count alone is never treated as a capacity value (CLAUDE.md §9)",
+    "provenance": {
+      "kind": "derived",
+      "source": "template-fixture"
+    }
+  },
+  "severed_paths": [],
+  "cascade": [
+    "aws_lambda_function.consumer"
+  ],
+  "verdict": {
+    "state": "assessed",
+    "value": "unaffected",
+    "provenance": {
+      "kind": "derived",
+      "source": "template-fixture"
+    }
+  },
+  "flow_detail": [],
+  "load": [],
+  "latency": []
+}

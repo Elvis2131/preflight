@@ -29,9 +29,11 @@ import { serialize } from "./serialize";
 import { GoldenNode } from "./GoldenNode";
 import { Inspector } from "./Inspector";
 import { CONTAINER_SIZE, containerRank, reevaluate } from "./containment";
+import { templateToCanvasState } from "./templateLoader";
+import { listTemplates, getTemplate, type TemplateMeta } from "./api";
 import { assessCanvas, simulateNodeLoss, simulateBaseline, describeSimError, type SimulateResponse } from "./api";
 import { ReportView } from "./ReportView";
-import { WorkloadForm, buildWorkload, emptyWorkloadFormValue, type WorkloadFormValue } from "./WorkloadForm";
+import { WorkloadForm, buildWorkload, emptyWorkloadFormValue, workloadToFormValue, type WorkloadFormValue } from "./WorkloadForm";
 import { JourneyPanel } from "./JourneyPanel";
 
 const nodeTypes = { golden: GoldenNode };
@@ -154,6 +156,21 @@ function CanvasInner() {
 
   useEffect(() => stopAnimation, [stopAnimation]);
 
+  // Templates (PC-108): a reference architecture loads into the SAME node/edge/workload
+  // state a hand-drawn design lives in. Nothing here assesses anything — the architect
+  // runs the ordinary assessment afterwards, through the ordinary canvas pipeline.
+  const [templateList, setTemplateList] = useState<TemplateMeta[]>([]);
+  const [templateError, setTemplateError] = useState<string | null>(null);
+  useEffect(() => {
+    let cancelled = false;
+    listTemplates()
+      .then((l) => !cancelled && setTemplateList(l))
+      .catch(() => undefined); // no backend / no templates endpoint: the picker simply stays empty
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
   const clearSimulation = useCallback(() => {
     stopAnimation();
     setNodes((nds) =>
@@ -165,6 +182,28 @@ function CanvasInner() {
     setSimSummary(null);
     setSimError(null);
   }, [setNodes, setEdges, stopAnimation]);
+
+  const loadTemplate = useCallback(
+    async (id: string) => {
+      if (!id) return;
+      if (nodes.length > 0 && !window.confirm("Replace the current canvas with this template?")) return;
+      try {
+        const t = await getTemplate(id);
+        const { nodes: tn, edges: te } = templateToCanvasState(t);
+        stopAnimation();
+        setSelectedNodeID(null);
+        setSimSummary(null);
+        setSimError(null);
+        setNodes(tn);
+        setEdges(te);
+        setWorkloadForm(workloadToFormValue(t.workload));
+        setTemplateError(null);
+      } catch (err) {
+        setTemplateError(err instanceof Error ? err.message : String(err));
+      }
+    },
+    [nodes.length, setNodes, setEdges, stopAnimation],
+  );
 
   // applySimResult paints the /simulate response onto the current graph — presentation
   // only (PC-88's own Conversation: "the underlying verdict, severed_paths, and cascade
@@ -538,6 +577,20 @@ function CanvasInner() {
               ))}
             </select>
           </label>
+          {templateList.length > 0 && (
+            <label style={{ fontSize: 12 }}>
+              Template:{" "}
+              <select value="" onChange={(e) => void loadTemplate(e.target.value)} data-testid="template-picker">
+                <option value="">load a reference architecture…</option>
+                {templateList.map((t) => (
+                  <option key={t.id} value={t.id} title={t.description}>
+                    {t.name}
+                  </option>
+                ))}
+              </select>
+            </label>
+          )}
+          {templateError && <span style={{ fontSize: 11, color: "#dc2626" }}>{templateError}</span>}
           <button onClick={() => setShowJSON((v) => !v)} style={{ fontSize: 12 }}>
             {showJSON ? "Hide" : "Show"} CanvasDocument JSON
           </button>

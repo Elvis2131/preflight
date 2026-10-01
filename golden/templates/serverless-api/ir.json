@@ -1,0 +1,71 @@
+{
+  "schema_version": "1.3.0",
+  "version_number": 1,
+  "version_hash": "sha256:59974c7f6b46dc278f00a3422fcceebaf6f92fbb8dd254abc7cfbd1e1215c3be",
+  "nodes": [
+    {
+      "id": "aws_route53_record.api",
+      "type": "dns",
+      "resolution": "known",
+      "raw_attributes": {
+        "capability_level": "REQUEST_SIMULATION"
+      },
+      "provenance": {
+        "kind": "stated",
+        "source": "canvas"
+      }
+    },
+    {
+      "id": "aws_lambda_function.handler",
+      "type": "compute",
+      "resolution": "known",
+      "raw_attributes": {
+        "capability_level": "CONFIGURATION"
+      },
+      "provenance": {
+        "kind": "stated",
+        "source": "canvas"
+      }
+    },
+    {
+      "id": "aws_dynamodb_table.items",
+      "type": "managed_database",
+      "resolution": "known",
+      "capability": {
+        "encryption_mechanism": "true"
+      },
+      "raw_attributes": {
+        "capability_level": "CONFIGURATION",
+        "server_side_encryption": "true"
+      },
+      "provenance": {
+        "kind": "stated",
+        "source": "canvas"
+      }
+    }
+  ],
+  "edges": [
+    {
+      "id": "r1",
+      "type": "routes_to",
+      "from": "aws_route53_record.api",
+      "to": "aws_lambda_function.handler",
+      "resolution": "known",
+      "provenance": {
+        "kind": "stated",
+        "source": "canvas"
+      }
+    },
+    {
+      "id": "r2",
+      "type": "reads/writes",
+      "from": "aws_lambda_function.handler",
+      "to": "aws_dynamodb_table.items",
+      "resolution": "known",
+      "provenance": {
+        "kind": "stated",
+        "source": "canvas"
+      }
+    }
+  ]
+}

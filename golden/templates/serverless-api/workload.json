@@ -1,0 +1,16 @@
+{
+  "schema_version": "1.0.0",
+  "name": "serverless-api",
+  "criticality": "tier2",
+  "data_classification": "internal",
+  "regions": [
+    "eu-west-1"
+  ],
+  "requirements": [
+    {
+      "id": "availability.target",
+      "value": 99.9,
+      "priority": "hard"
+    }
+  ]
+}

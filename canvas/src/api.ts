@@ -425,3 +425,32 @@ export function simulateBaseline(
     faults: [],
   });
 }
+
+// Reference-architecture templates (PC-108): pure reads of checked-in data. Loading one
+// into the canvas and assessing it uses the ordinary assessCanvas path — there is no
+// "assess template" endpoint, so no template-specific code path can exist.
+export interface TemplateMeta {
+  id: string;
+  name: string;
+  description: string;
+}
+
+export interface Template {
+  meta: TemplateMeta;
+  canvas: CanvasDocument;
+  workload: Workload;
+  // UI-only node placement — never part of the frozen canvas contract.
+  layout: Record<string, { x: number; y: number; width?: number; height?: number }>;
+}
+
+export async function listTemplates(): Promise<TemplateMeta[]> {
+  const res = await fetch(`${ASSESSD_BASE_URL}/templates`);
+  if (!res.ok) throw new Error(`listTemplates: HTTP ${res.status}`);
+  return res.json();
+}
+
+export async function getTemplate(id: string): Promise<Template> {
+  const res = await fetch(`${ASSESSD_BASE_URL}/templates/${encodeURIComponent(id)}`);
+  if (!res.ok) throw new Error(`getTemplate(${id}): HTTP ${res.status}`);
+  return res.json();
+}

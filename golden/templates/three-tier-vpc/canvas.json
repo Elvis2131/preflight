@@ -1,0 +1,269 @@
+{
+  "nodes": [
+    {
+      "id": "aws_vpc.main",
+      "type": "network_boundary",
+      "label": "VPC",
+      "capability": {},
+      "service_id": "aws_vpc",
+      "cidr_block": "10.0.0.0/16"
+    },
+    {
+      "id": "aws_subnet.public_a",
+      "type": "network_boundary",
+      "label": "Public A",
+      "capability": {},
+      "service_id": "aws_subnet",
+      "availability_zone": "eu-west-1a",
+      "cidr_block": "10.0.0.0/24"
+    },
+    {
+      "id": "aws_subnet.public_b",
+      "type": "network_boundary",
+      "label": "Public B",
+      "capability": {},
+      "service_id": "aws_subnet",
+      "availability_zone": "eu-west-1b",
+      "cidr_block": "10.0.1.0/24"
+    },
+    {
+      "id": "aws_subnet.private_a",
+      "type": "network_boundary",
+      "label": "Private A",
+      "capability": {},
+      "service_id": "aws_subnet",
+      "availability_zone": "eu-west-1a",
+      "cidr_block": "10.0.10.0/24"
+    },
+    {
+      "id": "aws_subnet.private_b",
+      "type": "network_boundary",
+      "label": "Private B",
+      "capability": {},
+      "service_id": "aws_subnet",
+      "availability_zone": "eu-west-1b",
+      "cidr_block": "10.0.11.0/24"
+    },
+    {
+      "id": "aws_subnet.data_a",
+      "type": "network_boundary",
+      "label": "Data A",
+      "capability": {},
+      "service_id": "aws_subnet",
+      "availability_zone": "eu-west-1a",
+      "cidr_block": "10.0.20.0/24"
+    },
+    {
+      "id": "aws_subnet.data_b",
+      "type": "network_boundary",
+      "label": "Data B",
+      "capability": {},
+      "service_id": "aws_subnet",
+      "availability_zone": "eu-west-1b",
+      "cidr_block": "10.0.21.0/24"
+    },
+    {
+      "id": "aws_route53_record.app",
+      "type": "dns",
+      "label": "DNS",
+      "capability": {},
+      "service_id": "aws_route53_record"
+    },
+    {
+      "id": "aws_lb.web",
+      "type": "load_balancer",
+      "label": "Application Load Balancer",
+      "capability": {},
+      "sizing": {
+        "load_balancer_type": "application"
+      },
+      "service_id": "aws_lb"
+    },
+    {
+      "id": "aws_eks_cluster.app",
+      "type": "container_workload",
+      "label": "App cluster",
+      "capability": {},
+      "service_id": "aws_eks_cluster"
+    },
+    {
+      "id": "aws_db_subnet_group.db",
+      "type": "network_boundary",
+      "label": "DB subnet group",
+      "capability": {},
+      "service_id": "aws_db_subnet_group"
+    },
+    {
+      "id": "aws_db_instance.db",
+      "type": "managed_database",
+      "label": "Database (Multi-AZ)",
+      "capability": {
+        "storage_encrypted": "true",
+        "multi_az": "true"
+      },
+      "service_id": "aws_db_instance"
+    },
+    {
+      "id": "aws_elasticache_subnet_group.cache",
+      "type": "network_boundary",
+      "label": "Cache subnet group",
+      "capability": {},
+      "service_id": "aws_elasticache_subnet_group"
+    },
+    {
+      "id": "aws_elasticache_replication_group.cache",
+      "type": "cache",
+      "label": "Cache",
+      "capability": {},
+      "service_id": "aws_elasticache_replication_group"
+    },
+    {
+      "id": "aws_nat_gateway.nat_a",
+      "type": "network_boundary",
+      "label": "NAT A",
+      "capability": {},
+      "service_id": "aws_nat_gateway"
+    },
+    {
+      "id": "aws_nat_gateway.nat_b",
+      "type": "network_boundary",
+      "label": "NAT B",
+      "capability": {},
+      "service_id": "aws_nat_gateway"
+    }
+  ],
+  "edges": [
+    {
+      "id": "c0",
+      "type": "contained_in",
+      "from": "aws_subnet.public_a",
+      "to": "aws_vpc.main"
+    },
+    {
+      "id": "c1",
+      "type": "contained_in",
+      "from": "aws_subnet.public_b",
+      "to": "aws_vpc.main"
+    },
+    {
+      "id": "c2",
+      "type": "contained_in",
+      "from": "aws_subnet.private_a",
+      "to": "aws_vpc.main"
+    },
+    {
+      "id": "c3",
+      "type": "contained_in",
+      "from": "aws_subnet.private_b",
+      "to": "aws_vpc.main"
+    },
+    {
+      "id": "c4",
+      "type": "contained_in",
+      "from": "aws_subnet.data_a",
+      "to": "aws_vpc.main"
+    },
+    {
+      "id": "c5",
+      "type": "contained_in",
+      "from": "aws_subnet.data_b",
+      "to": "aws_vpc.main"
+    },
+    {
+      "id": "c10",
+      "type": "contained_in",
+      "from": "aws_lb.web",
+      "to": "aws_subnet.public_a"
+    },
+    {
+      "id": "c11",
+      "type": "contained_in",
+      "from": "aws_lb.web",
+      "to": "aws_subnet.public_b"
+    },
+    {
+      "id": "c12",
+      "type": "contained_in",
+      "from": "aws_eks_cluster.app",
+      "to": "aws_subnet.private_a"
+    },
+    {
+      "id": "c13",
+      "type": "contained_in",
+      "from": "aws_eks_cluster.app",
+      "to": "aws_subnet.private_b"
+    },
+    {
+      "id": "c14",
+      "type": "contained_in",
+      "from": "aws_db_subnet_group.db",
+      "to": "aws_subnet.data_a"
+    },
+    {
+      "id": "c15",
+      "type": "contained_in",
+      "from": "aws_db_subnet_group.db",
+      "to": "aws_subnet.data_b"
+    },
+    {
+      "id": "c16",
+      "type": "contained_in",
+      "from": "aws_db_instance.db",
+      "to": "aws_db_subnet_group.db"
+    },
+    {
+      "id": "c17",
+      "type": "contained_in",
+      "from": "aws_elasticache_subnet_group.cache",
+      "to": "aws_subnet.data_a"
+    },
+    {
+      "id": "c18",
+      "type": "contained_in",
+      "from": "aws_elasticache_subnet_group.cache",
+      "to": "aws_subnet.data_b"
+    },
+    {
+      "id": "c19",
+      "type": "contained_in",
+      "from": "aws_elasticache_replication_group.cache",
+      "to": "aws_elasticache_subnet_group.cache"
+    },
+    {
+      "id": "r1",
+      "type": "routes_to",
+      "from": "aws_route53_record.app",
+      "to": "aws_lb.web"
+    },
+    {
+      "id": "r2",
+      "type": "routes_to",
+      "from": "aws_lb.web",
+      "to": "aws_eks_cluster.app"
+    },
+    {
+      "id": "r3",
+      "type": "reads/writes",
+      "from": "aws_eks_cluster.app",
+      "to": "aws_db_instance.db"
+    },
+    {
+      "id": "r4",
+      "type": "reads/writes",
+      "from": "aws_eks_cluster.app",
+      "to": "aws_elasticache_replication_group.cache"
+    },
+    {
+      "id": "c-nat-a",
+      "type": "contained_in",
+      "from": "aws_nat_gateway.nat_a",
+      "to": "aws_subnet.public_a"
+    },
+    {
+      "id": "c-nat-b",
+      "type": "contained_in",
+      "from": "aws_nat_gateway.nat_b",
+      "to": "aws_subnet.public_b"
+    }
+  ]
+}

@@ -1,0 +1,21 @@
+{
+  "schema_version": "1.0.0",
+  "name": "three-tier-web",
+  "criticality": "tier1",
+  "data_classification": "internal",
+  "regions": [
+    "eu-west-1"
+  ],
+  "requirements": [
+    {
+      "id": "rto_seconds",
+      "value": 60,
+      "priority": "hard"
+    },
+    {
+      "id": "availability.target",
+      "value": 99.95,
+      "priority": "hard"
+    }
+  ]
+}

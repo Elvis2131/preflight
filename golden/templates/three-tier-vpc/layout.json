@@ -1,0 +1,80 @@
+{
+  "aws_vpc.main": {
+    "x": 20,
+    "y": 20,
+    "width": 700,
+    "height": 720
+  },
+  "aws_subnet.public_a": {
+    "x": 50,
+    "y": 70,
+    "width": 300,
+    "height": 190
+  },
+  "aws_subnet.public_b": {
+    "x": 380,
+    "y": 70,
+    "width": 300,
+    "height": 190
+  },
+  "aws_subnet.private_a": {
+    "x": 50,
+    "y": 280,
+    "width": 300,
+    "height": 190
+  },
+  "aws_subnet.private_b": {
+    "x": 380,
+    "y": 280,
+    "width": 300,
+    "height": 190
+  },
+  "aws_subnet.data_a": {
+    "x": 50,
+    "y": 490,
+    "width": 300,
+    "height": 190
+  },
+  "aws_subnet.data_b": {
+    "x": 380,
+    "y": 490,
+    "width": 300,
+    "height": 190
+  },
+  "aws_lb.web": {
+    "x": 60,
+    "y": 110
+  },
+  "aws_nat_gateway.nat_a": {
+    "x": 60,
+    "y": 180
+  },
+  "aws_nat_gateway.nat_b": {
+    "x": 390,
+    "y": 110
+  },
+  "aws_eks_cluster.app": {
+    "x": 60,
+    "y": 320
+  },
+  "aws_db_subnet_group.db": {
+    "x": 60,
+    "y": 530
+  },
+  "aws_db_instance.db": {
+    "x": 60,
+    "y": 595
+  },
+  "aws_elasticache_subnet_group.cache": {
+    "x": 390,
+    "y": 530
+  },
+  "aws_elasticache_replication_group.cache": {
+    "x": 390,
+    "y": 595
+  },
+  "aws_route53_record.app": {
+    "x": -230,
+    "y": 110
+  }
+}

@@ -1,0 +1,69 @@
+{
+  "nodes": [
+    {
+      "id": "aws_route53_record.ingest",
+      "type": "dns",
+      "label": "DNS",
+      "capability": {},
+      "service_id": "aws_route53_record"
+    },
+    {
+      "id": "aws_lambda_function.producer",
+      "type": "compute",
+      "label": "Producer (Lambda)",
+      "capability": {},
+      "service_id": "aws_lambda_function"
+    },
+    {
+      "id": "aws_sqs_queue.jobs",
+      "type": "queue/stream",
+      "label": "Jobs queue (SQS)",
+      "capability": {
+        "server_side_encryption": "true"
+      },
+      "service_id": "aws_sqs_queue"
+    },
+    {
+      "id": "aws_lambda_function.consumer",
+      "type": "compute",
+      "label": "Consumer (Lambda)",
+      "capability": {},
+      "service_id": "aws_lambda_function"
+    },
+    {
+      "id": "aws_dynamodb_table.results",
+      "type": "managed_database",
+      "label": "Results table (DynamoDB)",
+      "capability": {
+        "server_side_encryption": "true"
+      },
+      "service_id": "aws_dynamodb_table"
+    }
+  ],
+  "edges": [
+    {
+      "id": "r1",
+      "type": "routes_to",
+      "from": "aws_route53_record.ingest",
+      "to": "aws_lambda_function.producer"
+    },
+    {
+      "id": "r2",
+      "type": "reads/writes",
+      "from": "aws_lambda_function.producer",
+      "to": "aws_sqs_queue.jobs"
+    },
+    {
+      "id": "r3",
+      "type": "reads/writes",
+      "from": "aws_lambda_function.consumer",
+      "to": "aws_sqs_queue.jobs"
+    },
+    {
+      "id": "r4",
+      "type": "reads/writes",
+      "from": "aws_lambda_function.consumer",
+      "to": "aws_dynamodb_table.results"
+    }
+  ]
+}

@@ -1,0 +1,5 @@
+{
+  "id": "serverless-api",
+  "name": "Serverless API",
+  "description": "DNS \u2192 Lambda \u2192 DynamoDB. API Gateway is deliberately absent: it is not in the capability registry, so this template does not claim it (a Route 53 record fronts the function)."
+}

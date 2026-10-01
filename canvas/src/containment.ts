@@ -79,6 +79,11 @@ export function withAutoContainment(
   const autoId = AUTO_EDGE_PREFIX + nodeId;
   const kept = edges.filter((e) => e.id !== autoId);
   if (!containerId) return kept;
+  // A hand-kept contained_in edge to this very container already says it (a template's
+  // multi-subnet node, say) — adding the auto one would duplicate it.
+  if (kept.some((e) => e.source === nodeId && e.target === containerId && e.data?.edgeType === "contained_in")) {
+    return kept;
+  }
   return [
     ...kept,
     {
@@ -103,6 +108,12 @@ export function reevaluate(
   for (const id of ids) {
     const n = nodes.find((x) => x.id === id);
     if (!n) continue;
+    // A node whose containment is kept by hand (a database placed via its subnet
+    // group, a load balancer spanning two subnets) is the architect's to maintain:
+    // geometry must not bolt a second, direct parent onto it.
+    if (out.some((e) => e.source === id && e.data?.edgeType === "contained_in" && !e.id.startsWith(AUTO_EDGE_PREFIX))) {
+      continue;
+    }
     out = withAutoContainment(out, id, innermostContainer(n, nodes));
   }
   return out;
