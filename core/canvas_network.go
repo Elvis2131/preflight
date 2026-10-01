@@ -4,10 +4,10 @@ package core
 // tables and NACLs). Like placement, the browser may highlight a problem but the server
 // decides. Violations reuse PlacementViolation (rule, resource, message, source).
 //
-// What is checked is deliberately only what is either engine scope or plain
-// well-formedness — NOT AWS behaviour this codebase could not cite: in particular no
-// upper bound on a NACL rule number is enforced, because the AWS page consulted
-// (vpc/latest/userguide/nacl-rules.html) states the evaluation order but no range.
+// What is checked is engine scope, plain well-formedness, and the one AWS-documented
+// limit on a NACL rule number (1-32766, cited from the EC2 API reference — the VPC user
+// guide page states the evaluation order but no range, which is why this was first left
+// unenforced; PC-113's decision comment supersedes that).
 
 import (
 	"fmt"
@@ -19,6 +19,16 @@ const (
 	NetCtlRouteTarget = "NETCTL-ROUTE-TARGET"
 	NetCtlRouteCIDR   = "NETCTL-ROUTE-CIDR"
 	NetCtlNACLCIDR    = "NETCTL-NACL-CIDR"
+	NetCtlNACLRange   = "NETCTL-NACL-RANGE"
+
+	// NACLRuleNumberMin/Max are the authorable rule numbers, from AWS's own EC2 API
+	// reference for CreateNetworkAclEntry: "Positive integer from 1 to 32766. The range
+	// 32767 to 65535 is reserved for internal use." The catch-all deny lives in that
+	// reserved range and is ENGINE-OWNED (NACLCatchAll): it can be neither authored nor
+	// deleted, so it is outside what any canvas document may carry.
+	NACLRuleNumberMin = 1
+	NACLRuleNumberMax = 32766
+	naclRangeSource   = "https://docs.aws.amazon.com/AWSEC2/latest/APIReference/API_CreateNetworkAclEntry.html"
 
 	engineScopeSource = "preflight: engine scope (PC-111 models only internet-gateway and NAT-gateway route targets)"
 )
@@ -64,6 +74,9 @@ func ValidateCanvasNetworkControls(doc CanvasDocument) []PlacementViolation {
 			}
 		}
 		for i, r := range n.NACLRules {
+			if r.Number < NACLRuleNumberMin || r.Number > NACLRuleNumberMax {
+				add(NetCtlNACLRange, n.ID, fmt.Sprintf("NACL rule %d has rule number %d; authorable rule numbers are %d-%d (32767-65535 is reserved for internal use, and the catch-all deny is engine-owned)", i+1, r.Number, NACLRuleNumberMin, NACLRuleNumberMax), naclRangeSource)
+			}
 			if _, err := netip.ParsePrefix(r.CIDRBlock); err != nil {
 				add(NetCtlNACLCIDR, n.ID, fmt.Sprintf("NACL rule %d (number %d) cidr_block %q is not a valid CIDR", i+1, r.Number, r.CIDRBlock), "well-formedness")
 			}

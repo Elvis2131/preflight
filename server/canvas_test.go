@@ -374,3 +374,35 @@ func TestAssessCanvas_InvalidNetworkControls_RejectedWithRuleAndResource(t *test
 		t.Fatalf("with a modelled target the same document must assess, got: %v", err)
 	}
 }
+
+// PC-113's decision: a NACL rule number outside 1-32766 is rejected with its OWN error
+// code, so a caller can tell a bad rule number from any other network-control problem.
+func TestAssessCanvas_NACLRuleNumberOutOfRange_HasItsOwnErrorCode(t *testing.T) {
+	store, err := server.OpenStore(":memory:")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer store.Close()
+	workload := baseInlineWorkload(nil)
+	doc := core.CanvasDocument{
+		Nodes: []core.CanvasNode{
+			{ID: "dns1", Type: "dns", Label: "DNS", Capability: map[string]string{}},
+			{ID: "db1", Type: "managed_database", Label: "DB", Capability: map[string]string{}},
+			{ID: "n1", Type: "network_boundary", Label: "NACL", Capability: map[string]string{}, ServiceID: "aws_network_acl",
+				NACLRules: []core.CanvasNACLRule{{Direction: "ingress", Number: 40000, Protocol: "tcp", CIDRBlock: "10.0.0.0/8", Action: "allow"}}},
+		},
+		Edges: []core.CanvasEdge{{ID: "e1", Type: "routes_to", From: "dns1", To: "db1"}},
+	}
+	_, err = server.AssessCanvas(store, server.AssessCanvasRequest{SessionID: "nr", Canvas: doc, Workload: &workload})
+	var apiErr *server.APIError
+	if !errors.As(err, &apiErr) || apiErr.Code != "invalid_nacl_rule_number" || apiErr.Status != http.StatusUnprocessableEntity {
+		t.Fatalf("got %#v, want 422 invalid_nacl_rule_number", err)
+	}
+	if !strings.Contains(err.Error(), "40000") || !strings.Contains(err.Error(), "n1") {
+		t.Errorf("error %q must name the number and the NACL", err.Error())
+	}
+	doc.Nodes[2].NACLRules[0].Number = 32766
+	if _, err := server.AssessCanvas(store, server.AssessCanvasRequest{SessionID: "nr", Canvas: doc, Workload: &workload}); err != nil {
+		t.Fatalf("32766 is the highest authorable number and must assess, got %v", err)
+	}
+}

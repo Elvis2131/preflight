@@ -89,13 +89,19 @@ func AssessCanvas(store *Store, req AssessCanvasRequest) (AssessResponse, error)
 	}
 
 	// PC-138/PC-139: routes and NACL rules are validated here too (engine scope and
-	// well-formedness), with the same naming of each broken rule and resource.
+	// well-formedness), with the same naming of each broken rule and resource. A NACL
+	// rule number outside 1-32766 gets its OWN error code (PC-113's decision) so a caller
+	// can tell "bad number" from every other network-control problem.
 	if violations := core.ValidateCanvasNetworkControls(req.Canvas); len(violations) > 0 {
-		msgs := make([]string, len(violations))
-		for i, v := range violations {
-			msgs[i] = v.String()
+		code := "invalid_network_controls"
+		var msgs []string
+		for _, v := range violations {
+			if v.Rule == core.NetCtlNACLRange {
+				code = "invalid_nacl_rule_number"
+			}
+			msgs = append(msgs, v.String())
 		}
-		return AssessResponse{}, newAPIError(http.StatusUnprocessableEntity, "invalid_network_controls",
+		return AssessResponse{}, newAPIError(http.StatusUnprocessableEntity, code,
 			"server: invalid network controls (%d violation(s)): %s", len(violations), strings.Join(msgs, "; "))
 	}
 

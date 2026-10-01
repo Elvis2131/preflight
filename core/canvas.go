@@ -139,7 +139,7 @@ type CanvasRoute struct {
 // boolean Terraform's rule_action produces.
 type CanvasNACLRule struct {
 	Direction string `json:"direction" validate:"required,oneof=ingress egress" jsonschema:"required,enum=ingress,enum=egress"`
-	Number    int    `json:"number" validate:"gt=0" jsonschema:"required,minimum=1,description=Rules are evaluated starting with the lowest number; the first match applies."`
+	Number    int    `json:"number" validate:"gte=1,lte=32766" jsonschema:"required,minimum=1,maximum=32766,description=Positive integer 1-32766 (EC2 CreateNetworkAclEntry: 32767-65535 is reserved for internal use — the catch-all deny lives there and is engine-owned, never authored). Rules are evaluated in ascending order; the first match applies."`
 	Protocol  string `json:"protocol" validate:"required" jsonschema:"required,description=tcp / udp / icmp / -1 (all protocols)."`
 	FromPort  int    `json:"from_port,omitempty"`
 	ToPort    int    `json:"to_port,omitempty"`

@@ -10,6 +10,16 @@ Each generated `contracts/*.schema.json` carries its own version in `x-schema-ve
 stamped by `cmd/gen-contracts` — check that field against this file, not the other way
 around, since a schema file is regenerated output, not hand-edited.
 
+## canvas.schema.json 1.6.0 — 2026-10-01 (PC-113: nacl_rules[].number bounded to 1-32766)
+
+**Tightening of one field in `canvas.schema.json`** (introduced in 1.5.0 the same day, so no
+document in the wild can be affected): `CanvasNACLRule.number` now has `minimum: 1` and
+`maximum: 32766`. Source: the EC2 API reference for CreateNetworkAclEntry — "Positive integer
+from 1 to 32766. The range 32767 to 65535 is reserved for internal use." The catch-all deny
+lives in that reserved range and is engine-owned: it can be neither authored nor deleted, so
+no canvas document carries it. The server rejects an out-of-range number with HTTP 422
+`error_code: invalid_nacl_rule_number` (distinct from `invalid_network_controls`).
+
 ## canvas.schema.json 1.5.0 — 2026-10-01 (PC-138/PC-139: CanvasNode.routes and nacl_rules added)
 
 **Additive change to `canvas.schema.json` only.** `CanvasNode` gains two optional fields.

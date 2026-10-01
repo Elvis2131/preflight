@@ -39,8 +39,9 @@
         },
         "number": {
           "type": "integer",
+          "maximum": 32766,
           "minimum": 1,
-          "description": "Rules are evaluated starting with the lowest number; the first match applies."
+          "description": "Positive integer 1-32766 (EC2 CreateNetworkAclEntry: 32767-65535 is reserved for internal use — the catch-all deny lives there and is engine-owned"
         },
         "protocol": {
           "type": "string",
@@ -221,5 +222,5 @@
     "edges"
   ],
   "x-changelog": "contracts/CHANGELOG.md",
-  "x-schema-version": "1.5.0"
+  "x-schema-version": "1.6.0"
 }

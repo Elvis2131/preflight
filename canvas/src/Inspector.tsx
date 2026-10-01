@@ -242,6 +242,13 @@ function RoutesEditor({
 // evaluated lowest number first by the server (AWS: "Rules are evaluated starting with
 // the lowest numbered rule. As soon as a rule matches traffic, it's applied"); nothing
 // is evaluated here. No rule at all means not authored — never an implied allow or deny.
+// The authorable NACL rule numbers (EC2 CreateNetworkAclEntry: 1-32766; 32767-65535 is
+// reserved, and the catch-all deny lives there, engine-owned). Display-side guidance only —
+// the server's NETCTL-NACL-RANGE check decides.
+const NACL_RULE_NUMBER_MIN = 1;
+const NACL_RULE_NUMBER_MAX = 32766;
+const numberInRange = (n: number) => Number.isInteger(n) && n >= NACL_RULE_NUMBER_MIN && n <= NACL_RULE_NUMBER_MAX;
+
 function NACLRulesEditor({ rules, onChange }: { rules: CanvasNACLRule[]; onChange: (rules: CanvasNACLRule[]) => void }) {
   const update = (i: number, patch: Partial<CanvasNACLRule>) => {
     const next = rules.slice();
@@ -261,9 +268,12 @@ function NACLRulesEditor({ rules, onChange }: { rules: CanvasNACLRule[]; onChang
         <div key={i} style={{ marginBottom: 6, paddingBottom: 6, borderBottom: "1px dashed #cbd5e1" }}>
           <div style={rowStyle}>
             <input
-              style={{ ...inputStyle, width: 55 }}
+              style={{ ...inputStyle, width: 62, ...(numberInRange(r.number) ? {} : { borderColor: "#dc2626" }) }}
               type="number"
+              min={NACL_RULE_NUMBER_MIN}
+              max={NACL_RULE_NUMBER_MAX}
               placeholder="#"
+              title={`Rule numbers ${NACL_RULE_NUMBER_MIN}-${NACL_RULE_NUMBER_MAX}`}
               value={r.number}
               onChange={(e) => update(i, { number: Number(e.target.value) })}
             />
@@ -297,7 +307,15 @@ function NACLRulesEditor({ rules, onChange }: { rules: CanvasNACLRule[]; onChang
           <input style={{ ...inputStyle, marginTop: 4 }} placeholder="cidr_block (source for ingress, destination for egress)" value={r.cidr_block} onChange={(e) => update(i, { cidr_block: e.target.value })} />
         </div>
       ))}
-      <button onClick={() => onChange([...rules, { direction: "ingress", number: nextNumber, protocol: "tcp", cidr_block: "", action: "allow" }])}>+ rule</button>
+      {rules.some((r) => !numberInRange(r.number)) && (
+        <p style={{ fontSize: 10, color: "#dc2626", margin: "0 0 4px" }}>
+          Rule numbers must be {NACL_RULE_NUMBER_MIN}-{NACL_RULE_NUMBER_MAX} (AWS reserves 32767-65535). The server rejects anything outside it.
+        </p>
+      )}
+      <div style={{ fontSize: 11, color: "#64748b", margin: "4px 0 6px" }} data-testid="nacl-catchall">
+        <strong>*</strong> &nbsp;deny all &nbsp;— the engine's own final rule. Always present; it cannot be added, edited or deleted here.
+      </div>
+      <button onClick={() => onChange([...rules, { direction: "ingress", number: Math.min(nextNumber, NACL_RULE_NUMBER_MAX), protocol: "tcp", cidr_block: "", action: "allow" }])}>+ rule</button>
     </div>
   );
 }

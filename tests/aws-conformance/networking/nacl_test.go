@@ -3,6 +3,9 @@ package networking
 // PC-113's real conformance tests — Network ACL evaluation.
 
 import (
+	"fmt"
+	"reflect"
+	"strings"
 	"testing"
 
 	"preflight/core"
@@ -102,5 +105,46 @@ func TestNACL_SameSubnet_004(t *testing.T) {
 	}
 	if !allowed {
 		t.Fatalf("%s (%s): same-subnet traffic must not be blocked by a NACL that never applied", spec.ID, spec.Rule)
+	}
+}
+
+func TestNACL_RuleNumberRange_001(t *testing.T) {
+	spec := harness.Verify(t, harness.Spec{
+		ID:            "NACL-RANGE-001",
+		Rule:          "A NACL rule number is a positive integer from 1 to 32766; 32767 to 65535 is reserved for internal use. The catch-all deny lives in the reserved range and is engine-owned, so it can be neither authored nor deleted.",
+		Source:        "https://docs.aws.amazon.com/AWSEC2/latest/APIReference/API_CreateNetworkAclEntry.html",
+		Scenario:      "Canvas-authored NACL rules numbered 0, -1, 1, 100, 32766, 32767 and 65535.",
+		Configuration: "one NACL node carrying seven otherwise-valid ingress allow rules, one per number above",
+		Request:       "ValidateCanvasNetworkControls over the document.",
+		Expected:      "Violations for exactly 0, -1, 32767 and 65535; 1, 100 and 32766 are accepted.",
+	})
+
+	numbers := []int{0, -1, 1, 100, 32766, 32767, 65535}
+	var rules []core.CanvasNACLRule
+	for _, n := range numbers {
+		rules = append(rules, core.CanvasNACLRule{Direction: "ingress", Number: n, Protocol: "tcp", CIDRBlock: "10.0.0.0/8", Action: "allow"})
+	}
+	doc := core.CanvasDocument{Nodes: []core.CanvasNode{{ID: "nacl", Type: "network_boundary", Label: "n", Capability: map[string]string{}, ServiceID: "aws_network_acl", NACLRules: rules}}}
+
+	var flagged []int
+	for _, v := range core.ValidateCanvasNetworkControls(doc) {
+		if v.Rule != core.NetCtlNACLRange {
+			continue
+		}
+		if v.Source != spec.Source {
+			t.Errorf("%s: violation must cite %s, got %s", spec.ID, spec.Source, v.Source)
+		}
+		for _, n := range numbers {
+			if strings.Contains(v.Message, fmt.Sprintf("has rule number %d;", n)) {
+				flagged = append(flagged, n)
+			}
+		}
+	}
+	want := []int{0, -1, 32767, 65535}
+	if !reflect.DeepEqual(flagged, want) {
+		t.Fatalf("%s (%s): flagged %v, want %v — see %s", spec.ID, spec.Rule, flagged, want, spec.Source)
+	}
+	if core.NACLRuleNumberMin != 1 || core.NACLRuleNumberMax != 32766 {
+		t.Fatalf("%s: authorable range is %d-%d, AWS documents 1-32766", spec.ID, core.NACLRuleNumberMin, core.NACLRuleNumberMax)
 	}
 }
