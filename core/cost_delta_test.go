@@ -60,8 +60,8 @@ func TestComputeCostDelta_GoldenBrokenToReal_HandVerified(t *testing.T) {
 	prov := core.NewProvenance(core.KindDerived, "test")
 	table := realPriceTableBothDeploymentOptions()
 
-	brokenCost := core.ComputeCost(brokenIR, table, prov)
-	realCost := core.ComputeCost(realIR, table, prov)
+	brokenCost := core.ComputeCost(brokenIR, table, []string{"eu-west-1"}, prov)
+	realCost := core.ComputeCost(realIR, table, []string{"eu-west-1"}, prov)
 
 	entries, snapshotChanged := core.ComputeCostDelta(&brokenCost, &realCost, prov)
 	if snapshotChanged {
@@ -127,8 +127,8 @@ func TestComputeCostDelta_DifferentSnapshots_NeverClassifiedAsDesignChange(t *te
 			Sizing: &core.Sizing{LoadBalancerType: strPtr("application")}},
 	}}
 
-	oldCost := core.ComputeCost(ir, oldTable, prov)
-	newCost := core.ComputeCost(ir, newTable, prov)
+	oldCost := core.ComputeCost(ir, oldTable, []string{"eu-west-1"}, prov)
+	newCost := core.ComputeCost(ir, newTable, []string{"eu-west-1"}, prov)
 
 	entries, snapshotChanged := core.ComputeCostDelta(&oldCost, &newCost, prov)
 	if !snapshotChanged {

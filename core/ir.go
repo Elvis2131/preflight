@@ -104,6 +104,11 @@ type Sizing struct {
 	StorageType        *string `json:"storage_type,omitempty" jsonschema:"description=Storage type (managed_database) — e.g. RDS storage_type (gp3, io1, ...)."`
 	CacheNodeType      *string `json:"cache_node_type,omitempty" jsonschema:"description=Cache node type (cache) — e.g. ElastiCache node_type."`
 	LoadBalancerType   *string `json:"load_balancer_type,omitempty" jsonschema:"description=Load balancer type (load_balancer) — ALB or NLB. Usage-based charges (data processed) are not_assessable until traffic inputs exist (PC-124)."`
+	// Region is PC-110's addition: the AWS region code (e.g. eu-west-1) this component runs
+	// in, stated by the architect. First step of the per-component region resolution
+	// (core.ResolveComponentRegion); absent means the workload's single region is used if
+	// there is exactly one, otherwise the component is unpriced until a region is chosen.
+	Region *string `json:"region,omitempty" jsonschema:"description=AWS region code this component runs in (e.g. eu-west-1). Absent: the workload's region is used only if it declares exactly one; otherwise cost is cost_unknown naming region. Never defaulted."`
 }
 
 // Node is one element of the IR's canonical semantic model, carrying its provider

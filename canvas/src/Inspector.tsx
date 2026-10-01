@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import type { Node } from "@xyflow/react";
 import type { CanvasNodeData, CanvasSecurityGroupRule, CanvasRoute, CanvasNACLRule } from "./types";
 import { SIZING_FIELDS, type SizingFieldDef } from "./sizingFields";
+import { resolveRegion, rowInRegion, REGION_PRICED_TYPES } from "./region";
 import { listPricingSnapshots, getPricingSnapshot, listServiceCatalog, type PricingSnapshot, type ServiceCatalogEntry } from "./api";
 
 // SERVICE_FOR_INSTANCE_TYPE_KIND maps a SizingFieldDef's own instanceTypeKind to the
@@ -82,12 +83,15 @@ function useServiceCatalog(): { entries: ServiceCatalogEntry[]; loading: boolean
   return { entries, loading };
 }
 
-function instanceTypesFor(snapshot: PricingSnapshot | null, kind: SizingFieldDef["instanceTypeKind"]): string[] {
-  if (!snapshot || !kind) return [];
+// instanceTypesFor lists the types the active snapshot can price — FILTERED BY THE RESOLVED
+// REGION (PC-110). With no resolved region it returns nothing: the architect must choose
+// one first, and the first of several declared regions is never assumed.
+function instanceTypesFor(snapshot: PricingSnapshot | null, kind: SizingFieldDef["instanceTypeKind"], region: string | null): string[] {
+  if (!snapshot || !kind || region === null) return [];
   const service = SERVICE_FOR_INSTANCE_TYPE_KIND[kind];
   const types = new Set<string>();
   for (const e of snapshot.entries) {
-    if (e.service !== service) continue;
+    if (e.service !== service || !rowInRegion(e.region, region)) continue;
     const t = e.sku_attributes["instanceType"];
     if (t) types.add(t);
   }
@@ -336,6 +340,7 @@ export function Inspector({
   routeTargets,
   onRoutesChange,
   onNACLRulesChange,
+  workloadRegions,
 }: {
   node: Node<CanvasNodeData>;
   onChange: (nodeID: string, sizing: Record<string, string>) => void;
@@ -345,11 +350,19 @@ export function Inspector({
   routeTargets: Array<{ id: string; label: string }>;
   onRoutesChange: (nodeID: string, routes: CanvasRoute[]) => void;
   onNACLRulesChange: (nodeID: string, rules: CanvasNACLRule[]) => void;
+  workloadRegions: string[];
 }) {
   const fields = SIZING_FIELDS[node.data.nodeType];
   const { snapshot, loading } = usePricingSnapshot();
   const { entries: serviceEntries, loading: servicesLoading } = useServiceCatalog();
   const sizing = node.data.sizing ?? {};
+
+  // Region (PC-110): resolved per component — its own region, else the workload's only when
+  // it declares exactly one, else unresolved (the architect must choose; the component is
+  // unpriced until they do). Display-side guidance: the server prices and decides.
+  const pricedByRegion = REGION_PRICED_TYPES.has(node.data.nodeType);
+  const regionResolution = resolveRegion(sizing["region"], workloadRegions);
+  const resolvedRegion = regionResolution.resolved ? regionResolution.region : null;
 
   // servicesForNodeType (PC-136): only entries whose OWN node_type matches the
   // selected node's declared NodeType are offered — the same discipline
@@ -453,16 +466,44 @@ export function Inspector({
             Sizing (PC-115/PC-117). Blank means unknown — the cost result reports{" "}
             <code>cost_unknown</code> for that dimension, never a guessed default.
           </p>
+          {pricedByRegion && (
+            <div data-testid="region-block">
+              <label style={labelStyle}>Region (PC-110)</label>
+              <input
+                style={inputStyle}
+                list="workload-regions"
+                placeholder={workloadRegions.length === 1 ? `blank = the workload's ${workloadRegions[0]}` : "e.g. eu-west-1"}
+                value={sizing["region"] ?? ""}
+                onChange={(e) => setField("region", e.target.value.trim())}
+              />
+              <datalist id="workload-regions">
+                {workloadRegions.map((r) => (
+                  <option key={r} value={r} />
+                ))}
+              </datalist>
+              <p style={{ fontSize: 10, margin: "2px 0 0", color: regionResolution.resolved ? "#64748b" : "#b45309" }} data-testid="region-resolution">
+                {regionResolution.resolved
+                  ? `Priced in ${regionResolution.region} (${regionResolution.source === "component" ? "this component's own region" : "the workload's only declared region"}).`
+                  : `${regionResolution.reason}. Until you choose one this component is unpriced (cost_unknown) — never a guessed default.`}
+              </p>
+            </div>
+          )}
           {fields.map((f) => {
             const value = sizing[f.key] ?? "";
-            const types = f.instanceTypeKind ? instanceTypesFor(snapshot, f.instanceTypeKind) : [];
+            const types = f.instanceTypeKind ? instanceTypesFor(snapshot, f.instanceTypeKind, resolvedRegion) : [];
             const showPicker = f.instanceTypeKind && types.length > 0;
             return (
               <div key={f.key}>
                 <label style={labelStyle}>
                   {f.label}
                   {f.instanceTypeKind && !loading && !showPicker && (
-                    <span style={{ fontWeight: 400, color: "#b45309" }}> (unpriced — no active pricing snapshot)</span>
+                    <span style={{ fontWeight: 400, color: "#b45309" }}>
+                      {resolvedRegion === null && pricedByRegion
+                        ? " (unpriced — choose a region first)"
+                        : snapshot
+                          ? ` (unpriced — the active snapshot has no price for this in ${resolvedRegion ?? "any region"})`
+                          : " (unpriced — no active pricing snapshot)"}
+                    </span>
                   )}
                 </label>
                 {showPicker ? (

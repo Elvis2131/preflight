@@ -286,6 +286,10 @@
         "load_balancer_type": {
           "type": "string",
           "description": "Load balancer type (load_balancer) — ALB or NLB. Usage-based charges (data processed) are not_assessable until traffic inputs exist (PC-124)."
+        },
+        "region": {
+          "type": "string",
+          "description": "AWS region code this component runs in (e.g. eu-west-1). Absent: the workload's region is used only if it declares exactly one; otherwise cost is cost_unknown naming region. Never defaulted."
         }
       },
       "additionalProperties": false,
@@ -328,5 +332,5 @@
     "edges"
   ],
   "x-changelog": "contracts/CHANGELOG.md",
-  "x-schema-version": "1.3.0"
+  "x-schema-version": "1.4.0"
 }

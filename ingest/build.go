@@ -174,7 +174,7 @@ func Ingest(dir string, registry providers.Registry, versionNumber int) (Result,
 	sort.Slice(edges, func(i, j int) bool { return edges[i].ID < edges[j].ID })
 
 	ir := &core.IR{
-		SchemaVersion: "1.3.0",
+		SchemaVersion: "1.4.0",
 		VersionNumber: versionNumber,
 		VersionHash:   contentHash(nodes, edges),
 		Nodes:         nodes,

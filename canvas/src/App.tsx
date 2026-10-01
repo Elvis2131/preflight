@@ -827,6 +827,7 @@ function CanvasInner() {
           routeTargets={routeTargets}
           onRoutesChange={updateNodeRoutes}
           onNACLRulesChange={updateNodeNACLRules}
+          workloadRegions={buildWorkload(workloadForm).regions ?? []}
         />
       )}
       {caps.canInjectFaults && (

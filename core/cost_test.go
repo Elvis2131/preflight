@@ -64,7 +64,7 @@ func realGoldenIR(t *testing.T) *core.IR {
 func TestComputeCost_GoldenBundle_HandVerifiedAgainstRealPriceRows(t *testing.T) {
 	ir := realGoldenIR(t)
 	prov := core.NewProvenance(core.KindDerived, "test")
-	report := core.ComputeCost(ir, realPriceTable(), prov)
+	report := core.ComputeCost(ir, realPriceTable(), []string{"eu-west-1"}, prov)
 
 	if report.SnapshotID != "test-snapshot-2026-09-25" {
 		t.Errorf("SnapshotID = %q", report.SnapshotID)
@@ -119,7 +119,7 @@ func TestComputeCost_GoldenBundle_HandVerifiedAgainstRealPriceRows(t *testing.T)
 func TestComputeCost_UnpricedComponentNeverCountsAsZero(t *testing.T) {
 	ir := realGoldenIR(t)
 	prov := core.NewProvenance(core.KindDerived, "test")
-	report := core.ComputeCost(ir, realPriceTable(), prov)
+	report := core.ComputeCost(ir, realPriceTable(), []string{"eu-west-1"}, prov)
 
 	var eks *core.ComponentCost
 	for i := range report.Components {
@@ -161,8 +161,8 @@ func TestComputeCost_Deterministic(t *testing.T) {
 	prov := core.NewProvenance(core.KindDerived, "test")
 	table := realPriceTable()
 
-	r1 := core.ComputeCost(ir, table, prov)
-	r2 := core.ComputeCost(ir, table, prov)
+	r1 := core.ComputeCost(ir, table, []string{"eu-west-1"}, prov)
+	r2 := core.ComputeCost(ir, table, []string{"eu-west-1"}, prov)
 
 	if len(r1.Components) != len(r2.Components) {
 		t.Fatalf("component count differs: %d vs %d", len(r1.Components), len(r2.Components))
@@ -182,7 +182,7 @@ func TestComputeCost_MissingSizing_IsCostUnknown(t *testing.T) {
 	ir := &core.IR{Nodes: []core.Node{
 		{ID: "n1", Type: core.NodeTypeManagedDatabase, Resolution: core.ResolutionKnown, Provenance: prov},
 	}}
-	report := core.ComputeCost(ir, realPriceTable(), prov)
+	report := core.ComputeCost(ir, realPriceTable(), []string{"eu-west-1"}, prov)
 	if len(report.Components) != 1 || report.Components[0].Decision != core.CostUnknown {
 		t.Fatalf("got %+v, want a single cost_unknown component (no Sizing at all)", report.Components)
 	}

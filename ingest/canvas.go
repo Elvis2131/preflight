@@ -107,7 +107,7 @@ func IngestCanvas(doc core.CanvasDocument, registry providers.Registry, versionN
 	}
 
 	ir := &core.IR{
-		SchemaVersion: "1.3.0",
+		SchemaVersion: "1.4.0",
 		VersionNumber: versionNumber,
 		VersionHash:   contentHash(nodes, edges),
 		Nodes:         nodes,
@@ -174,6 +174,7 @@ func buildCanvasSizing(sizing map[string]string) *core.Sizing {
 		StorageType:        get("storage_type"),
 		CacheNodeType:      get("cache_node_type"),
 		LoadBalancerType:   get("load_balancer_type"),
+		Region:             get("region"),
 	}
 	if s == (core.Sizing{}) {
 		return nil

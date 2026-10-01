@@ -160,6 +160,28 @@ function ReportSummary({ report, onRepriced }: { report: Report; onRepriced?: ()
                 <span style={notAssessableStyle}> — {report.cost.report.UnpricedCount} unpriced component(s)</span>
               )}
             </div>
+            <table style={{ ...tableStyle, marginTop: 6 }} data-testid="cost-components">
+              <thead>
+                <tr>
+                  <th style={thtdStyle}>Component</th>
+                  <th style={thtdStyle}>Monthly</th>
+                  <th style={thtdStyle}>Region</th>
+                  <th style={thtdStyle}>Note</th>
+                </tr>
+              </thead>
+              <tbody>
+                {report.cost.report.Components.filter((c) => c.Decision === "priced" || c.Reason.includes("region")).map((c) => (
+                  <tr key={c.NodeID}>
+                    <td style={thtdStyle}>{c.NodeID}</td>
+                    <td style={{ ...thtdStyle, ...(c.Decision === "priced" ? {} : notAssessableStyle) }}>
+                      {c.Decision === "priced" ? `${c.Currency} ${c.MonthlyAmount.toFixed(2)}` : "unpriced"}
+                    </td>
+                    <td style={thtdStyle}>{c.Region ? `${c.Region} (${c.RegionSource === "component" ? "component's own" : "workload's only"})` : ""}</td>
+                    <td style={{ ...thtdStyle, ...(c.Decision === "priced" ? {} : notAssessableStyle) }}>{c.Decision === "priced" ? "" : c.Reason}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
             {onRepriced && (
               <button style={{ fontSize: 11, marginTop: 6 }} onClick={onRepriced}>
                 Re-price with latest snapshot (creates a new version)

@@ -59,7 +59,7 @@ func GetReport(store *Store, sessionID string, versionNumber int) (core.Report, 
 			priceTable.SnapshotID = snap.ID
 			for _, e := range snap.Entries {
 				priceTable.Rows = append(priceTable.Rows, core.PriceRow{
-					Service: e.Service, SKUAttributes: e.SKUAttributes, Unit: e.Unit, Price: e.Price, Currency: e.Currency,
+					Service: e.Service, Region: e.Region, SKUAttributes: e.SKUAttributes, Unit: e.Unit, Price: e.Price, Currency: e.Currency,
 				})
 			}
 		}

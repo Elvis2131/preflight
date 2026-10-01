@@ -18,7 +18,10 @@ const HoursPerMonthAssumption = 730.0
 
 // PriceRow is core's own plain mirror of pricing.PriceEntry.
 type PriceRow struct {
-	Service       string
+	Service string
+	// Region is the AWS region code the row prices (PC-110). Empty means the snapshot
+	// recorded no region for it (see priceRowInRegion).
+	Region        string
 	SKUAttributes map[string]string
 	Unit          string
 	Price         float64
@@ -53,6 +56,13 @@ type ComponentCost struct {
 	SnapshotID    string
 	SKURateCode   string // the specific AWS rateCode this figure came from — empty when CostUnknown
 	Provenance    Provenance
+
+	// Region/RegionSource are PC-110's own addition: the region this component was priced
+	// in and WHICH of the three resolution steps supplied it (component | workload).
+	// Empty when no region was resolved (the component is then cost_unknown, Reason naming
+	// "region") or when the node type is not priced at all.
+	Region       string       `json:",omitempty"`
+	RegionSource RegionSource `json:",omitempty"`
 }
 
 // CostReport is the whole assessment's cost picture — PC-117's own acceptance
@@ -100,11 +110,11 @@ var engineNameToAWS = map[string]string{
 // byte-identical output (no clock read, no randomness, no map-iteration-order
 // dependence — Components is built in a single pass over ir.Nodes, itself already in
 // a stable, sorted order per ingest.Ingest's own sort.Slice by ID).
-func ComputeCost(ir *IR, table PriceTable, prov Provenance) CostReport {
+func ComputeCost(ir *IR, table PriceTable, workloadRegions []string, prov Provenance) CostReport {
 	report := CostReport{SnapshotID: table.SnapshotID, HoursPerMonthAssumed: HoursPerMonthAssumption, Currency: "USD"}
 
 	for _, n := range ir.Nodes {
-		cc := costOneNode(n, table, prov)
+		cc := costOneNode(n, table, workloadRegions, prov)
 		report.Components = append(report.Components, cc)
 		if cc.Decision == CostPriced {
 			report.PricedTotal += cc.MonthlyAmount
@@ -115,7 +125,7 @@ func ComputeCost(ir *IR, table PriceTable, prov Provenance) CostReport {
 	return report
 }
 
-func costOneNode(n Node, table PriceTable, prov Provenance) ComponentCost {
+func costOneNode(n Node, table PriceTable, workloadRegions []string, prov Provenance) ComponentCost {
 	base := ComponentCost{NodeID: n.ID, SnapshotID: table.SnapshotID, Currency: "USD", Provenance: prov}
 
 	if n.Sizing == nil {
@@ -128,12 +138,26 @@ func costOneNode(n Node, table PriceTable, prov Provenance) ComponentCost {
 	var ok bool
 	var reason string
 	switch n.Type {
-	case NodeTypeManagedDatabase:
-		row, ok, reason = matchRDSRow(n, table)
-	case NodeTypeCache:
-		row, ok, reason = matchElastiCacheRow(n, table)
-	case NodeTypeLoadBalancer:
-		row, ok, reason = matchALBRow(n, table)
+	case NodeTypeManagedDatabase, NodeTypeCache, NodeTypeLoadBalancer:
+		// PC-110: price only in a region that actually resolved — never a guessed one.
+		region, source, why := ResolveComponentRegion(n.Sizing, workloadRegions)
+		if region == "" {
+			base.Decision = CostUnknown
+			base.Reason = why
+			return base
+		}
+		base.Region, base.RegionSource = region, source
+		switch n.Type {
+		case NodeTypeManagedDatabase:
+			row, ok, reason = matchRDSRow(n, regionTable(table, region))
+		case NodeTypeCache:
+			row, ok, reason = matchElastiCacheRow(n, regionTable(table, region))
+		default:
+			row, ok, reason = matchALBRow(n, regionTable(table, region))
+		}
+		if !ok && reason != "" {
+			reason += " (region " + region + ")"
+		}
 	default:
 		reason = "service not in this pricing snapshot's scope (ADR-006 §3)"
 	}
@@ -158,6 +182,17 @@ func costOneNode(n Node, table PriceTable, prov Provenance) ComponentCost {
 	}
 	base.SKURateCode = row.SKUAttributes["rate_description"]
 	return base
+}
+
+// regionTable returns table restricted to rows that may price region (priceRowInRegion).
+func regionTable(table PriceTable, region string) PriceTable {
+	out := PriceTable{SnapshotID: table.SnapshotID}
+	for _, r := range table.Rows {
+		if priceRowInRegion(r, region) {
+			out.Rows = append(out.Rows, r)
+		}
+	}
+	return out
 }
 
 func matchRDSRow(n Node, table PriceTable) (PriceRow, bool, string) {

@@ -300,7 +300,17 @@ export interface ReportCostSection {
     PricedTotal: number;
     Currency: string;
     UnpricedCount: number;
-    Components: Array<{ NodeID: string; Decision: string; MonthlyAmount: number; Currency: string; Reason: string }>;
+    Components: Array<{
+      NodeID: string;
+      Decision: string;
+      MonthlyAmount: number;
+      Currency: string;
+      Reason: string;
+      // PC-110: the region this component was priced in and which resolution step supplied
+      // it (component | workload) — absent when no region resolved.
+      Region?: string;
+      RegionSource?: string;
+    }>;
   };
   usage_based_charges: UsageBasedCostEntry[];
 }

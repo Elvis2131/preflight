@@ -10,6 +10,25 @@ Each generated `contracts/*.schema.json` carries its own version in `x-schema-ve
 stamped by `cmd/gen-contracts` — check that field against this file, not the other way
 around, since a schema file is regenerated output, not hand-edited.
 
+## ir.schema.json 1.4.0 — 2026-10-01 (PC-110: Sizing.region added)
+
+**Additive change to `ir.schema.json` only.** `Sizing` gains optional `region` — the AWS region
+code (e.g. `eu-west-1`) a component runs in, stated by the architect. It is the first step of
+the per-component region resolution (`core.ResolveComponentRegion`, PC-110): the component's
+own region; otherwise the workload's region ONLY if exactly one is declared; otherwise no
+region resolves and the component is `cost_unknown` naming `region` — the first of several
+is never picked. The canvas sets it through the existing free-form `sizing` map (key
+`region`), so `canvas.schema.json` is unchanged. A reader of a 1.3.0 document treats absence
+as "no component region". Regenerated golden/template IR fixtures differ only in
+`schema_version`.
+
+## report.schema.json 1.6.0 — 2026-10-01 (PC-110: cost components record their region)
+
+**Additive change to `report.schema.json` only.** Each cost component gains optional
+`Region` and `RegionSource` (`component` | `workload`): the region it was priced in and which
+resolution step supplied it. Absent when no region resolved (the component is then
+`cost_unknown`, reason naming region) or the node type is not priced.
+
 ## canvas.schema.json 1.6.0 — 2026-10-01 (PC-113: nacl_rules[].number bounded to 1-32766)
 
 **Tightening of one field in `canvas.schema.json`** (introduced in 1.5.0 the same day, so no

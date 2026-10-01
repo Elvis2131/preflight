@@ -195,7 +195,7 @@ func assessFromResult(store *Store, sessionID string, versionNumber int, hadPrev
 	// declared hard-budget finding is just one more entry in the same scorecard the
 	// existing compliance delta mechanism already diffs — no separate cost-compliance
 	// delta path needed for the budget-finding case specifically.
-	cost, err := computeCostIfAvailable(store, result.IR, priceSnapshotID)
+	cost, err := computeCostIfAvailable(store, result.IR, workload.Regions, priceSnapshotID)
 	if err != nil {
 		return AssessResponse{}, err
 	}
@@ -260,7 +260,7 @@ func assessFromResult(store *Store, sessionID string, versionNumber int, hadPrev
 // an APIError, not silently ignored. No pin and no active snapshot either -> nil, nil
 // (nothing to price against yet, not an error: a fresh deployment may not have run
 // the pricing fetcher at all).
-func computeCostIfAvailable(store *Store, ir *core.IR, priceSnapshotID string) (*core.CostReport, error) {
+func computeCostIfAvailable(store *Store, ir *core.IR, workloadRegions []string, priceSnapshotID string) (*core.CostReport, error) {
 	if store.pricingStore == nil {
 		return nil, nil
 	}
@@ -289,11 +289,11 @@ func computeCostIfAvailable(store *Store, ir *core.IR, priceSnapshotID string) (
 	table := core.PriceTable{SnapshotID: snap.ID}
 	for _, e := range snap.Entries {
 		table.Rows = append(table.Rows, core.PriceRow{
-			Service: e.Service, SKUAttributes: e.SKUAttributes, Unit: e.Unit, Price: e.Price, Currency: e.Currency,
+			Service: e.Service, Region: e.Region, SKUAttributes: e.SKUAttributes, Unit: e.Unit, Price: e.Price, Currency: e.Currency,
 		})
 	}
 	prov := core.NewProvenance(core.KindDerived, "server:assess:cost").WithReason("snapshot " + snap.ID)
-	report := core.ComputeCost(ir, table, prov)
+	report := core.ComputeCost(ir, table, workloadRegions, prov)
 	return &report, nil
 }
 

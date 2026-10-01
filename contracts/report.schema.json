@@ -164,6 +164,12 @@
         },
         "Provenance": {
           "$ref": "#/$defs/Provenance"
+        },
+        "Region": {
+          "type": "string"
+        },
+        "RegionSource": {
+          "type": "string"
         }
       },
       "additionalProperties": false,
@@ -1122,5 +1128,5 @@
     "provenance"
   ],
   "x-changelog": "contracts/CHANGELOG.md",
-  "x-schema-version": "1.5.0"
+  "x-schema-version": "1.6.0"
 }

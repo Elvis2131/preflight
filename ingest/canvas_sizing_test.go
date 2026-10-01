@@ -4,6 +4,7 @@ package ingest_test
 // real cost result — blank sizing must stay cost_unknown, never a guessed default.
 
 import (
+	"strings"
 	"testing"
 
 	"preflight/core"
@@ -120,7 +121,7 @@ func TestIngestCanvas_Sizing_EndToEndCost(t *testing.T) {
 	if err != nil {
 		t.Fatalf("IngestCanvas: %v", err)
 	}
-	pricedReport := core.ComputeCost(pricedResult.IR, table, prov)
+	pricedReport := core.ComputeCost(pricedResult.IR, table, []string{"eu-west-1"}, prov)
 	if componentFor(pricedReport, "db").Decision != core.CostPriced {
 		t.Errorf("with sizing: Decision = %q, want priced: %s", componentFor(pricedReport, "db").Decision, componentFor(pricedReport, "db").Reason)
 	}
@@ -136,7 +137,7 @@ func TestIngestCanvas_Sizing_EndToEndCost(t *testing.T) {
 	if err != nil {
 		t.Fatalf("IngestCanvas: %v", err)
 	}
-	blankReport := core.ComputeCost(blankResult.IR, table, prov)
+	blankReport := core.ComputeCost(blankResult.IR, table, []string{"eu-west-1"}, prov)
 	if componentFor(blankReport, "db").Decision != core.CostUnknown {
 		t.Errorf("blank sizing: Decision = %q, want cost_unknown", componentFor(blankReport, "db").Decision)
 	}
@@ -149,4 +150,53 @@ func componentFor(report core.CostReport, nodeID string) core.ComponentCost {
 		}
 	}
 	panic("component not found: " + nodeID)
+}
+
+// PC-110: the canvas sizing map's "region" key reaches the IR's Sizing.Region, and through
+// the real cost engine decides whether a component prices when the workload declares SEVERAL
+// regions — priced in its own region when one is chosen, cost_unknown naming "region" when not.
+func TestIngestCanvas_SizingRegion_DecidesPricingWhenWorkloadHasSeveralRegions(t *testing.T) {
+	build := func(sizing map[string]string) *core.IR {
+		doc := core.CanvasDocument{Nodes: []core.CanvasNode{
+			{ID: "dns", Type: "dns", Label: "DNS", Capability: map[string]string{}},
+			{ID: "lb", Type: "load_balancer", Label: "LB", Capability: map[string]string{}, ServiceID: "aws_lb", Sizing: sizing},
+			{ID: "db", Type: "managed_database", Label: "DB", Capability: map[string]string{}},
+		}}
+		res, err := ingest.IngestCanvas(doc, providers.Registry(loadRegistry(t)), 1)
+		if err != nil || res.IR == nil {
+			t.Fatalf("ingest: %v / %+v", err, res.Insufficient)
+		}
+		return res.IR
+	}
+	table := core.PriceTable{SnapshotID: "s", Rows: []core.PriceRow{{
+		Service: "AWSELB", Region: "eu-west-1", Unit: "Hrs", Price: 0.0225, Currency: "USD",
+		SKUAttributes: map[string]string{"usagetype": "LoadBalancerUsage", "operation": "LoadBalancing:Application"},
+	}}}
+	prov := core.NewProvenance(core.KindDerived, "test")
+	regions := []string{"eu-west-1", "eu-central-1"}
+	lb := func(ir *core.IR) core.ComponentCost {
+		for _, c := range core.ComputeCost(ir, table, regions, prov).Components {
+			if c.NodeID == "lb" {
+				return c
+			}
+		}
+		t.Fatal("no lb component")
+		return core.ComponentCost{}
+	}
+
+	chosen := build(map[string]string{"load_balancer_type": "application", "region": "eu-west-1"})
+	for _, n := range chosen.Nodes {
+		if n.ID == "lb" && (n.Sizing == nil || n.Sizing.Region == nil || *n.Sizing.Region != "eu-west-1") {
+			t.Fatalf("sizing region did not reach the IR: %+v", n.Sizing)
+		}
+	}
+	if c := lb(chosen); c.Decision != core.CostPriced || c.RegionSource != core.RegionFromComponent {
+		t.Errorf("a chosen component region must price it even with several workload regions: %+v", c)
+	}
+	if c := lb(build(map[string]string{"load_balancer_type": "application"})); c.Decision != core.CostUnknown || !strings.Contains(c.Reason, "region") {
+		t.Errorf("no chosen region + several workload regions must be cost_unknown naming region: %+v", c)
+	}
+	if c := lb(build(map[string]string{"load_balancer_type": "application", "region": ""})); c.Decision != core.CostUnknown {
+		t.Errorf("a blank region is no region: %+v", c)
+	}
 }
