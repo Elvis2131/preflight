@@ -106,3 +106,10 @@ jobs:
       - uses: golangci/golangci-lint-action@v9
         with:
           version: v2.13.2
+
+      # canvas/e2e: the re-runnable evidence behind every "verified live in a browser" claim —
+      # real headless Chromium against a real assessd on throwaway state, with assertions (a
+      # failed check exits non-zero). Uses the Chromium installed above.
+      - name: browser end-to-end suite
+        working-directory: canvas
+        run: npm run e2e
