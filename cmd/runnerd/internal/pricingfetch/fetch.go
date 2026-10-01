@@ -17,6 +17,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"sort"
 	"strconv"
 	"time"
 
@@ -103,8 +104,11 @@ func Fetch(client httpClient, serviceCode, region string) ([]pricing.PriceEntry,
 				for k, v := range product.Attributes {
 					attrs[k] = v
 				}
+				attrs["sku"] = sku
 				attrs["product_family"] = product.ProductFamily
 				attrs["rate_description"] = dim.Description
+				attrs["begin_range"] = dim.BeginRange
+				attrs["end_range"] = dim.EndRange
 				out = append(out, pricing.PriceEntry{
 					Service:       serviceCode,
 					Region:        region,
@@ -116,6 +120,14 @@ func Fetch(client httpClient, serviceCode, region string) ([]pricing.PriceEntry,
 			}
 		}
 	}
+	// Products is a map: sort so identical input yields identical snapshots (NFR-1).
+	sort.SliceStable(out, func(i, j int) bool {
+		a, b := out[i], out[j]
+		if a.SKUAttributes["sku"] != b.SKUAttributes["sku"] {
+			return a.SKUAttributes["sku"] < b.SKUAttributes["sku"]
+		}
+		return rangeStart(a) < rangeStart(b)
+	})
 	source := fmt.Sprintf("AWS Bulk Price List API, %s %s", serviceCode, offer.Version)
 	return out, source, nil
 }
@@ -176,4 +188,9 @@ func get(client httpClient, url string) ([]byte, error) {
 		return nil, fmt.Errorf("pricingfetch: GET %s: status %d", url, resp.StatusCode)
 	}
 	return io.ReadAll(resp.Body)
+}
+
+func rangeStart(e pricing.PriceEntry) float64 {
+	v, _ := strconv.ParseFloat(e.SKUAttributes["begin_range"], 64)
+	return v
 }

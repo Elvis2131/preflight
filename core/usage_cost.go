@@ -5,14 +5,28 @@
 // egresses via a NAT gateway — zero new reachability logic, only a new cost
 // classification layered on top of what those engines already compute.
 //
-// SKU MATCHING HONESTY NOTE: the usagetype strings this file matches against
-// (NatGateway-Bytes, DataTransfer-Regional-Bytes, DataTransfer-Out-Bytes, LCUUsage)
-// are AWS's own well-documented, standard Cost & Usage Report / Cost Explorer usage
-// type vocabulary. They were cross-checked against representative rows from the
-// public Bulk Price List files on 2026-10-01; see
-// cmd/runnerd/internal/pricingfetch/testdata/pc132_usage_type_rows.json. The
-// manifest proves spelling and service/operation identity only, not every region or
-// pricing dimension.
+// SKU MATCHING (verified against real AWS Bulk Price List data, 2026-10-01/02;
+// manifest in cmd/runnerd/internal/pricingfetch/testdata/pc132_usage_type_rows.json):
+//   - NAT data processing: AmazonEC2 offer, usagetype "<REGION>-NatGateway-Bytes",
+//     operation "NatGateway", unit GB (eu-west-1: $0.048/GB). The offer ALSO holds
+//     "<REGION>-RegionalNatGateway-Bytes" (operation "RegionalNatGateway"), a different
+//     product — a substring match would hit it, so matching is exact on the
+//     region-stripped usagetype plus operation.
+//   - Cross-AZ: "<REGION>-DataTransfer-Regional-Bytes", unit GB (eu-west-1: $0.01/GB;
+//     AWS's description says in/out/between AZs, i.e. the rate applies per direction —
+//     this engine bills the declared volume once, a stated lower bound).
+//   - Internet egress: lives in the AWSDataTransfer offer (NOT AmazonEC2),
+//     "<REGION>-DataTransfer-Out-Bytes", transferType "AWS Outbound", TIERED by
+//     beginRange/endRange (eu-west-1: $0.09 first 10 TB, $0.085, $0.07, $0.05). The
+//     account-wide monthly free allowance is not modelled (stated in the reason).
+//   - ALB: AWSELB "LCUUsage"/"LoadBalancing:Application", unit LCU-Hrs. Per AWS ELB
+//     pricing, 1 LCU = 1 GB/hour processed bytes for EC2/container/IP targets
+//     (0.4 GB/h for Lambda), and billing uses the HIGHEST of four dimensions — so
+//     the bytes dimension alone is a lower bound, and Lambda targets are not modelled.
+//
+// A row whose unit is not the expected one is skipped, never multiplied blindly.
+// Rows spanning more than one region with no way to choose are cost_unknown, never
+// "first row wins".
 //
 // Monthly volume conversion (steady_rps -> monthly bytes) is tagged Kind=assumed —
 // the Card's own explicit instruction, and (per core/report.go's own doc comment)
@@ -21,6 +35,9 @@ package core
 
 import (
 	"fmt"
+	"math"
+	"sort"
+	"strconv"
 	"strings"
 )
 
@@ -205,41 +222,112 @@ func resolveAvailabilityZone(ir *IR, nodeID string) (string, bool) {
 
 func priceUsageEntry(journeyID string, hop JourneyHopFlow, kind UsageCostKind, monthlyGB float64, table PriceTable, assumedProv Provenance, match func(PriceRow) bool) UsageBasedCostEntry {
 	prov := NewProvenance(KindDerived, fmt.Sprintf("core/usage_cost:%s:%s->%s", kind, hop.From, hop.To))
+	unknown := func(reason string) UsageBasedCostEntry {
+		return UsageBasedCostEntry{
+			JourneyID: journeyID, HopFrom: hop.From, HopTo: hop.To, Kind: kind,
+			Decision: CostUnknown, Reason: reason, SnapshotID: table.SnapshotID, Provenance: prov,
+		}
+	}
+
+	var rows []PriceRow
+	regions := map[string]bool{}
 	for _, row := range table.Rows {
 		if match(row) {
-			return UsageBasedCostEntry{
-				JourneyID: journeyID, HopFrom: hop.From, HopTo: hop.To, Kind: kind,
-				Decision: CostPriced, MonthlyGB: monthlyGB, MonthlyAmount: monthlyGB * row.Price, Currency: row.Currency,
-				Reason:     fmt.Sprintf("%.4g GB/month (%s) at $%.4f/GB", monthlyGB, assumedProv.Reason, row.Price),
-				SnapshotID: table.SnapshotID, Provenance: prov,
-			}
+			rows = append(rows, row)
+			regions[row.Region] = true
 		}
+	}
+	if len(rows) == 0 {
+		return unknown("no matching price row for this usage dimension in the pinned snapshot")
+	}
+	if len(regions) > 1 {
+		return unknown("matching price rows span several regions and this usage entry has no region to choose between them")
+	}
+
+	if kind == UsageCostInternetEgress {
+		amount, ok := tieredAmount(rows, monthlyGB)
+		if !ok {
+			return unknown("internet egress rows carry no usable tier bounds (begin_range/end_range) — cannot price the volume")
+		}
+		return UsageBasedCostEntry{
+			JourneyID: journeyID, HopFrom: hop.From, HopTo: hop.To, Kind: kind,
+			Decision: CostPriced, MonthlyGB: monthlyGB, MonthlyAmount: amount, Currency: rows[0].Currency,
+			Reason:     fmt.Sprintf("%.4g GB/month (%s) priced across the published volume tiers; the account-wide monthly free allowance is not modelled", monthlyGB, assumedProv.Reason),
+			SnapshotID: table.SnapshotID, Provenance: prov,
+		}
+	}
+
+	// Several rows for one dimension (differing only by price) cannot be told apart
+	// here: pick deterministically (lowest price first would hide a conflict), so
+	// refuse instead when they disagree.
+	price := rows[0].Price
+	for _, r := range rows[1:] {
+		if r.Price != price {
+			return unknown("several matching price rows disagree on the rate — refusing to pick one")
+		}
+	}
+	reason := fmt.Sprintf("%.4g GB/month (%s) at $%.4f/GB", monthlyGB, assumedProv.Reason, price)
+	if kind == UsageCostLBDataProcessed {
+		reason = fmt.Sprintf("%.4g LCU-hours/month from the processed-bytes dimension only (1 LCU = 1 GB/hour for EC2/IP targets; billing uses the highest of four dimensions, so this is a lower bound) (%s) at $%.4f/LCU-hour", monthlyGB, assumedProv.Reason, price)
 	}
 	return UsageBasedCostEntry{
 		JourneyID: journeyID, HopFrom: hop.From, HopTo: hop.To, Kind: kind,
-		Decision: CostUnknown, Reason: "no matching price row for this usage dimension in the pinned snapshot",
-		SnapshotID: table.SnapshotID, Provenance: prov,
+		Decision: CostPriced, MonthlyGB: monthlyGB, MonthlyAmount: monthlyGB * price, Currency: rows[0].Currency,
+		Reason: reason, SnapshotID: table.SnapshotID, Provenance: prov,
 	}
 }
 
+// tieredAmount walks volume tiers in ascending begin_range order. ok is false when
+// any row lacks parseable bounds.
+func tieredAmount(rows []PriceRow, gb float64) (float64, bool) {
+	type tier struct{ begin, end, price float64 }
+	var tiers []tier
+	for _, r := range rows {
+		begin, err := strconv.ParseFloat(r.SKUAttributes["begin_range"], 64)
+		if err != nil {
+			return 0, false
+		}
+		end := math.Inf(1)
+		if e := r.SKUAttributes["end_range"]; e != "" && e != "Inf" {
+			if end, err = strconv.ParseFloat(e, 64); err != nil {
+				return 0, false
+			}
+		}
+		tiers = append(tiers, tier{begin, end, r.Price})
+	}
+	sort.Slice(tiers, func(i, j int) bool { return tiers[i].begin < tiers[j].begin })
+	var total float64
+	for _, t := range tiers {
+		if gb <= t.begin {
+			break
+		}
+		total += (math.Min(gb, t.end) - t.begin) * t.price
+	}
+	return total, true
+}
+
+// usageTypeIs matches a usagetype exactly after dropping AWS's region prefix
+// ("EU-", "USE1-", or none for us-east-1) — so "RegionalNatGateway-Bytes" does not
+// match "NatGateway-Bytes".
+func usageTypeIs(r PriceRow, want string) bool {
+	u := r.SKUAttributes["usagetype"]
+	return u == want || strings.HasSuffix(u, "-"+want)
+}
+
 // matchNATDataProcessingRow/matchInternetEgressRow/matchCrossAZTransferRow/
-// matchLBDataProcessedRow — see this file's own header SKU-matching honesty note.
+// matchLBDataProcessedRow — see this file's own header SKU-matching note.
 func matchNATDataProcessingRow(r PriceRow) bool {
-	return containsFold(r.SKUAttributes["usagetype"], "NatGateway-Bytes")
+	return usageTypeIs(r, "NatGateway-Bytes") && r.SKUAttributes["operation"] == "NatGateway" && r.Unit == "GB"
 }
 
 func matchInternetEgressRow(r PriceRow) bool {
-	return containsFold(r.SKUAttributes["usagetype"], "DataTransfer-Out-Bytes")
+	return usageTypeIs(r, "DataTransfer-Out-Bytes") && r.SKUAttributes["transferType"] == "AWS Outbound" && r.Unit == "GB"
 }
 
 func matchCrossAZTransferRow(r PriceRow) bool {
-	return containsFold(r.SKUAttributes["usagetype"], "DataTransfer-Regional-Bytes")
+	return usageTypeIs(r, "DataTransfer-Regional-Bytes") && r.Unit == "GB"
 }
 
 func matchLBDataProcessedRow(r PriceRow) bool {
-	return containsFold(r.SKUAttributes["usagetype"], "LCUUsage") && r.SKUAttributes["operation"] == "LoadBalancing:Application"
-}
-
-func containsFold(s, substr string) bool {
-	return strings.Contains(strings.ToLower(s), strings.ToLower(substr))
+	return usageTypeIs(r, "LCUUsage") && r.SKUAttributes["operation"] == "LoadBalancing:Application" && r.Unit == "LCU-Hrs"
 }

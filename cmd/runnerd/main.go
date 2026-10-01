@@ -32,7 +32,8 @@ func runFetchPricing(dbPath, region string) {
 	}
 	defer store.Close()
 
-	services := []string{"AWSELB", "AmazonS3", "AmazonElastiCache", "AmazonRDS"}
+	services := []string{"AWSELB", "AWSDataTransfer", "AmazonS3", "AmazonElastiCache", "AmazonRDS"}
+	// AWSDataTransfer carries internet egress + cross-AZ rates (PC-132, ~1.5MB/region).
 	// EC2 and NAT Gateway deliberately excluded — ADR-006 §3: the real, measured
 	// 481MB/region EC2 offer file is deferred past v1, not silently dropped.
 

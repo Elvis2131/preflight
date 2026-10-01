@@ -24,14 +24,26 @@ import (
 	"preflight/core"
 )
 
+// usageCostPriceTable holds rows shaped exactly like real AWS Bulk Price List rows
+// (eu-west-1 offers, retrieved 2026-10-02; prices/units/tiers are the real ones,
+// attribute names as pricingfetch emits them). The RegionalNatGateway row is a real
+// decoy: same unit and price, different product — it must never be the one matched.
 func usageCostPriceTable() core.PriceTable {
+	egress := func(begin, end string, price float64) core.PriceRow {
+		return core.PriceRow{Service: "AWSDataTransfer", Region: "eu-west-1", Unit: "GB", Price: price, Currency: "USD",
+			SKUAttributes: map[string]string{"usagetype": "EU-DataTransfer-Out-Bytes", "transferType": "AWS Outbound", "begin_range": begin, "end_range": end}}
+	}
 	return core.PriceTable{
 		SnapshotID: "test-usage-snapshot",
 		Rows: []core.PriceRow{
-			{Service: "AmazonVPC", SKUAttributes: map[string]string{"usagetype": "USE1-NatGateway-Bytes"}, Unit: "GB", Price: 0.045, Currency: "USD"},
-			{Service: "AWSDataTransfer", SKUAttributes: map[string]string{"usagetype": "USE1-DataTransfer-Out-Bytes"}, Unit: "GB", Price: 0.09, Currency: "USD"},
-			{Service: "AWSDataTransfer", SKUAttributes: map[string]string{"usagetype": "USE1-DataTransfer-Regional-Bytes"}, Unit: "GB", Price: 0.01, Currency: "USD"},
-			{Service: "AWSELB", SKUAttributes: map[string]string{"usagetype": "USE1-LCUUsage", "operation": "LoadBalancing:Application"}, Unit: "LCU-Hrs", Price: 0.008, Currency: "USD"},
+			{Service: "AmazonEC2", Region: "eu-west-1", SKUAttributes: map[string]string{"usagetype": "EU-RegionalNatGateway-Bytes", "operation": "RegionalNatGateway"}, Unit: "GB", Price: 0.048, Currency: "USD"},
+			{Service: "AmazonEC2", Region: "eu-west-1", SKUAttributes: map[string]string{"usagetype": "EU-NatGateway-Bytes", "operation": "NatGateway"}, Unit: "GB", Price: 0.048, Currency: "USD"},
+			egress("153600", "Inf", 0.05),
+			egress("0", "10240", 0.09),
+			egress("10240", "51200", 0.085),
+			egress("51200", "153600", 0.07),
+			{Service: "AWSDataTransfer", Region: "eu-west-1", SKUAttributes: map[string]string{"usagetype": "EU-DataTransfer-Regional-Bytes", "transferType": "IntraRegion"}, Unit: "GB", Price: 0.01, Currency: "USD"},
+			{Service: "AWSELB", Region: "us-east-1", SKUAttributes: map[string]string{"usagetype": "LCUUsage", "operation": "LoadBalancing:Application"}, Unit: "LCU-Hrs", Price: 0.008, Currency: "USD"},
 		},
 	}
 }
@@ -113,8 +125,9 @@ func TestComputeUsageBasedCost_InternetEgress_RealPricedAmount(t *testing.T) {
 		t.Fatalf("Decision = %q, want priced: %s", egress.Decision, egress.Reason)
 	}
 	// Hand-verified: 10 req/s * 5000 bytes/req * (730*3600) s/month = 131,400,000,000
-	// bytes/month = 122,392.19... GB (bytes / 1024^3) * $0.09/GB.
+	// bytes/month = ~122.4 GB (bytes / 1024^3), all within the first tier.
 	wantGB := 10.0 * 5000.0 * core.SecondsPerMonthAssumption / (1024 * 1024 * 1024)
+	// ~122.4 GB sits wholly inside the first real eu-west-1 tier ($0.09, 0-10240 GB).
 	wantAmount := wantGB * 0.09
 	if diff := egress.MonthlyGB - wantGB; diff > 0.001 || diff < -0.001 {
 		t.Errorf("MonthlyGB = %v, want %v", egress.MonthlyGB, wantGB)
@@ -279,4 +292,88 @@ func containsSubstr(s, substr string) bool {
 		}
 	}
 	return false
+}
+
+// TestMatchers_RealRowShapes_NegativeControls pins the defects found by checking the
+// matchers against real Price List data: the old substring match let
+// RegionalNatGateway-Bytes satisfy NatGateway-Bytes, and EC2 rows could never carry
+// egress. Each case fails if the corresponding guard is removed.
+func TestUsageCost_RealRowShapes_NegativeControls(t *testing.T) {
+	ir := buildInternetReachableIR()
+	j := core.DeclaredJourney{
+		ID: "j1", Name: "j1", Path: []string{core.JourneyInternetSentinel, "edge"}, Protocol: "tcp", Port: 443, Criticality: "tier1",
+		SteadyRPS: steadyRPS(10), AvgRequestBytes: avgBytes(1000), AvgResponseBytes: avgBytes(4000),
+	}
+	run := func(rows ...core.PriceRow) []core.UsageBasedCostEntry {
+		return core.ComputeUsageBasedCost(ir, core.Workload{Journeys: []core.DeclaredJourney{j}}, core.PriceTable{SnapshotID: "s", Rows: rows}, nil)
+	}
+	find := func(rs []core.UsageBasedCostEntry, k core.UsageCostKind) core.UsageBasedCostEntry {
+		for _, r := range rs {
+			if r.Kind == k {
+				return r
+			}
+		}
+		t.Fatalf("no %s entry in %+v", k, rs)
+		return core.UsageBasedCostEntry{}
+	}
+
+	// Egress rows without tier bounds are refused, not priced at one arbitrary tier.
+	noTiers := run(core.PriceRow{Region: "eu-west-1", Unit: "GB", Price: 0.09, Currency: "USD",
+		SKUAttributes: map[string]string{"usagetype": "EU-DataTransfer-Out-Bytes", "transferType": "AWS Outbound"}})
+	if e := find(noTiers, core.UsageCostInternetEgress); e.Decision != core.CostUnknown {
+		t.Errorf("egress with no tier bounds: %+v, want cost_unknown", e)
+	}
+	// Wrong unit is skipped, never multiplied blindly.
+	badUnit := run(core.PriceRow{Region: "eu-west-1", Unit: "Hrs", Price: 0.09, Currency: "USD",
+		SKUAttributes: map[string]string{"usagetype": "EU-DataTransfer-Out-Bytes", "transferType": "AWS Outbound", "begin_range": "0", "end_range": "Inf"}})
+	if e := find(badUnit, core.UsageCostInternetEgress); e.Decision != core.CostUnknown {
+		t.Errorf("egress with unit Hrs: %+v, want cost_unknown", e)
+	}
+	// The same usagetype from two regions with nothing to choose between them.
+	two := run(
+		core.PriceRow{Region: "eu-west-1", Unit: "GB", Price: 0.09, Currency: "USD", SKUAttributes: map[string]string{"usagetype": "EU-DataTransfer-Out-Bytes", "transferType": "AWS Outbound", "begin_range": "0", "end_range": "Inf"}},
+		core.PriceRow{Region: "us-east-1", Unit: "GB", Price: 0.09, Currency: "USD", SKUAttributes: map[string]string{"usagetype": "DataTransfer-Out-Bytes", "transferType": "AWS Outbound", "begin_range": "0", "end_range": "Inf"}},
+	)
+	if e := find(two, core.UsageCostInternetEgress); e.Decision != core.CostUnknown {
+		t.Errorf("rows from two regions: %+v, want cost_unknown", e)
+	}
+	// Row order must not change the answer.
+	tbl := usageCostPriceTable()
+	rev := core.PriceTable{SnapshotID: tbl.SnapshotID}
+	for i := len(tbl.Rows) - 1; i >= 0; i-- {
+		rev.Rows = append(rev.Rows, tbl.Rows[i])
+	}
+	a := core.ComputeUsageBasedCost(ir, core.Workload{Journeys: []core.DeclaredJourney{j}}, tbl, nil)
+	b := core.ComputeUsageBasedCost(ir, core.Workload{Journeys: []core.DeclaredJourney{j}}, rev, nil)
+	if len(a) != len(b) {
+		t.Fatalf("entry counts differ by row order: %d vs %d", len(a), len(b))
+	}
+	for i := range a {
+		if a[i].MonthlyAmount != b[i].MonthlyAmount || a[i].Decision != b[i].Decision {
+			t.Errorf("entry %d differs by row order: %+v vs %+v", i, a[i], b[i])
+		}
+	}
+}
+
+// A volume that spans tiers: 5000 req/s x 5000 B x 2,628,000 s = ~61,200 GB/month, so
+// 10240 GB at $0.09 + 40960 GB at $0.085 + the rest at $0.07 (real eu-west-1 tiers).
+func TestComputeUsageBasedCost_InternetEgress_SpansTiers(t *testing.T) {
+	ir := buildInternetReachableIR()
+	j := core.DeclaredJourney{
+		ID: "j1", Name: "j1", Path: []string{core.JourneyInternetSentinel, "edge"}, Protocol: "tcp", Port: 443, Criticality: "tier1",
+		SteadyRPS: steadyRPS(5000), AvgRequestBytes: avgBytes(1000), AvgResponseBytes: avgBytes(4000),
+	}
+	results := core.ComputeUsageBasedCost(ir, core.Workload{Journeys: []core.DeclaredJourney{j}}, usageCostPriceTable(), nil)
+	for _, r := range results {
+		if r.Kind != core.UsageCostInternetEgress {
+			continue
+		}
+		gb := 5000.0 * 5000.0 * core.SecondsPerMonthAssumption / (1024 * 1024 * 1024)
+		want := 10240*0.09 + 40960*0.085 + (gb-51200)*0.07
+		if diff := r.MonthlyAmount - want; diff > 0.01 || diff < -0.01 {
+			t.Errorf("MonthlyAmount = %v, want %v", r.MonthlyAmount, want)
+		}
+		return
+	}
+	t.Fatal("no internet_egress entry")
 }
