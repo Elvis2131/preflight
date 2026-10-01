@@ -30,7 +30,7 @@ type ServiceCatalogEntry struct {
 func ListServiceCatalog(registry providers.Registry) []ServiceCatalogEntry {
 	entries := make([]ServiceCatalogEntry, 0, len(registry))
 	for _, mapping := range registry {
-		if mapping.IsEdgeMapping() {
+		if mapping.IsEdgeMapping() || mapping.IngestOnly {
 			continue
 		}
 		entries = append(entries, ServiceCatalogEntry{

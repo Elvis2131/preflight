@@ -120,6 +120,12 @@ type ResourceMapping struct {
 	// edge type itself was already frozen by PC-7).
 	ReferenceEdgeType core.EdgeType `yaml:"reference_edge_type,omitempty"`
 
+	// IngestOnly marks a node mapping that HCL ingest understands but the canvas cannot
+	// author yet (PC-149: aws_default_network_acl — the canvas has no way to mark a NACL
+	// as the VPC default). The service catalog omits it, so the palette never offers a
+	// service whose semantics the canvas would silently drop.
+	IngestOnly bool `yaml:"ingest_only,omitempty"`
+
 	// CapabilityLevel is PC-107's own registry entry: how much of this specific AWS
 	// service Preflight can actually simulate, on core.CapabilityLevel's 9-rung
 	// ladder. Required for every node mapping (validated against

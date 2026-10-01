@@ -85,3 +85,20 @@ func TestListServiceCatalogHandler_ServesRealCatalogAsJSON(t *testing.T) {
 		t.Fatal("expected at least one real service catalog entry")
 	}
 }
+
+// PC-149: an ingest-only mapping (aws_default_network_acl) is understood by HCL ingest
+// but must never reach the palette.
+func TestListServiceCatalog_OmitsIngestOnlyMappings(t *testing.T) {
+	reg, err := awsprovider.Load()
+	if err != nil {
+		t.Fatalf("awsprovider.Load(): %v", err)
+	}
+	if _, ok := reg.Lookup("aws_default_network_acl"); !ok {
+		t.Fatal("aws_default_network_acl must stay in the registry so ingest keeps working")
+	}
+	for _, e := range server.ListServiceCatalog(reg) {
+		if e.ResourceType == "aws_default_network_acl" {
+			t.Fatal("an ingest-only mapping must not be offered by the service catalog")
+		}
+	}
+}
