@@ -24,7 +24,7 @@ import {
   type NodeType,
   type EdgeType,
 } from "./goldenVocabulary";
-import type { CanvasNodeData, CanvasEdgeData, CanvasSecurityGroupRule } from "./types";
+import type { CanvasNodeData, CanvasEdgeData, CanvasSecurityGroupRule, CanvasRoute, CanvasNACLRule } from "./types";
 import { serialize } from "./serialize";
 import { GoldenNode } from "./GoldenNode";
 import { Inspector } from "./Inspector";
@@ -429,6 +429,29 @@ function CanvasInner() {
     [nodes, setNodes, setEdges],
   );
 
+  // PC-138/PC-139: the Inspector's route and NACL editors' own write paths — same
+  // immutable-map pattern as the other inspector write paths.
+  const updateNodeRoutes = useCallback(
+    (nodeID: string, routes: CanvasRoute[]) => {
+      setNodes((nds) => nds.map((n) => (n.id === nodeID ? { ...n, data: { ...n.data, routes } } : n)));
+    },
+    [setNodes],
+  );
+  const updateNodeNACLRules = useCallback(
+    (nodeID: string, naclRules: CanvasNACLRule[]) => {
+      setNodes((nds) => nds.map((n) => (n.id === nodeID ? { ...n, data: { ...n.data, naclRules } } : n)));
+    },
+    [setNodes],
+  );
+  // Route targets the engine models: internet-gateway and NAT-gateway nodes on the canvas.
+  const routeTargets = useMemo(
+    () =>
+      nodes
+        .filter((n) => n.data.serviceID === "aws_internet_gateway" || n.data.serviceID === "aws_nat_gateway")
+        .map((n) => ({ id: n.id, label: `${n.data.label} (${n.data.serviceID})` })),
+    [nodes],
+  );
+
   // updateNodePlacement (PC-105) is the Inspector's CIDR/AZ fields' write path — same
   // immutable-map pattern as the other inspector write paths.
   const updateNodePlacement = useCallback(
@@ -801,6 +824,9 @@ function CanvasInner() {
           onServiceChange={updateNodeServiceID}
           onSecurityGroupRulesChange={updateNodeSecurityGroupRules}
           onPlacementChange={updateNodePlacement}
+          routeTargets={routeTargets}
+          onRoutesChange={updateNodeRoutes}
+          onNACLRulesChange={updateNodeNACLRules}
         />
       )}
       {caps.canInjectFaults && (

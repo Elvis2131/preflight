@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import type { Node } from "@xyflow/react";
-import type { CanvasNodeData, CanvasSecurityGroupRule } from "./types";
+import type { CanvasNodeData, CanvasSecurityGroupRule, CanvasRoute, CanvasNACLRule } from "./types";
 import { SIZING_FIELDS, type SizingFieldDef } from "./sizingFields";
 import { listPricingSnapshots, getPricingSnapshot, listServiceCatalog, type PricingSnapshot, type ServiceCatalogEntry } from "./api";
 
@@ -182,6 +182,126 @@ function SecurityGroupRulesEditor({
   );
 }
 
+// RoutesEditor (PC-138) authors the routes on a route-table node: destination CIDR to a
+// target that is an internet gateway or NAT gateway node. Every field is stated input
+// written verbatim into CanvasNodeData.routes — no routing logic here (route selection,
+// longest-prefix match, public/private are all the server's). Targets offered are only
+// the kinds the engine models; the server rejects anything else regardless.
+function RoutesEditor({
+  routes,
+  targets,
+  onChange,
+}: {
+  routes: CanvasRoute[];
+  targets: Array<{ id: string; label: string }>;
+  onChange: (routes: CanvasRoute[]) => void;
+}) {
+  const update = (i: number, patch: Partial<CanvasRoute>) => {
+    const next = routes.slice();
+    next[i] = { ...next[i], ...patch };
+    onChange(next);
+  };
+  return (
+    <div style={{ marginTop: 10, paddingTop: 8, borderTop: "1px solid #e2e8f0" }} data-testid="routes-editor">
+      <label style={labelStyle}>Routes (PC-138)</label>
+      <p style={{ fontSize: 10, color: "#94a3b8", margin: "0 0 4px" }}>
+        Associate a subnet with this route table by drawing a depends_on edge from the subnet to it. Only
+        internet-gateway and NAT-gateway targets are modelled. A subnet with no route table is not_assessable at
+        route selection — never a guessed default route.
+      </p>
+      {targets.length === 0 && (
+        <p style={{ fontSize: 10, color: "#b45309", margin: "0 0 4px" }}>
+          No internet gateway or NAT gateway in this design to route to — add one (service aws_internet_gateway / aws_nat_gateway).
+        </p>
+      )}
+      {routes.map((r, i) => (
+        <div key={i} style={{ ...rowStyle, marginBottom: 6 }}>
+          <input
+            style={{ ...inputStyle, width: 110 }}
+            placeholder="destination CIDR"
+            value={r.destination_cidr}
+            onChange={(e) => update(i, { destination_cidr: e.target.value })}
+          />
+          <select style={inputStyle} value={r.target} onChange={(e) => update(i, { target: e.target.value })}>
+            <option value="">— target —</option>
+            {targets.map((t) => (
+              <option key={t.id} value={t.id}>
+                {t.label}
+              </option>
+            ))}
+          </select>
+          <button onClick={() => onChange(routes.filter((_, j) => j !== i))}>×</button>
+        </div>
+      ))}
+      <button onClick={() => onChange([...routes, { destination_cidr: "", target: targets[0]?.id ?? "" }])}>+ route</button>
+    </div>
+  );
+}
+
+// NACLRulesEditor (PC-139) authors the ordered rules on a network-ACL node. Rules are
+// evaluated lowest number first by the server (AWS: "Rules are evaluated starting with
+// the lowest numbered rule. As soon as a rule matches traffic, it's applied"); nothing
+// is evaluated here. No rule at all means not authored — never an implied allow or deny.
+function NACLRulesEditor({ rules, onChange }: { rules: CanvasNACLRule[]; onChange: (rules: CanvasNACLRule[]) => void }) {
+  const update = (i: number, patch: Partial<CanvasNACLRule>) => {
+    const next = rules.slice();
+    next[i] = { ...next[i], ...patch };
+    onChange(next);
+  };
+  const nextNumber = rules.reduce((m, r) => Math.max(m, r.number), 0) + 10;
+  return (
+    <div style={{ marginTop: 10, paddingTop: 8, borderTop: "1px solid #e2e8f0" }} data-testid="nacl-editor">
+      <label style={labelStyle}>Network ACL rules (PC-139)</label>
+      <p style={{ fontSize: 10, color: "#94a3b8", margin: "0 0 4px" }}>
+        Associate a subnet with this NACL by drawing a depends_on edge from the subnet to it. Lowest rule number
+        is evaluated first and the first match applies; NACLs are stateless, so a return path needs its own rule.
+        No rule means not authored — never an implied allow-all or deny-all.
+      </p>
+      {rules.map((r, i) => (
+        <div key={i} style={{ marginBottom: 6, paddingBottom: 6, borderBottom: "1px dashed #cbd5e1" }}>
+          <div style={rowStyle}>
+            <input
+              style={{ ...inputStyle, width: 55 }}
+              type="number"
+              placeholder="#"
+              value={r.number}
+              onChange={(e) => update(i, { number: Number(e.target.value) })}
+            />
+            <select style={inputStyle} value={r.direction} onChange={(e) => update(i, { direction: e.target.value as CanvasNACLRule["direction"] })}>
+              <option value="ingress">ingress</option>
+              <option value="egress">egress</option>
+            </select>
+            <select style={inputStyle} value={r.action} onChange={(e) => update(i, { action: e.target.value as CanvasNACLRule["action"] })}>
+              <option value="allow">allow</option>
+              <option value="deny">deny</option>
+            </select>
+            <button onClick={() => onChange(rules.filter((_, j) => j !== i))}>×</button>
+          </div>
+          <div style={rowStyle}>
+            <input style={{ ...inputStyle, width: 60 }} placeholder="protocol" value={r.protocol} onChange={(e) => update(i, { protocol: e.target.value })} />
+            <input
+              style={{ ...inputStyle, width: 55 }}
+              type="number"
+              placeholder="from"
+              value={r.from_port ?? ""}
+              onChange={(e) => update(i, { from_port: e.target.value === "" ? undefined : Number(e.target.value) })}
+            />
+            <input
+              style={{ ...inputStyle, width: 55 }}
+              type="number"
+              placeholder="to"
+              value={r.to_port ?? ""}
+              onChange={(e) => update(i, { to_port: e.target.value === "" ? undefined : Number(e.target.value) })}
+            />
+          </div>
+          <input style={{ ...inputStyle, marginTop: 4 }} placeholder="cidr_block (source for ingress, destination for egress)" value={r.cidr_block} onChange={(e) => update(i, { cidr_block: e.target.value })} />
+        </div>
+      ))}
+      <button onClick={() => onChange([...rules, { direction: "ingress", number: nextNumber, protocol: "tcp", cidr_block: "", action: "allow" }])}>+ rule</button>
+    </div>
+  );
+}
+
 // Inspector is PC-110's own new panel: sizing fields for the currently-selected
 // node, per NodeType (SIZING_FIELDS). Absent from this codebase before this ticket —
 // there was no per-node inspector of any kind (capability entry has no UI either;
@@ -195,12 +315,18 @@ export function Inspector({
   onServiceChange,
   onSecurityGroupRulesChange,
   onPlacementChange,
+  routeTargets,
+  onRoutesChange,
+  onNACLRulesChange,
 }: {
   node: Node<CanvasNodeData>;
   onChange: (nodeID: string, sizing: Record<string, string>) => void;
   onServiceChange: (nodeID: string, serviceID: string) => void;
   onSecurityGroupRulesChange: (nodeID: string, rules: CanvasSecurityGroupRule[]) => void;
   onPlacementChange: (nodeID: string, patch: { availabilityZone?: string; cidrBlock?: string }) => void;
+  routeTargets: Array<{ id: string; label: string }>;
+  onRoutesChange: (nodeID: string, routes: CanvasRoute[]) => void;
+  onNACLRulesChange: (nodeID: string, rules: CanvasNACLRule[]) => void;
 }) {
   const fields = SIZING_FIELDS[node.data.nodeType];
   const { snapshot, loading } = usePricingSnapshot();
@@ -284,7 +410,15 @@ export function Inspector({
         </div>
       )}
 
-      {node.data.nodeType === "network_boundary" && (
+      {node.data.serviceID === "aws_route_table" && (
+        <RoutesEditor routes={node.data.routes ?? []} targets={routeTargets} onChange={(r) => onRoutesChange(node.id, r)} />
+      )}
+
+      {node.data.serviceID === "aws_network_acl" && (
+        <NACLRulesEditor rules={node.data.naclRules ?? []} onChange={(r) => onNACLRulesChange(node.id, r)} />
+      )}
+
+      {node.data.nodeType === "network_boundary" && (!node.data.serviceID || node.data.serviceID === "aws_security_group") && (
         <SecurityGroupRulesEditor
           rules={node.data.securityGroupRules ?? []}
           onChange={(rules) => onSecurityGroupRulesChange(node.id, rules)}

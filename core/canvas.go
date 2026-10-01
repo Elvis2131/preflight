@@ -82,6 +82,23 @@ type CanvasNode struct {
 	// Workload.Regions — so the canvas's visual AZ/Region grouping writes these
 	// attributes instead of inventing nodes the Terraform path has no equivalent for.
 	// Absent means unknown, never defaulted (I4).
+	// Routes is PC-138's own addition: the routes authored on a ROUTE TABLE node. Each
+	// becomes a routes_to edge from this node to the route's target, carrying
+	// destination_cidr and target_kind in its RawAttributes — the same edge shape
+	// ingest/routes.go produces for Terraform, so one routing engine reads both. A subnet
+	// is associated with a route table by a depends_on edge from the subnet to it (as in
+	// Terraform ingest). Only internet-gateway and NAT-gateway targets are modelled; any
+	// other target kind is rejected by the server (invalid_network_controls), never
+	// silently treated as a blackhole or as success (PC-111's own rule).
+	Routes []CanvasRoute `json:"routes,omitempty" validate:"dive" jsonschema:"description=Routes authored on a route table node (PC-138): destination CIDR to a target node. Only internet-gateway and NAT-gateway targets are modelled."`
+
+	// NACLRules is PC-139's own addition: the ordered rules authored on a NETWORK ACL
+	// node, stamped onto RawAttributes["nacl_rules"] in the exact shape
+	// ingest/nacl.go's normalizeNACLRule produces for Terraform. A subnet is associated
+	// with a NACL by a depends_on edge from the subnet to it. A NACL with no rule at all
+	// is "not authored" (the key is left unset), never an implied allow-all or deny-all.
+	NACLRules []CanvasNACLRule `json:"nacl_rules,omitempty" validate:"dive" jsonschema:"description=Network ACL rules authored on a NACL node (PC-139), evaluated lowest rule number first. A subnet attaches via a depends_on edge."`
+
 	AvailabilityZone string `json:"availability_zone,omitempty" jsonschema:"description=The Availability Zone a subnet resides in (e.g. eu-west-1a) — one value, since a subnet cannot span zones. Absent means unknown."`
 	CIDRBlock        string `json:"cidr_block,omitempty" jsonschema:"description=IPv4 CIDR block of a VPC or subnet. Absent means unknown."`
 }
@@ -107,6 +124,27 @@ type CanvasSecurityGroupRule struct {
 	// to by the time it reaches core.SGRule.SourceSG).
 	CIDRBlocks          []string `json:"cidr_blocks,omitempty"`
 	SourceSecurityGroup string   `json:"source_security_group,omitempty"`
+}
+
+// CanvasRoute is one route authored on a route table node (PC-138).
+type CanvasRoute struct {
+	DestinationCIDR string `json:"destination_cidr" validate:"required" jsonschema:"required,minLength=1,description=IPv4 CIDR the route matches, e.g. 0.0.0.0/0."`
+	// Target is another canvas node's own ID — an internet gateway or a NAT gateway.
+	Target string `json:"target" validate:"required" jsonschema:"required,minLength=1"`
+}
+
+// CanvasNACLRule is one network ACL rule authored on the canvas (PC-139) — the wire-shape
+// counterpart to ingest/nacl.go's normalizeNACLRule output, typed here because it is
+// architect-entered input. Action is "allow" or "deny"; ingest turns it into the same
+// boolean Terraform's rule_action produces.
+type CanvasNACLRule struct {
+	Direction string `json:"direction" validate:"required,oneof=ingress egress" jsonschema:"required,enum=ingress,enum=egress"`
+	Number    int    `json:"number" validate:"gt=0" jsonschema:"required,minimum=1,description=Rules are evaluated starting with the lowest number; the first match applies."`
+	Protocol  string `json:"protocol" validate:"required" jsonschema:"required,description=tcp / udp / icmp / -1 (all protocols)."`
+	FromPort  int    `json:"from_port,omitempty"`
+	ToPort    int    `json:"to_port,omitempty"`
+	CIDRBlock string `json:"cidr_block" validate:"required" jsonschema:"required,description=Source (ingress) or destination (egress) CIDR."`
+	Action    string `json:"action" validate:"required,oneof=allow deny" jsonschema:"required,enum=allow,enum=deny"`
 }
 
 type CanvasEdge struct {

@@ -10,6 +10,19 @@ Each generated `contracts/*.schema.json` carries its own version in `x-schema-ve
 stamped by `cmd/gen-contracts` — check that field against this file, not the other way
 around, since a schema file is regenerated output, not hand-edited.
 
+## canvas.schema.json 1.5.0 — 2026-10-01 (PC-138/PC-139: CanvasNode.routes and nacl_rules added)
+
+**Additive change to `canvas.schema.json` only.** `CanvasNode` gains two optional fields.
+`routes` (`destination_cidr`, `target`) on a route-table node: each becomes a `routes_to`
+edge from that node to the target with `destination_cidr`/`target_kind` in its
+RawAttributes — the same edge `ingest/routes.go` builds for a Terraform route; only
+internet-gateway and NAT-gateway targets are modelled. `nacl_rules` (`direction`, `number`,
+`protocol`, `from_port`, `to_port`, `cidr_block`, `action`) on a network-ACL node: stamped
+onto `RawAttributes["nacl_rules"]` in the shape `ingest/nacl.go` produces. A subnet attaches
+to either by a `depends_on` edge, as in Terraform ingest. `POST /sessions/{id}/canvas` now
+rejects an unmodelled route target or a malformed CIDR with HTTP 422
+`error_code: invalid_network_controls`. A 1.4.0 document needs no change.
+
 ## report.schema.json 1.5.0 — 2026-10-01 (PC-131: Report.scenarios added)
 
 **Additive change to `report.schema.json` only.** `Report` gains `scenarios`: the session's

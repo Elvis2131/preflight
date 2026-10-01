@@ -334,3 +334,43 @@ func TestAssessCanvas_InvalidPlacement_RejectedWithRuleAndResource(t *testing.T)
 		t.Fatalf("with valid placement the same session must assess, got: %v", err)
 	}
 }
+
+// PC-138/PC-139: a route to an unmodelled target is rejected by the SERVER with a specific
+// error code naming the rule and resource — never silently treated as a blackhole or as
+// success — and the same document with a modelled target assesses.
+func TestAssessCanvas_InvalidNetworkControls_RejectedWithRuleAndResource(t *testing.T) {
+	store, err := server.OpenStore(":memory:")
+	if err != nil {
+		t.Fatalf("OpenStore: %v", err)
+	}
+	defer store.Close()
+	workload := baseInlineWorkload(nil)
+
+	rt := core.CanvasNode{ID: "rt1", Type: "network_boundary", Label: "RT", Capability: map[string]string{}, ServiceID: "aws_route_table",
+		Routes: []core.CanvasRoute{{DestinationCIDR: "0.0.0.0/0", Target: "vpc1"}}} // a VPC is not a route target
+	doc := core.CanvasDocument{
+		Nodes: []core.CanvasNode{
+			{ID: "dns1", Type: "dns", Label: "DNS", Capability: map[string]string{}},
+			{ID: "db1", Type: "managed_database", Label: "DB", Capability: map[string]string{}},
+			{ID: "vpc1", Type: "network_boundary", Label: "VPC", Capability: map[string]string{}, ServiceID: "aws_vpc"},
+			rt,
+		},
+		Edges: []core.CanvasEdge{{ID: "e1", Type: "routes_to", From: "dns1", To: "db1"}},
+	}
+	_, err = server.AssessCanvas(store, server.AssessCanvasRequest{SessionID: "netctl", Canvas: doc, Workload: &workload})
+	var apiErr *server.APIError
+	if !errors.As(err, &apiErr) || apiErr.Code != "invalid_network_controls" || apiErr.Status != http.StatusUnprocessableEntity {
+		t.Fatalf("got %#v, want a 422 APIError with code invalid_network_controls", err)
+	}
+	for _, want := range []string{core.NetCtlRouteTarget, "rt1"} {
+		if !strings.Contains(err.Error(), want) {
+			t.Errorf("error %q must name %q", err.Error(), want)
+		}
+	}
+
+	doc.Nodes = append(doc.Nodes, core.CanvasNode{ID: "igw1", Type: "network_boundary", Label: "IGW", Capability: map[string]string{}, ServiceID: "aws_internet_gateway"})
+	doc.Nodes[3].Routes = []core.CanvasRoute{{DestinationCIDR: "0.0.0.0/0", Target: "igw1"}}
+	if _, err := server.AssessCanvas(store, server.AssessCanvasRequest{SessionID: "netctl", Canvas: doc, Workload: &workload}); err != nil {
+		t.Fatalf("with a modelled target the same document must assess, got: %v", err)
+	}
+}

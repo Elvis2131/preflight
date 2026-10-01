@@ -17,5 +17,40 @@
       "value": 99.95,
       "priority": "hard"
     }
+  ],
+  "journeys": [
+    {
+      "id": "web",
+      "name": "Clients to load balancer",
+      "path": [
+        "internet",
+        "aws_lb.web"
+      ],
+      "protocol": "tcp",
+      "port": 443,
+      "criticality": "tier1"
+    },
+    {
+      "id": "api",
+      "name": "Load balancer to app",
+      "path": [
+        "aws_lb.web",
+        "aws_eks_cluster.app"
+      ],
+      "protocol": "tcp",
+      "port": 8080,
+      "criticality": "tier1"
+    },
+    {
+      "id": "data",
+      "name": "App to database",
+      "path": [
+        "aws_eks_cluster.app",
+        "aws_db_instance.db"
+      ],
+      "protocol": "tcp",
+      "port": 5432,
+      "criticality": "tier1"
+    }
   ]
 }

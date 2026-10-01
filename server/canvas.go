@@ -88,6 +88,17 @@ func AssessCanvas(store *Store, req AssessCanvasRequest) (AssessResponse, error)
 			"server: invalid placement (%d violation(s)): %s", len(violations), strings.Join(msgs, "; "))
 	}
 
+	// PC-138/PC-139: routes and NACL rules are validated here too (engine scope and
+	// well-formedness), with the same naming of each broken rule and resource.
+	if violations := core.ValidateCanvasNetworkControls(req.Canvas); len(violations) > 0 {
+		msgs := make([]string, len(violations))
+		for i, v := range violations {
+			msgs[i] = v.String()
+		}
+		return AssessResponse{}, newAPIError(http.StatusUnprocessableEntity, "invalid_network_controls",
+			"server: invalid network controls (%d violation(s)): %s", len(violations), strings.Join(msgs, "; "))
+	}
+
 	registry, err := loadMergedRegistry()
 	if err != nil {
 		return AssessResponse{}, err

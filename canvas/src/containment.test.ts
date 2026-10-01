@@ -89,3 +89,31 @@ describe("container size", () => {
     expect(innermostContainer(staleSubnet, [staleVpc, staleSubnet])).toBe("vpc");
   });
 });
+
+describe("serialize: routes and NACL rules (PC-138/PC-139)", () => {
+  it("emits routes/nacl_rules only when authored, with the wire names, and no UI-only fields", () => {
+    const rt = node("rt", 0, 0, "aws_route_table");
+    rt.data.routes = [{ destination_cidr: "0.0.0.0/0", target: "igw" }];
+    const nacl = node("nacl", 0, 0, "aws_network_acl");
+    nacl.data.naclRules = [{ direction: "ingress", number: 100, protocol: "tcp", from_port: 443, to_port: 443, cidr_block: "0.0.0.0/0", action: "allow" }];
+    const [a, b] = serialize([rt, nacl], []).nodes as unknown as Array<Record<string, unknown>>;
+    expect(a.routes).toEqual([{ destination_cidr: "0.0.0.0/0", target: "igw" }]);
+    expect(b.nacl_rules).toEqual([{ direction: "ingress", number: 100, protocol: "tcp", from_port: 443, to_port: 443, cidr_block: "0.0.0.0/0", action: "allow" }]);
+    for (const out of [a, b]) for (const k of ["naclRules", "position", "style"]) expect(Object.keys(out)).not.toContain(k);
+
+    const untouched = serialize([node("rt2", 0, 0, "aws_route_table"), node("n2", 0, 0, "aws_network_acl")], []).nodes as unknown as Array<Record<string, unknown>>;
+    for (const out of untouched) {
+      expect(Object.keys(out)).not.toContain("routes");
+      expect(Object.keys(out)).not.toContain("nacl_rules");
+    }
+  });
+
+  it("an emptied editor serializes as 'not authored', never an empty list", () => {
+    const nacl = node("nacl", 0, 0, "aws_network_acl");
+    nacl.data.naclRules = [];
+    nacl.data.routes = [];
+    const out = serialize([nacl], []).nodes[0] as unknown as Record<string, unknown>;
+    expect(Object.keys(out)).not.toContain("nacl_rules");
+    expect(Object.keys(out)).not.toContain("routes");
+  });
+});

@@ -5,10 +5,12 @@ import (
 	"encoding/json"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"preflight/core"
 	"preflight/golden/templates"
+	"preflight/ingest"
 	awsprovider "preflight/providers/aws"
 	"preflight/server"
 )
@@ -156,5 +158,168 @@ func TestTemplates_NoUnknownFiles(t *testing.T) {
 				t.Errorf("%s/%s is not a known template file", id, e.Name())
 			}
 		}
+	}
+}
+
+// PC-137/138/139 end to end: the 3-tier template's journeys flow through the SG, NACL and
+// route-table steps, authored entirely on the canvas — and each control is LOAD-BEARING:
+// breaking exactly one of them makes the journey that depends on it fail at exactly that
+// step, not somewhere else and not silently.
+func TestThreeTier_JourneysFlow_AndEachNetworkControlIsLoadBearing(t *testing.T) {
+	reg := registry(t)
+	load := func() templates.Template {
+		tpl, err := templates.Load("three-tier-vpc")
+		if err != nil {
+			t.Fatal(err)
+		}
+		return tpl
+	}
+	flows := func(tpl templates.Template) map[string]core.JourneyFlowResult {
+		res, err := ingest.IngestCanvas(tpl.Canvas, reg, 1)
+		if err != nil || res.IR == nil {
+			t.Fatalf("ingest: %v / %+v", err, res.Insufficient)
+		}
+		out := map[string]core.JourneyFlowResult{}
+		for _, j := range tpl.Workload.Journeys {
+			out[j.ID] = core.ComputeJourneyFlow(res.IR, j, nil)
+		}
+		return out
+	}
+
+	base := flows(load())
+	if len(base) != 3 {
+		t.Fatalf("want 3 declared journeys, got %d", len(base))
+	}
+	for id, f := range base {
+		if !f.Flows {
+			t.Fatalf("baseline: journey %q must flow end to end, blocked at %s: %s", id, f.BlockedAt, f.BlockedReason)
+		}
+	}
+
+	mutate := func(nodeID string, fn func(n *core.CanvasNode)) templates.Template {
+		tpl := load()
+		for i := range tpl.Canvas.Nodes {
+			if tpl.Canvas.Nodes[i].ID == nodeID {
+				fn(&tpl.Canvas.Nodes[i])
+				return tpl
+			}
+		}
+		t.Fatalf("no node %q", nodeID)
+		return tpl
+	}
+
+	cases := []struct {
+		name    string
+		tpl     templates.Template
+		journey string
+		step    string
+	}{
+		{"remove the only rule letting the app reach the database (SG)",
+			mutate("aws_security_group.db", func(n *core.CanvasNode) {
+				n.SecurityGroupRules = n.SecurityGroupRules[1:] // drops the 5432 ingress rule, keeps egress
+			}), "data", "sg_dest_ingress"},
+		{"turn the NACL's ingress allow into a deny",
+			mutate("aws_network_acl.default", func(n *core.CanvasNode) {
+				n.NACLRules[0].Action = "deny"
+			}), "web", "nacl"},
+		{"remove the private route table's only route (route table)",
+			mutate("aws_route_table.private", func(n *core.CanvasNode) {
+				n.Routes = nil
+			}), "api", "route_selection"},
+	}
+	for _, c := range cases {
+		got := flows(c.tpl)[c.journey]
+		if got.Flows {
+			t.Errorf("%s: journey %q must fail but still flows", c.name, c.journey)
+			continue
+		}
+		if !strings.Contains(got.BlockedReason, c.step) {
+			t.Errorf("%s: journey %q blocked, but not at %q — %s", c.name, c.journey, c.step, got.BlockedReason)
+		}
+	}
+}
+
+// PC-138/PC-139: missing data is NOT a verdict (I4). Take the working 3-tier design and
+// remove, in turn, a subnet's route table and its NACL association: the trace step that
+// needed it must read not_assessable — not deny, not allow — and say what is missing.
+// And NACLs are stateless and directional: breaking only the EGRESS rule fails the
+// journey too, so egress rules authored on the canvas are really evaluated, not assumed.
+func TestThreeTier_MissingNetworkControlsAreNotAssessable_AndReturnPathIsEvaluated(t *testing.T) {
+	reg := registry(t)
+	traceOf := func(mutate func(*templates.Template)) []core.TraceStep {
+		tpl, err := templates.Load("three-tier-vpc")
+		if err != nil {
+			t.Fatal(err)
+		}
+		mutate(&tpl)
+		res, err := ingest.IngestCanvas(tpl.Canvas, reg, 1)
+		if err != nil || res.IR == nil {
+			t.Fatalf("ingest: %v / %+v", err, res.Insufficient)
+		}
+		return core.BuildTrace(res.IR, "aws_lb.web", "aws_eks_cluster.app", "", "tcp", 8080).Steps
+	}
+	step := func(steps []core.TraceStep, name string) (core.TraceStep, bool) {
+		for _, s := range steps {
+			if s.Step == name {
+				return s, true
+			}
+		}
+		return core.TraceStep{}, false
+	}
+
+	// Baseline: the route, both forward NACL legs (source egress, destination ingress) and
+	// the SG step all run and allow. (The stateless return-path step only appears when the
+	// return leg is the one that fails.)
+	base := traceOf(func(*templates.Template) {})
+	for _, name := range []string{"route_selection", "nacl_source_egress", "nacl_dest_ingress", "sg_dest_ingress"} {
+		s, ok := step(base, name)
+		if !ok || s.Decision != core.TraceAllow {
+			t.Fatalf("baseline step %q: got %+v (present=%v), want allow", name, s, ok)
+		}
+	}
+
+	// No route table for the destination's subnets.
+	noRoute := traceOf(func(tpl *templates.Template) {
+		for i := range tpl.Canvas.Nodes {
+			if tpl.Canvas.Nodes[i].ID == "aws_route_table.private" {
+				tpl.Canvas.Nodes[i].Routes = nil
+			}
+		}
+	})
+	if s, ok := step(noRoute, "route_selection"); !ok || s.Decision != core.TraceNotAssessable || !strings.Contains(s.Reason, "route table") {
+		t.Errorf("no route table: route_selection must be not_assessable naming the missing route table, got %+v (present=%v)", s, ok)
+	}
+
+	// No NACL associated with the destination's subnets.
+	noNACL := traceOf(func(tpl *templates.Template) {
+		kept := tpl.Canvas.Edges[:0]
+		for _, e := range tpl.Canvas.Edges {
+			if e.Type == "depends_on" && e.To == "aws_network_acl.default" {
+				continue
+			}
+			kept = append(kept, e)
+		}
+		tpl.Canvas.Edges = kept
+	})
+	if s, ok := step(noNACL, "nacl_check"); !ok || s.Decision != core.TraceNotAssessable || !strings.Contains(s.Reason, "NACL") {
+		t.Errorf("no NACL: nacl_check must be not_assessable naming the missing NACL, got %+v (present=%v)", s, ok)
+	}
+
+	// Only the EGRESS rule denies: stateless NACLs must fail the journey on the leg that rule governs.
+	egressDeny := traceOf(func(tpl *templates.Template) {
+		for i := range tpl.Canvas.Nodes {
+			if tpl.Canvas.Nodes[i].ID == "aws_network_acl.default" {
+				tpl.Canvas.Nodes[i].NACLRules[1].Action = "deny" // rule 100 egress
+			}
+		}
+	})
+	denied := false
+	for _, s := range egressDeny {
+		if strings.HasPrefix(s.Step, "nacl") && s.Decision == core.TraceDeny {
+			denied = true
+		}
+	}
+	if !denied {
+		t.Errorf("an egress-only deny must be caught by a NACL step (stateless), got steps %+v", egressDeny)
 	}
 }

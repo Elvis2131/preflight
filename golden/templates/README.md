@@ -9,7 +9,7 @@ the ordinary path returns the checked-in findings byte for byte).
 
 | Template | What it is | Honest limits |
 |---|---|---|
-| `three-tier-vpc` | DNS → ALB across two AZs → app cluster → Multi-AZ database + cache, in a VPC with public/private/data subnets in two AZs and a NAT per AZ | No routes/NACLs/SG rules authored (PC-138/PC-139), so journeys through it are `not_assessable`, not passes. Only claims what is declared: storage encrypted, multi-AZ. |
+| `three-tier-vpc` | DNS → ALB across two AZs → app cluster → Multi-AZ database + cache, in a VPC with public/private/data subnets in two AZs, a NAT per AZ, an internet gateway, public and private route tables, an allow-all NACL, and SG rules (443 from the internet → 8080 from the LB SG → 5432 from the app SG). Three declared journeys (web, api, data) **flow end to end** through every SG, NACL and route step. | Only claims what is declared: storage encrypted, multi-AZ. The NACL is an explicit allow-all (the default-NACL behaviour made visible), not a hardened policy. |
 | `serverless-api` | DNS → Lambda → DynamoDB | **No API Gateway** — it is not in the capability registry, so the template does not claim it. |
 | `event-driven` | DNS → producer → SQS ← consumer → DynamoDB | Reachability follows edge direction and a consumer *pulls* from the queue, so the results table is not reachable from the entry point in either state. The failure fixture shows what the engine computes (a consumer loss leaves the producer→queue path intact), no more. |
 

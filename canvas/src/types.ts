@@ -55,6 +55,29 @@ export interface CanvasNode {
   // edges plus these attributes — an AZ is an attribute of a subnet, not a node.
   availability_zone?: string;
   cidr_block?: string;
+  // routes: PC-138's own addition — routes authored on a ROUTE TABLE node, mirroring
+  // core.CanvasRoute. A subnet associates with the table by a depends_on edge to it.
+  routes?: CanvasRoute[];
+  // nacl_rules: PC-139's own addition — rules authored on a NETWORK ACL node, mirroring
+  // core.CanvasNACLRule. A subnet associates by a depends_on edge to it.
+  nacl_rules?: CanvasNACLRule[];
+}
+
+export interface CanvasRoute {
+  destination_cidr: string;
+  // target is another node's ID — an internet gateway or a NAT gateway (the only target
+  // kinds the engine models; the server rejects any other with invalid_network_controls).
+  target: string;
+}
+
+export interface CanvasNACLRule {
+  direction: "ingress" | "egress";
+  number: number;
+  protocol: string;
+  from_port?: number;
+  to_port?: number;
+  cidr_block: string;
+  action: "allow" | "deny";
 }
 
 // CanvasSecurityGroupRule mirrors core.CanvasSecurityGroupRule (core/canvas.go,
@@ -108,6 +131,8 @@ export interface CanvasNodeData extends Record<string, unknown> {
   securityGroupRules?: CanvasSecurityGroupRule[];
   availabilityZone?: string;
   cidrBlock?: string;
+  routes?: CanvasRoute[];
+  naclRules?: CanvasNACLRule[];
   simState?: SimState;
   journeyOnPath?: boolean;
   utilization?: number | null;

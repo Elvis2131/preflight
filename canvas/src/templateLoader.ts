@@ -32,6 +32,8 @@ export function templateToCanvasState(t: Template): { nodes: Node<CanvasNodeData
         ...(n.security_group_rules ? { securityGroupRules: n.security_group_rules } : {}),
         ...(n.availability_zone ? { availabilityZone: n.availability_zone } : {}),
         ...(n.cidr_block ? { cidrBlock: n.cidr_block } : {}),
+        ...(n.routes ? { routes: n.routes } : {}),
+        ...(n.nacl_rules ? { naclRules: n.nacl_rules } : {}),
       },
     };
   });

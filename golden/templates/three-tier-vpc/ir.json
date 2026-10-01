@@ -1,7 +1,7 @@
 {
   "schema_version": "1.3.0",
   "version_number": 1,
-  "version_hash": "sha256:4799ad648e69f27dfef60ae58ff1b8612f0380a692b162c7afb897286c692db8",
+  "version_hash": "sha256:ea4896df9696422d2f8faec2db6b1d97498e662e337d98b825e2ec5e48f69438",
   "nodes": [
     {
       "id": "aws_vpc.main",
@@ -211,6 +211,156 @@
       "resolution": "known",
       "raw_attributes": {
         "capability_level": "NETWORK_BEHAVIOR"
+      },
+      "provenance": {
+        "kind": "stated",
+        "source": "canvas"
+      }
+    },
+    {
+      "id": "aws_internet_gateway.igw",
+      "type": "network_boundary",
+      "resolution": "known",
+      "raw_attributes": {
+        "capability_level": "NETWORK_BEHAVIOR"
+      },
+      "provenance": {
+        "kind": "stated",
+        "source": "canvas"
+      }
+    },
+    {
+      "id": "aws_route_table.public",
+      "type": "network_boundary",
+      "resolution": "known",
+      "raw_attributes": {
+        "capability_level": "NETWORK_BEHAVIOR"
+      },
+      "provenance": {
+        "kind": "stated",
+        "source": "canvas"
+      }
+    },
+    {
+      "id": "aws_route_table.private",
+      "type": "network_boundary",
+      "resolution": "known",
+      "raw_attributes": {
+        "capability_level": "NETWORK_BEHAVIOR"
+      },
+      "provenance": {
+        "kind": "stated",
+        "source": "canvas"
+      }
+    },
+    {
+      "id": "aws_network_acl.default",
+      "type": "network_boundary",
+      "resolution": "known",
+      "raw_attributes": {
+        "capability_level": "NETWORK_BEHAVIOR",
+        "nacl_rules": [
+          {
+            "allow": true,
+            "cidr": "0.0.0.0/0",
+            "direction": "ingress",
+            "number": 100,
+            "protocol": "-1"
+          },
+          {
+            "allow": true,
+            "cidr": "0.0.0.0/0",
+            "direction": "egress",
+            "number": 100,
+            "protocol": "-1"
+          }
+        ]
+      },
+      "provenance": {
+        "kind": "stated",
+        "source": "canvas"
+      }
+    },
+    {
+      "id": "aws_security_group.lb",
+      "type": "network_boundary",
+      "resolution": "known",
+      "raw_attributes": {
+        "capability_level": "NETWORK_BEHAVIOR",
+        "security_group_rules": [
+          {
+            "cidr_blocks": [
+              "0.0.0.0/0"
+            ],
+            "direction": "ingress",
+            "from_port": 443,
+            "protocol": "tcp",
+            "to_port": 443
+          },
+          {
+            "cidr_blocks": [
+              "0.0.0.0/0"
+            ],
+            "direction": "egress",
+            "protocol": "-1"
+          }
+        ]
+      },
+      "provenance": {
+        "kind": "stated",
+        "source": "canvas"
+      }
+    },
+    {
+      "id": "aws_security_group.app",
+      "type": "network_boundary",
+      "resolution": "known",
+      "raw_attributes": {
+        "capability_level": "NETWORK_BEHAVIOR",
+        "security_group_rules": [
+          {
+            "direction": "ingress",
+            "from_port": 8080,
+            "protocol": "tcp",
+            "source_security_group": "aws_security_group.lb",
+            "to_port": 8080
+          },
+          {
+            "cidr_blocks": [
+              "0.0.0.0/0"
+            ],
+            "direction": "egress",
+            "protocol": "-1"
+          }
+        ]
+      },
+      "provenance": {
+        "kind": "stated",
+        "source": "canvas"
+      }
+    },
+    {
+      "id": "aws_security_group.db",
+      "type": "network_boundary",
+      "resolution": "known",
+      "raw_attributes": {
+        "capability_level": "NETWORK_BEHAVIOR",
+        "security_group_rules": [
+          {
+            "direction": "ingress",
+            "from_port": 5432,
+            "protocol": "tcp",
+            "source_security_group": "aws_security_group.app",
+            "to_port": 5432
+          },
+          {
+            "cidr_blocks": [
+              "0.0.0.0/0"
+            ],
+            "direction": "egress",
+            "protocol": "-1"
+          }
+        ]
       },
       "provenance": {
         "kind": "stated",
@@ -459,6 +609,245 @@
       "provenance": {
         "kind": "stated",
         "source": "canvas"
+      }
+    },
+    {
+      "id": "c-igw",
+      "type": "contained_in",
+      "from": "aws_internet_gateway.igw",
+      "to": "aws_vpc.main",
+      "resolution": "known",
+      "provenance": {
+        "kind": "stated",
+        "source": "canvas"
+      }
+    },
+    {
+      "id": "c-rtpub",
+      "type": "contained_in",
+      "from": "aws_route_table.public",
+      "to": "aws_vpc.main",
+      "resolution": "known",
+      "provenance": {
+        "kind": "stated",
+        "source": "canvas"
+      }
+    },
+    {
+      "id": "c-rtpriv",
+      "type": "contained_in",
+      "from": "aws_route_table.private",
+      "to": "aws_vpc.main",
+      "resolution": "known",
+      "provenance": {
+        "kind": "stated",
+        "source": "canvas"
+      }
+    },
+    {
+      "id": "c-nacl",
+      "type": "contained_in",
+      "from": "aws_network_acl.default",
+      "to": "aws_vpc.main",
+      "resolution": "known",
+      "provenance": {
+        "kind": "stated",
+        "source": "canvas"
+      }
+    },
+    {
+      "id": "a-pub-a",
+      "type": "depends_on",
+      "from": "aws_subnet.public_a",
+      "to": "aws_route_table.public",
+      "resolution": "known",
+      "provenance": {
+        "kind": "stated",
+        "source": "canvas"
+      }
+    },
+    {
+      "id": "a-pub-b",
+      "type": "depends_on",
+      "from": "aws_subnet.public_b",
+      "to": "aws_route_table.public",
+      "resolution": "known",
+      "provenance": {
+        "kind": "stated",
+        "source": "canvas"
+      }
+    },
+    {
+      "id": "a-private-a",
+      "type": "depends_on",
+      "from": "aws_subnet.private_a",
+      "to": "aws_route_table.private",
+      "resolution": "known",
+      "provenance": {
+        "kind": "stated",
+        "source": "canvas"
+      }
+    },
+    {
+      "id": "a-private-b",
+      "type": "depends_on",
+      "from": "aws_subnet.private_b",
+      "to": "aws_route_table.private",
+      "resolution": "known",
+      "provenance": {
+        "kind": "stated",
+        "source": "canvas"
+      }
+    },
+    {
+      "id": "a-data-a",
+      "type": "depends_on",
+      "from": "aws_subnet.data_a",
+      "to": "aws_route_table.private",
+      "resolution": "known",
+      "provenance": {
+        "kind": "stated",
+        "source": "canvas"
+      }
+    },
+    {
+      "id": "a-data-b",
+      "type": "depends_on",
+      "from": "aws_subnet.data_b",
+      "to": "aws_route_table.private",
+      "resolution": "known",
+      "provenance": {
+        "kind": "stated",
+        "source": "canvas"
+      }
+    },
+    {
+      "id": "n-public-a",
+      "type": "depends_on",
+      "from": "aws_subnet.public_a",
+      "to": "aws_network_acl.default",
+      "resolution": "known",
+      "provenance": {
+        "kind": "stated",
+        "source": "canvas"
+      }
+    },
+    {
+      "id": "n-public-b",
+      "type": "depends_on",
+      "from": "aws_subnet.public_b",
+      "to": "aws_network_acl.default",
+      "resolution": "known",
+      "provenance": {
+        "kind": "stated",
+        "source": "canvas"
+      }
+    },
+    {
+      "id": "n-private-a",
+      "type": "depends_on",
+      "from": "aws_subnet.private_a",
+      "to": "aws_network_acl.default",
+      "resolution": "known",
+      "provenance": {
+        "kind": "stated",
+        "source": "canvas"
+      }
+    },
+    {
+      "id": "n-private-b",
+      "type": "depends_on",
+      "from": "aws_subnet.private_b",
+      "to": "aws_network_acl.default",
+      "resolution": "known",
+      "provenance": {
+        "kind": "stated",
+        "source": "canvas"
+      }
+    },
+    {
+      "id": "n-data-a",
+      "type": "depends_on",
+      "from": "aws_subnet.data_a",
+      "to": "aws_network_acl.default",
+      "resolution": "known",
+      "provenance": {
+        "kind": "stated",
+        "source": "canvas"
+      }
+    },
+    {
+      "id": "n-data-b",
+      "type": "depends_on",
+      "from": "aws_subnet.data_b",
+      "to": "aws_network_acl.default",
+      "resolution": "known",
+      "provenance": {
+        "kind": "stated",
+        "source": "canvas"
+      }
+    },
+    {
+      "id": "sg-lb",
+      "type": "depends_on",
+      "from": "aws_lb.web",
+      "to": "aws_security_group.lb",
+      "resolution": "known",
+      "provenance": {
+        "kind": "stated",
+        "source": "canvas"
+      }
+    },
+    {
+      "id": "sg-app",
+      "type": "depends_on",
+      "from": "aws_eks_cluster.app",
+      "to": "aws_security_group.app",
+      "resolution": "known",
+      "provenance": {
+        "kind": "stated",
+        "source": "canvas"
+      }
+    },
+    {
+      "id": "sg-db",
+      "type": "depends_on",
+      "from": "aws_db_instance.db",
+      "to": "aws_security_group.db",
+      "resolution": "known",
+      "provenance": {
+        "kind": "stated",
+        "source": "canvas"
+      }
+    },
+    {
+      "id": "aws_route_table.public-route[0]-\u003eaws_internet_gateway.igw",
+      "type": "routes_to",
+      "from": "aws_route_table.public",
+      "to": "aws_internet_gateway.igw",
+      "resolution": "known",
+      "provenance": {
+        "kind": "stated",
+        "source": "canvas"
+      },
+      "raw_attributes": {
+        "destination_cidr": "0.0.0.0/0",
+        "target_kind": "internet_gateway"
+      }
+    },
+    {
+      "id": "aws_route_table.private-route[0]-\u003eaws_nat_gateway.nat_a",
+      "type": "routes_to",
+      "from": "aws_route_table.private",
+      "to": "aws_nat_gateway.nat_a",
+      "resolution": "known",
+      "provenance": {
+        "kind": "stated",
+        "source": "canvas"
+      },
+      "raw_attributes": {
+        "destination_cidr": "0.0.0.0/0",
+        "target_kind": "nat_gateway"
       }
     }
   ]

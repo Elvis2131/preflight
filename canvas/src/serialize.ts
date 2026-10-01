@@ -38,6 +38,11 @@ export function serialize(
       // one — omitted, never an empty string, so "unknown" stays unknown.
       ...(n.data.availabilityZone ? { availability_zone: n.data.availabilityZone } : {}),
       ...(n.data.cidrBlock ? { cidr_block: n.data.cidrBlock } : {}),
+      // routes/nacl_rules (PC-138/PC-139): only when at least one was actually authored —
+      // an empty list would read as "authored, none", which is not what a node nobody
+      // touched means (core leaves the NACL key unset: not authored, never allow/deny-all).
+      ...(n.data.routes && n.data.routes.length > 0 ? { routes: n.data.routes } : {}),
+      ...(n.data.naclRules && n.data.naclRules.length > 0 ? { nacl_rules: n.data.naclRules } : {}),
     })),
     edges: edges.map((e) => ({
       id: e.id,

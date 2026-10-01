@@ -81,6 +81,21 @@ describe("templateToCanvasState (PC-108)", () => {
   });
 });
 
+describe("workloadToFormValue: journeys", () => {
+  it("carries a template's declared journeys into the form and back out unchanged, never inventing rates", () => {
+    const w = {
+      ...t.workload,
+      journeys: [
+        { id: "web", name: "Clients", path: ["internet", "lb"], protocol: "tcp", port: 443, criticality: "tier1" },
+        { id: "api", name: "Api", path: ["lb", "app"], protocol: "tcp", port: 8080, criticality: "tier1", peak_rps: 100 },
+      ],
+    } as unknown as Template["workload"];
+    const back = buildWorkload(workloadToFormValue(w));
+    expect(back.journeys).toEqual(w.journeys);
+    expect(back.journeys?.[0].peak_rps).toBeUndefined();
+  });
+});
+
 describe("workloadToFormValue", () => {
   it("round-trips through buildWorkload without inventing capacity or journeys", () => {
     const form = workloadToFormValue(t.workload);

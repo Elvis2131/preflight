@@ -34,7 +34,8 @@
   ],
   "cascade": [
     "aws_db_instance.db",
-    "aws_db_subnet_group.db"
+    "aws_db_subnet_group.db",
+    "aws_security_group.db"
   ],
   "verdict": {
     "state": "assessed",
@@ -44,7 +45,109 @@
       "source": "template-fixture"
     }
   },
-  "flow_detail": [],
-  "load": [],
-  "latency": []
+  "flow_detail": [
+    {
+      "JourneyID": "web",
+      "Flows": true,
+      "Hops": [
+        {
+          "From": "internet",
+          "To": "aws_lb.web",
+          "Allowed": true,
+          "Reason": "Allowed: internet -\u003e aws_lb.web:443/tcp reaches its destination.",
+          "GroupIndex": 1
+        }
+      ],
+      "ReachedByGroup": [
+        [
+          "internet"
+        ],
+        [
+          "aws_lb.web"
+        ]
+      ],
+      "BlockedAt": "",
+      "BlockedReason": ""
+    },
+    {
+      "JourneyID": "api",
+      "Flows": true,
+      "Hops": [
+        {
+          "From": "aws_lb.web",
+          "To": "aws_eks_cluster.app",
+          "Allowed": true,
+          "Reason": "Allowed: aws_lb.web -\u003e aws_eks_cluster.app:8080/tcp reaches its destination.",
+          "GroupIndex": 1
+        }
+      ],
+      "ReachedByGroup": [
+        [
+          "aws_lb.web"
+        ],
+        [
+          "aws_eks_cluster.app"
+        ]
+      ],
+      "BlockedAt": "",
+      "BlockedReason": ""
+    },
+    {
+      "JourneyID": "data",
+      "Flows": false,
+      "Hops": [
+        {
+          "From": "aws_eks_cluster.app",
+          "To": "aws_db_instance.db",
+          "Allowed": false,
+          "Reason": "component aws_db_instance.db is unreachable under the declared fault",
+          "GroupIndex": 1
+        }
+      ],
+      "ReachedByGroup": [
+        [
+          "aws_eks_cluster.app"
+        ],
+        []
+      ],
+      "BlockedAt": "aws_db_instance.db",
+      "BlockedReason": "component aws_db_instance.db is unreachable under the declared fault"
+    }
+  ],
+  "load": null,
+  "latency": [
+    {
+      "journey_id": "web",
+      "result": {
+        "state": "not_assessable",
+        "reason": "journey \"web\" has no declared peak_rps",
+        "provenance": {
+          "kind": "derived",
+          "source": "template-fixture"
+        }
+      }
+    },
+    {
+      "journey_id": "api",
+      "result": {
+        "state": "not_assessable",
+        "reason": "journey \"api\" has no declared peak_rps",
+        "provenance": {
+          "kind": "derived",
+          "source": "template-fixture"
+        }
+      }
+    },
+    {
+      "journey_id": "data",
+      "result": {
+        "state": "not_assessable",
+        "reason": "journey \"data\" has no declared peak_rps",
+        "provenance": {
+          "kind": "derived",
+          "source": "template-fixture"
+        }
+      }
+    }
+  ]
 }

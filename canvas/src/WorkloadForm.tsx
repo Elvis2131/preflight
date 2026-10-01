@@ -93,9 +93,10 @@ export function emptyWorkloadFormValue(): WorkloadFormValue {
 }
 
 // workloadToFormValue is buildWorkload's inverse for loading a template's workload into
-// the form (PC-108). It only copies what the form can represent; a template declares no
-// journeys, so journeyRows start empty rather than guessed. A capacity the template does
-// not declare stays absent — never a defaulted number.
+// the form (PC-108). It only copies what the form can represent. Journeys a template
+// declares are carried over verbatim (a template that declares none leaves journeyRows
+// empty, never guessed); a rate or capacity the template does not declare stays blank —
+// never a defaulted number.
 export function workloadToFormValue(w: Workload): WorkloadFormValue {
   const capacityRows = Object.entries(w.capacity ?? {}).map(([key, v]) => ({ key, valueText: String(v) }));
   return {
@@ -111,7 +112,16 @@ export function workloadToFormValue(w: Workload): WorkloadFormValue {
       priority: r.priority,
       rankText: r.rank === undefined ? "" : String(r.rank),
     })),
-    journeyRows: [],
+    journeyRows: (w.journeys ?? []).map((j) => ({
+      id: j.id,
+      name: j.name,
+      pathText: j.path.join(", "),
+      protocol: j.protocol,
+      port: String(j.port),
+      criticality: j.criticality,
+      peakRPSText: j.peak_rps === undefined ? "" : String(j.peak_rps),
+      steadyRPSText: j.steady_rps === undefined ? "" : String(j.steady_rps),
+    })),
   };
 }
 

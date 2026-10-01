@@ -7,6 +7,7 @@
 package ingest
 
 import (
+	"fmt"
 	"strconv"
 
 	"preflight/core"
@@ -67,12 +68,15 @@ func IngestCanvas(doc core.CanvasDocument, registry providers.Registry, versionN
 			Resolution: core.ResolutionKnown,
 			Capability: buildCanvasCapability(n.Capability),
 			Sizing:     buildCanvasSizing(n.Sizing),
-			RawAttributes: withCanvasPlacement(
-				withCanvasSecurityGroupRules(
-					resolveCanvasCapabilityLevel(canvasCapabilityToRawAttributes(n.Capability), registry, n.ServiceID, n.Type),
-					n.SecurityGroupRules,
+			RawAttributes: withCanvasNACLRules(
+				withCanvasPlacement(
+					withCanvasSecurityGroupRules(
+						resolveCanvasCapabilityLevel(canvasCapabilityToRawAttributes(n.Capability), registry, n.ServiceID, n.Type),
+						n.SecurityGroupRules,
+					),
+					n,
 				),
-				n,
+				n.NACLRules,
 			),
 			Provenance: prov,
 		})
@@ -95,6 +99,8 @@ func IngestCanvas(doc core.CanvasDocument, registry providers.Registry, versionN
 			Provenance: edgeProv,
 		})
 	}
+
+	edges = append(edges, canvasRouteEdges(doc, nodeExists, prov)...)
 
 	if insufficient := CheckMVG(nodes); insufficient != nil {
 		return Result{Insufficient: insufficient}, nil
@@ -221,6 +227,80 @@ func resolveCanvasCapabilityLevel(raw map[string]any, registry providers.Registr
 	}
 	raw["capability_level"] = string(mapping.CapabilityLevel)
 	return raw
+}
+
+// withCanvasNACLRules is PC-139's own addition: stamps a canvas node's authored NACL
+// rules onto RawAttributes["nacl_rules"] in the EXACT shape ingest/nacl.go's
+// normalizeNACLRule produces for Terraform (direction, number, protocol, from_port,
+// to_port, cidr, allow bool) — core.NACLProfileForSubnet reads it back identically from
+// either producer. No rule at all leaves the key unset: "not authored" is never an
+// implied allow-all or deny-all (I4).
+func withCanvasNACLRules(raw map[string]any, rules []core.CanvasNACLRule) map[string]any {
+	if len(rules) == 0 {
+		return raw
+	}
+	if raw == nil {
+		raw = make(map[string]any, 1)
+	}
+	out := make([]map[string]any, 0, len(rules))
+	for _, r := range rules {
+		rule := map[string]any{
+			"direction": r.Direction,
+			"number":    r.Number,
+			"protocol":  r.Protocol,
+			"cidr":      r.CIDRBlock,
+			"allow":     r.Action == "allow",
+		}
+		if r.FromPort != 0 {
+			rule["from_port"] = r.FromPort
+		}
+		if r.ToPort != 0 {
+			rule["to_port"] = r.ToPort
+		}
+		out = append(out, rule)
+	}
+	raw["nacl_rules"] = out
+	return raw
+}
+
+// canvasRouteEdges is PC-138's own addition: every route authored on a route-table node
+// becomes a routes_to edge from that node to the route's target, with destination_cidr
+// and target_kind in RawAttributes — exactly the edge ingest/routes.go builds for a
+// Terraform route, so core's routing engine reads one shape from both producers. A
+// target the engine does not model, or that does not exist, yields an UNRESOLVED edge
+// naming why (the server also rejects it up front) — never a silently dropped route.
+func canvasRouteEdges(doc core.CanvasDocument, nodeExists map[string]bool, prov core.Provenance) []core.Edge {
+	serviceOf := make(map[string]string, len(doc.Nodes))
+	for _, n := range doc.Nodes {
+		serviceOf[n.ID] = n.ServiceID
+	}
+	var out []core.Edge
+	for _, n := range doc.Nodes {
+		for i, r := range n.Routes {
+			edge := core.Edge{
+				ID:            fmt.Sprintf("%s-route[%d]->%s", n.ID, i, r.Target),
+				Type:          core.EdgeTypeRoutesTo,
+				From:          n.ID,
+				To:            r.Target,
+				Resolution:    core.ResolutionKnown,
+				Provenance:    prov,
+				RawAttributes: map[string]any{"destination_cidr": r.DestinationCIDR},
+			}
+			kind, supported := core.RouteTargetKind(serviceOf[r.Target])
+			switch {
+			case !nodeExists[r.Target]:
+				edge.Resolution = core.ResolutionUnresolved
+				edge.Provenance = prov.WithReason("route target " + r.Target + " is not a node in this canvas document")
+			case !supported:
+				edge.Resolution = core.ResolutionUnresolved
+				edge.Provenance = prov.WithReason("route target " + r.Target + " is not an internet gateway or NAT gateway — that target kind is not modelled")
+			default:
+				edge.RawAttributes["target_kind"] = kind
+			}
+			out = append(out, edge)
+		}
+	}
+	return out
 }
 
 // withCanvasPlacement is PC-105's own addition: stamps a canvas node's declared

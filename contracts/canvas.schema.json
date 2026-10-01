@@ -28,6 +28,52 @@
         "to"
       ]
     },
+    "CanvasNACLRule": {
+      "properties": {
+        "direction": {
+          "type": "string",
+          "enum": [
+            "ingress",
+            "egress"
+          ]
+        },
+        "number": {
+          "type": "integer",
+          "minimum": 1,
+          "description": "Rules are evaluated starting with the lowest number; the first match applies."
+        },
+        "protocol": {
+          "type": "string",
+          "description": "tcp / udp / icmp / -1 (all protocols)."
+        },
+        "from_port": {
+          "type": "integer"
+        },
+        "to_port": {
+          "type": "integer"
+        },
+        "cidr_block": {
+          "type": "string",
+          "description": "Source (ingress) or destination (egress) CIDR."
+        },
+        "action": {
+          "type": "string",
+          "enum": [
+            "allow",
+            "deny"
+          ]
+        }
+      },
+      "additionalProperties": false,
+      "type": "object",
+      "required": [
+        "direction",
+        "number",
+        "protocol",
+        "cidr_block",
+        "action"
+      ]
+    },
     "CanvasNode": {
       "properties": {
         "id": {
@@ -66,6 +112,20 @@
           "type": "array",
           "description": "Security Group rules authored on this node (PC-137) — mirrors ingest/securitygroups.go's own normalized rule shape. A component attaches to this security group via a depends_on edge exactly as the Terraform ingest path already represents SG attachment."
         },
+        "routes": {
+          "items": {
+            "$ref": "#/$defs/CanvasRoute"
+          },
+          "type": "array",
+          "description": "Routes authored on a route table node (PC-138): destination CIDR to a target node. Only internet-gateway and NAT-gateway targets are modelled."
+        },
+        "nacl_rules": {
+          "items": {
+            "$ref": "#/$defs/CanvasNACLRule"
+          },
+          "type": "array",
+          "description": "Network ACL rules authored on a NACL node (PC-139)"
+        },
         "availability_zone": {
           "type": "string",
           "description": "The Availability Zone a subnet resides in (e.g. eu-west-1a) — one value"
@@ -82,6 +142,25 @@
         "type",
         "label",
         "capability"
+      ]
+    },
+    "CanvasRoute": {
+      "properties": {
+        "destination_cidr": {
+          "type": "string",
+          "minLength": 1,
+          "description": "IPv4 CIDR the route matches"
+        },
+        "target": {
+          "type": "string",
+          "minLength": 1
+        }
+      },
+      "additionalProperties": false,
+      "type": "object",
+      "required": [
+        "destination_cidr",
+        "target"
       ]
     },
     "CanvasSecurityGroupRule": {
@@ -142,5 +221,5 @@
     "edges"
   ],
   "x-changelog": "contracts/CHANGELOG.md",
-  "x-schema-version": "1.4.0"
+  "x-schema-version": "1.5.0"
 }

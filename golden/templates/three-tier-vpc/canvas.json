@@ -130,6 +130,133 @@
       "label": "NAT B",
       "capability": {},
       "service_id": "aws_nat_gateway"
+    },
+    {
+      "id": "aws_internet_gateway.igw",
+      "type": "network_boundary",
+      "label": "Internet gateway",
+      "capability": {},
+      "service_id": "aws_internet_gateway"
+    },
+    {
+      "id": "aws_route_table.public",
+      "type": "network_boundary",
+      "label": "Public route table",
+      "capability": {},
+      "service_id": "aws_route_table",
+      "routes": [
+        {
+          "destination_cidr": "0.0.0.0/0",
+          "target": "aws_internet_gateway.igw"
+        }
+      ]
+    },
+    {
+      "id": "aws_route_table.private",
+      "type": "network_boundary",
+      "label": "Private route table",
+      "capability": {},
+      "service_id": "aws_route_table",
+      "routes": [
+        {
+          "destination_cidr": "0.0.0.0/0",
+          "target": "aws_nat_gateway.nat_a"
+        }
+      ]
+    },
+    {
+      "id": "aws_network_acl.default",
+      "type": "network_boundary",
+      "label": "Network ACL (allow all)",
+      "capability": {},
+      "service_id": "aws_network_acl",
+      "nacl_rules": [
+        {
+          "direction": "ingress",
+          "number": 100,
+          "protocol": "-1",
+          "cidr_block": "0.0.0.0/0",
+          "action": "allow"
+        },
+        {
+          "direction": "egress",
+          "number": 100,
+          "protocol": "-1",
+          "cidr_block": "0.0.0.0/0",
+          "action": "allow"
+        }
+      ]
+    },
+    {
+      "id": "aws_security_group.lb",
+      "type": "network_boundary",
+      "label": "LB security group",
+      "capability": {},
+      "service_id": "aws_security_group",
+      "security_group_rules": [
+        {
+          "direction": "ingress",
+          "protocol": "tcp",
+          "from_port": 443,
+          "to_port": 443,
+          "cidr_blocks": [
+            "0.0.0.0/0"
+          ]
+        },
+        {
+          "direction": "egress",
+          "protocol": "-1",
+          "cidr_blocks": [
+            "0.0.0.0/0"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "aws_security_group.app",
+      "type": "network_boundary",
+      "label": "App security group",
+      "capability": {},
+      "service_id": "aws_security_group",
+      "security_group_rules": [
+        {
+          "direction": "ingress",
+          "protocol": "tcp",
+          "from_port": 8080,
+          "to_port": 8080,
+          "source_security_group": "aws_security_group.lb"
+        },
+        {
+          "direction": "egress",
+          "protocol": "-1",
+          "cidr_blocks": [
+            "0.0.0.0/0"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "aws_security_group.db",
+      "type": "network_boundary",
+      "label": "DB security group",
+      "capability": {},
+      "service_id": "aws_security_group",
+      "security_group_rules": [
+        {
+          "direction": "ingress",
+          "protocol": "tcp",
+          "from_port": 5432,
+          "to_port": 5432,
+          "source_security_group": "aws_security_group.app"
+        },
+        {
+          "direction": "egress",
+          "protocol": "-1",
+          "cidr_blocks": [
+            "0.0.0.0/0"
+          ]
+        }
+      ]
     }
   ],
   "edges": [
@@ -264,6 +391,120 @@
       "type": "contained_in",
       "from": "aws_nat_gateway.nat_b",
       "to": "aws_subnet.public_b"
+    },
+    {
+      "id": "c-igw",
+      "type": "contained_in",
+      "from": "aws_internet_gateway.igw",
+      "to": "aws_vpc.main"
+    },
+    {
+      "id": "c-rtpub",
+      "type": "contained_in",
+      "from": "aws_route_table.public",
+      "to": "aws_vpc.main"
+    },
+    {
+      "id": "c-rtpriv",
+      "type": "contained_in",
+      "from": "aws_route_table.private",
+      "to": "aws_vpc.main"
+    },
+    {
+      "id": "c-nacl",
+      "type": "contained_in",
+      "from": "aws_network_acl.default",
+      "to": "aws_vpc.main"
+    },
+    {
+      "id": "a-pub-a",
+      "type": "depends_on",
+      "from": "aws_subnet.public_a",
+      "to": "aws_route_table.public"
+    },
+    {
+      "id": "a-pub-b",
+      "type": "depends_on",
+      "from": "aws_subnet.public_b",
+      "to": "aws_route_table.public"
+    },
+    {
+      "id": "a-private-a",
+      "type": "depends_on",
+      "from": "aws_subnet.private_a",
+      "to": "aws_route_table.private"
+    },
+    {
+      "id": "a-private-b",
+      "type": "depends_on",
+      "from": "aws_subnet.private_b",
+      "to": "aws_route_table.private"
+    },
+    {
+      "id": "a-data-a",
+      "type": "depends_on",
+      "from": "aws_subnet.data_a",
+      "to": "aws_route_table.private"
+    },
+    {
+      "id": "a-data-b",
+      "type": "depends_on",
+      "from": "aws_subnet.data_b",
+      "to": "aws_route_table.private"
+    },
+    {
+      "id": "n-public-a",
+      "type": "depends_on",
+      "from": "aws_subnet.public_a",
+      "to": "aws_network_acl.default"
+    },
+    {
+      "id": "n-public-b",
+      "type": "depends_on",
+      "from": "aws_subnet.public_b",
+      "to": "aws_network_acl.default"
+    },
+    {
+      "id": "n-private-a",
+      "type": "depends_on",
+      "from": "aws_subnet.private_a",
+      "to": "aws_network_acl.default"
+    },
+    {
+      "id": "n-private-b",
+      "type": "depends_on",
+      "from": "aws_subnet.private_b",
+      "to": "aws_network_acl.default"
+    },
+    {
+      "id": "n-data-a",
+      "type": "depends_on",
+      "from": "aws_subnet.data_a",
+      "to": "aws_network_acl.default"
+    },
+    {
+      "id": "n-data-b",
+      "type": "depends_on",
+      "from": "aws_subnet.data_b",
+      "to": "aws_network_acl.default"
+    },
+    {
+      "id": "sg-lb",
+      "type": "depends_on",
+      "from": "aws_lb.web",
+      "to": "aws_security_group.lb"
+    },
+    {
+      "id": "sg-app",
+      "type": "depends_on",
+      "from": "aws_eks_cluster.app",
+      "to": "aws_security_group.app"
+    },
+    {
+      "id": "sg-db",
+      "type": "depends_on",
+      "from": "aws_db_instance.db",
+      "to": "aws_security_group.db"
     }
   ]
 }
