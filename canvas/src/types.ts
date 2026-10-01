@@ -1,4 +1,5 @@
 import type { NodeType, EdgeType } from "./goldenVocabulary";
+import type { SubnetFact } from "./api";
 
 // CanvasDocument is the ONLY shape this app ever serializes to — PC-85's own
 // acceptance criterion, verbatim: "canvas state (nodes + edges + capability values)
@@ -133,6 +134,9 @@ export interface CanvasNodeData extends Record<string, unknown> {
   cidrBlock?: string;
   routes?: CanvasRoute[];
   naclRules?: CanvasNACLRule[];
+  // subnetFact is UI-only presentation state: the server-derived public/private classification
+  // for a subnet node (PC-105), attached at render time and never serialized.
+  subnetFact?: SubnetFact;
   simState?: SimState;
   journeyOnPath?: boolean;
   utilization?: number | null;

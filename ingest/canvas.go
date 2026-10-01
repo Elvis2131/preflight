@@ -14,6 +14,9 @@ import (
 	"preflight/providers"
 )
 
+// buildCanvasNodesAndEdges is the shared body of IngestCanvas (below) and DeriveCanvasIR:
+// everything IngestCanvas does up to, but not including, the Minimum Viable Graph gate.
+//
 // IngestCanvas builds an IR directly from a canvas-authored core.CanvasDocument
 // (PC-85's own wire contract, frozen as contracts/canvas.schema.json). Unlike Ingest,
 // a canvas node already declares its canonical NodeType directly — the palette IS the
@@ -52,7 +55,7 @@ import (
 //     capability entered at all — or missing the one field a specific check reads —
 //     produces a nil CapabilityModel field, and every compliance/failover check
 //     already treats that as not_assessable, never a fabricated default.
-func IngestCanvas(doc core.CanvasDocument, registry providers.Registry, versionNumber int) (Result, error) {
+func buildCanvasNodesAndEdges(doc core.CanvasDocument, registry providers.Registry) ([]core.Node, []core.Edge) {
 	nodeExists := make(map[string]bool, len(doc.Nodes))
 	for _, n := range doc.Nodes {
 		nodeExists[n.ID] = true
@@ -102,6 +105,12 @@ func IngestCanvas(doc core.CanvasDocument, registry providers.Registry, versionN
 
 	edges = append(edges, canvasRouteEdges(doc, nodeExists, prov)...)
 
+	return nodes, edges
+}
+
+func IngestCanvas(doc core.CanvasDocument, registry providers.Registry, versionNumber int) (Result, error) {
+	nodes, edges := buildCanvasNodesAndEdges(doc, registry)
+
 	if insufficient := CheckMVG(nodes); insufficient != nil {
 		return Result{Insufficient: insufficient}, nil
 	}
@@ -115,6 +124,16 @@ func IngestCanvas(doc core.CanvasDocument, registry providers.Registry, versionN
 	}
 
 	return Result{IR: ir}, nil
+}
+
+// DeriveCanvasIR builds the IR a canvas document WOULD produce, WITHOUT the Minimum Viable
+// Graph gate IngestCanvas applies. It exists for derived read-only views of a design that
+// is still being drawn (PC-105: Region/AZ groupings and the public/private badge): such a
+// view must work on a half-built canvas, which IngestCanvas would refuse. It is never a
+// source of assessment results — nothing is stored and no verdict is derived from it.
+func DeriveCanvasIR(doc core.CanvasDocument, registry providers.Registry) *core.IR {
+	nodes, edges := buildCanvasNodesAndEdges(doc, registry)
+	return &core.IR{SchemaVersion: "1.4.0", VersionNumber: 0, VersionHash: contentHash(nodes, edges), Nodes: nodes, Edges: edges}
 }
 
 // buildCanvasCapability reuses assignCapabilityField unchanged — see this file's own

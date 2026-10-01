@@ -32,15 +32,17 @@ import { CONTAINER_SIZE, containerRank, reevaluate } from "./containment";
 import { templateToCanvasState } from "./templateLoader";
 import { MODES, capabilities, type Mode } from "./modes";
 import { AnalyzeView } from "./analyze/AnalyzeView";
-import { listTemplates, getTemplate, simulateFaults, evaluateScenarios, type TemplateMeta, type Fault, type ScenarioResult } from "./api";
+import { listTemplates, getTemplate, simulateFaults, evaluateScenarios, deriveCanvas, type TemplateMeta, type Fault, type ScenarioResult, type SubnetFact } from "./api";
 import { FailureLab } from "./FailureLab";
+import { GroupingNode } from "./GroupingNode";
+import { buildGroupings } from "./groupings";
 import { killedTargets } from "./faultBuilder";
 import { assessCanvas, simulateNodeLoss, simulateBaseline, describeSimError, type SimulateResponse } from "./api";
 import { ReportView } from "./ReportView";
 import { WorkloadForm, buildWorkload, emptyWorkloadFormValue, workloadToFormValue, type WorkloadFormValue } from "./WorkloadForm";
 import { JourneyPanel } from "./JourneyPanel";
 
-const nodeTypes = { golden: GoldenNode };
+const nodeTypes = { golden: GoldenNode, grouping: GroupingNode };
 
 let nextID = 1;
 function freshID(prefix: string): string {
@@ -582,21 +584,56 @@ function CanvasInner() {
     return m;
   }, [simSummary]);
 
+  // Derived, read-only facts about the design (PC-105): each subnet's AZ, region and route-
+  // derived public/private classification, asked of the server (POST /canvas/derive — pure,
+  // stores nothing, works on a half-drawn design) whenever the document changes. The picture
+  // draws exactly what comes back; no mode derives any of it in the browser.
+  const [subnetFacts, setSubnetFacts] = useState<SubnetFact[]>([]);
+  const docKey = JSON.stringify(serialize(nodes, edges));
+  useEffect(() => {
+    if (nodes.length === 0) {
+      setSubnetFacts([]);
+      return;
+    }
+    let cancelled = false;
+    const t = setTimeout(() => {
+      deriveCanvas(JSON.parse(docKey))
+        .then((r) => !cancelled && setSubnetFacts(r.subnets))
+        .catch(() => !cancelled && setSubnetFacts([])); // no backend: simply no derived overlay
+    }, 400);
+    return () => {
+      cancelled = true;
+      clearTimeout(t);
+    };
+    // docKey is the whole serialized document: the derivation depends on nothing else.
+  }, [docKey]); // eslint-disable-line react-hooks/exhaustive-deps
+  const factByNode = useMemo(() => new Map(subnetFacts.map((f) => [f.node_id, f])), [subnetFacts]);
+
   // displayNodes overlays journey highlight + utilization presentation at render
   // time only, same "never written back into node state" discipline displayEdges
   // below already applies to severed.
-  const displayNodes = nodes.map((n) => {
-    const load = loadByNodeID.get(n.id);
-    return {
-      ...n,
-      data: {
-        ...n.data,
-        journeyOnPath: journeyNodeIDs.has(n.id),
-        utilization: load ? load.Utilization : undefined,
-        notAssessableLoad: load ? load.Capacity === null : false,
-      },
-    };
-  });
+  const displayNodes = [
+    // Region/AZ groupings (PC-105): read-only boxes derived from the subnets' server-derived
+    // facts. They exist only here — never in `nodes`, so never serialized or editable.
+    ...buildGroupings(nodes, subnetFacts),
+    ...nodes.map((n) => {
+      const load = loadByNodeID.get(n.id);
+      return {
+        ...n,
+        data: {
+          ...n.data,
+          journeyOnPath: journeyNodeIDs.has(n.id),
+          utilization: load ? load.Utilization : undefined,
+          notAssessableLoad: load ? load.Capacity === null : false,
+          subnetFact: factByNode.get(n.id),
+        },
+      };
+    }),
+    // The grouping nodes are display-only (unselectable, undraggable, pointer-events off), so
+    // no handler ever receives one; React Flow's own change application ignores an id that is
+    // not in `nodes` state. The cast only reconciles that heterogeneous list with the canvas
+    // handlers' node type.
+  ] as unknown as Node<CanvasNodeData>[];
 
   // displayEdges applies severed styling at render time only — edges' own stored
   // `data.severed` (set by applySimResult) never becomes a React Flow `style`/

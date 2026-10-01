@@ -60,6 +60,7 @@ export function GoldenNode({ data, selected }: NodeProps<GoldenNodeType>) {
           background: rank === 1 ? "rgba(20,184,166,0.06)" : "rgba(100,116,139,0.08)",
           padding: "6px 10px",
           fontSize: 12,
+          position: "relative",
         }}
       >
         <Handle type="target" position={Position.Top} />
@@ -68,6 +69,7 @@ export function GoldenNode({ data, selected }: NodeProps<GoldenNodeType>) {
           {rank === 1 ? "VPC" : `Subnet${data.availabilityZone ? ` · ${data.availabilityZone}` : ""}`}
           {data.cidrBlock ? ` · ${data.cidrBlock}` : ""}
         </div>
+        {rank === 2 && data.subnetFact && <SubnetBadge fact={data.subnetFact} />}
         <Handle type="source" position={Position.Bottom} />
       </div>
     );
@@ -128,5 +130,31 @@ export function GoldenNode({ data, selected }: NodeProps<GoldenNodeType>) {
       )}
       <Handle type="source" position={Position.Bottom} />
     </div>
+  );
+}
+
+// SubnetBadge (PC-105) shows a subnet's public/private classification. It is a DERIVED badge:
+// the server decides it from the subnet's route table (a route to an internet gateway makes
+// it public — AWS's own definition) and sends the answer; nothing is authored or computed
+// here. "not assessable" means the subnet has no resolvable route table — never shown as
+// private.
+function SubnetBadge({ fact }: { fact: NonNullable<CanvasNodeData["subnetFact"]> }) {
+  const style =
+    fact.visibility === "public"
+      ? { background: "#dcfce7", color: "#166534", border: "1px solid #86efac" }
+      : fact.visibility === "private"
+        ? { background: "#e0e7ff", color: "#3730a3", border: "1px solid #a5b4fc" }
+        : { background: "#f1f5f9", color: "#64748b", border: "1px dashed #94a3b8" };
+  return (
+    <span
+      data-testid="subnet-badge"
+      data-visibility={fact.visibility}
+      title={fact.reason}
+      // Top-right of the subnet: the resources drawn inside sit under the header on the left,
+      // and a badge in the flow of the text would be covered by them.
+      style={{ ...style, position: "absolute", top: 6, right: 8, padding: "0 6px", borderRadius: 8, fontSize: 10, fontWeight: 600 }}
+    >
+      {fact.visibility === "not_assessable" ? "not assessable" : fact.visibility}
+    </span>
   );
 }

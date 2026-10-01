@@ -532,3 +532,19 @@ export async function deleteScenario(sessionID: string, name: string, baseURL: s
 export function evaluateScenarios(sessionID: string, versionNumber: number, baseURL: string = ASSESSD_BASE_URL): Promise<ScenarioResult[]> {
   return getJSON(`${baseURL}/sessions/${sessionID}/versions/${versionNumber}/scenarios`);
 }
+
+// Derived, read-only facts about a canvas document (PC-105): each subnet's AZ, region and
+// route-derived public/private classification. The browser draws exactly what the server
+// returns and derives none of it. POST /canvas/derive stores nothing and works on a
+// half-drawn design.
+export interface SubnetFact {
+  node_id: string;
+  availability_zone?: string;
+  region?: string;
+  visibility: "public" | "private" | "not_assessable";
+  reason?: string;
+}
+
+export async function deriveCanvas(doc: CanvasDocument, baseURL: string = ASSESSD_BASE_URL): Promise<{ subnets: SubnetFact[] }> {
+  return postJSON(`${baseURL}/canvas/derive`, { canvas: doc });
+}
