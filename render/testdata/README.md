@@ -41,16 +41,16 @@ Generated against Graphviz **16.1.0** (Homebrew, macOS arm64), 2026-09-25 (PC-11
 
 ## PC-122: the PDF renderer does NOT get a golden fixture here
 
-`render/pdf.go`'s `PDF` function shells out to `wkhtmltopdf` the same way `SVG` above
-shells out to `dot` — but unlike the SVG/DOT pair, its output is not golden-fixture
-tested, and that is a deliberate, recorded decision (see `render/pdf.go`'s own doc
-comment), not an oversight matching this directory's own pattern by omission.
-wkhtmltopdf embeds a real `CreationDate`/`ModDate` in the PDF's own `/Info` dictionary
-by default, and font subsetting can vary by whatever fonts are actually installed on
-the rendering machine — neither is stripped or normalized here. The HTML report
-(`core.RenderReportHTML`) IS golden-fixture tested and proven byte-identical
-(`golden/fixtures/aws.report.html`, `core/report_html_golden_test.go`); PDF
-correctness is instead checked by real-invocation tests only (`render/pdf_test.go`),
-which skip gracefully wherever `wkhtmltopdf` isn't installed (this project's own
-development environment as of PC-122, included) rather than failing the whole suite
-red on a brand-new, not-yet-universally-installed dependency.
+`render/pdf.go`'s `PDF` function shells out to **headless Chromium** the same way `SVG`
+above shells out to `dot` (wkhtmltopdf was dropped: its repository was archived on
+2023-01-02 and its last release was 2020-06-10). Its output is deliberately **not**
+golden-fixture tested — a recorded decision, not an oversight. Chromium embeds a
+`CreationDate`/`ModDate`; they were the only bytes that differed between two renders of the
+same HTML (4 bytes, measured) and are fixed-width, so `render` rewrites them to a constant
+and two renders in one environment ARE byte-identical (`render/pdf_test.go` proves it,
+negative-controlled by bypassing the normalizer). But even with the dates fixed, PDF bytes
+depend on the exact Chromium build (the `/Producer` string names it) and on which fonts the
+machine has to subset, so a checked-in PDF would only be true on the machine that made it.
+The HTML report (`core.RenderReportHTML`) IS golden-fixture tested and byte-stable
+(`golden/fixtures/aws.report.html`); the PDF is a print of exactly that HTML, with the
+Chromium version pinned and logged in CI like `dot -V`.

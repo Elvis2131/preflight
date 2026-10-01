@@ -52,18 +52,25 @@ jobs:
           sudo apt-get install -y graphviz
           dot -V
 
-      # render/pdf.go's own PC-122 half: PDF export shells out to wkhtmltopdf, same
-      # "install it explicitly, print the exact version this run used" discipline as
-      # the graphviz step above. PDF output is NOT claimed byte-stable (render/pdf.go's
-      # own doc comment records why — embedded CreationDate metadata, font
-      # subsetting) — this step exists so render/pdf_test.go's real-invocation tests
-      # (currently skipped on any machine without wkhtmltopdf installed, including
-      # this project's own development environment as of this ticket) actually run in
-      # CI instead of silently skipping there too.
-      - name: install wkhtmltopdf
+      # render/pdf.go's PC-122 half: PDF export prints the report HTML with headless Chromium
+      # (NOT wkhtmltopdf — archived 2023-01-02, last release 2020-06-10; PC-122's decision
+      # comment). Chromium is installed through Playwright, pinned to the version the lockfile
+      # resolves, and its exact build is printed — the same "install it explicitly, print the
+      # version this run used" discipline as `dot -V` above. PREFLIGHT_CHROMIUM names the
+      # binary so the logged version IS the version that rendered, and the sandbox is turned
+      # off only here (a throwaway CI runner printing this server's own escaped HTML), never
+      # by default. PDFs are byte-identical within one environment (embedded dates are
+      # normalized) but are NOT claimed byte-stable across Chromium builds or font sets, and
+      # have no golden fixture — see render/pdf.go's doc comment.
+      - name: install headless chromium
+        working-directory: canvas
         run: |
-          sudo apt-get install -y wkhtmltopdf
-          wkhtmltopdf --version
+          npm ci
+          npx playwright install --with-deps chromium
+          CHROMIUM="$(find "$HOME/.cache/ms-playwright" -path '*chromium_headless_shell-*' -name chrome-headless-shell -type f | sort | tail -1)"
+          echo "PREFLIGHT_CHROMIUM=$CHROMIUM" >> "$GITHUB_ENV"
+          echo "PREFLIGHT_CHROMIUM_NO_SANDBOX=1" >> "$GITHUB_ENV"
+          "$CHROMIUM" --version
 
       - name: go build
         run: go build ./...

@@ -7,12 +7,13 @@ import (
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
-	"os/exec"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"preflight/core"
 	"preflight/pricing"
+	"preflight/render"
 	"preflight/server"
 )
 
@@ -162,12 +163,11 @@ func TestGetReportHandler_FormatHTML_ReturnsRenderedHTML(t *testing.T) {
 
 // TestGetReportHandler_FormatPDF_MissingRenderer_RealError proves the format=pdf
 // path returns a real, classified error (never a silently-empty body) when the PDF
-// renderer isn't installed — exactly this development environment's own real state
-// today (see render/pdf.go's own doc comment).
+// renderer is missing. The missing case is FORCED (PREFLIGHT_CHROMIUM pointing at a
+// binary that does not exist) so this proves the path on every machine, whether or not
+// Chromium happens to be installed there (see render/pdf.go's own doc comment).
 func TestGetReportHandler_FormatPDF_MissingRenderer_RealError(t *testing.T) {
-	if _, err := exec.LookPath("wkhtmltopdf"); err == nil {
-		t.Skip("wkhtmltopdf IS installed — this test only proves the not-found path")
-	}
+	t.Setenv("PREFLIGHT_CHROMIUM", "/definitely/not/chromium")
 
 	store, err := server.OpenStore(":memory:")
 	if err != nil {
@@ -197,7 +197,7 @@ func TestGetReportHandler_FormatPDF_MissingRenderer_RealError(t *testing.T) {
 	mux.ServeHTTP(rec, req)
 
 	if rec.Code != http.StatusInternalServerError {
-		t.Fatalf("status = %d, want 500 (render_failed) since wkhtmltopdf is not installed here: %s", rec.Code, rec.Body.String())
+		t.Fatalf("status = %d, want 500 (render_failed) since the renderer is missing: %s", rec.Code, rec.Body.String())
 	}
 	if !bytesContains(rec.Body.String(), "render_failed") {
 		t.Errorf("body does not name the render_failed error code: %s", rec.Body.String())
@@ -292,5 +292,35 @@ func TestGetReportHandler_ServesValidReport(t *testing.T) {
 	}
 	if err := report.Validate(); err != nil {
 		t.Errorf("Validate() = %v, want nil", err)
+	}
+}
+
+// TestGetReportHandler_FormatPDF_RealChromium_ReturnsARealPDF is the positive end to end:
+// a real assessed session, GET ...report?format=pdf, a real PDF back through the real
+// Chromium subprocess boundary. Skipped (not failed) where no Chromium exists.
+func TestGetReportHandler_FormatPDF_RealChromium_ReturnsARealPDF(t *testing.T) {
+	if _, err := render.PDFRendererVersion(); err != nil {
+		t.Skipf("no headless Chromium available (%v)", err)
+	}
+	store, err := server.OpenStore(":memory:")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer store.Close()
+	bundleDir, _ := filepath.Abs("../golden/aws")
+	workloadPath, _ := filepath.Abs("../golden/workload.yaml")
+	if _, err := server.Assess(store, server.AssessRequest{SessionID: "pdf-real", BundleDir: bundleDir, WorkloadPath: workloadPath}); err != nil {
+		t.Fatal(err)
+	}
+	mux := http.NewServeMux()
+	mux.HandleFunc("GET /sessions/{id}/versions/{n}/report", server.GetReportHandler(store))
+	rec := httptest.NewRecorder()
+	mux.ServeHTTP(rec, httptest.NewRequest(http.MethodGet, "/sessions/pdf-real/versions/1/report?format=pdf", nil))
+
+	if rec.Code != http.StatusOK || rec.Header().Get("Content-Type") != "application/pdf" {
+		t.Fatalf("status %d content-type %q, want 200 application/pdf: %.200s", rec.Code, rec.Header().Get("Content-Type"), rec.Body.String())
+	}
+	if !strings.HasPrefix(rec.Body.String(), "%PDF-") || rec.Body.Len() < 20_000 {
+		t.Fatalf("body is not a substantial PDF (%d bytes)", rec.Body.Len())
 	}
 }

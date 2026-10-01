@@ -164,9 +164,10 @@ is that same report through `core.RenderReportHTML`, including the real, live-re
 PC-81 SVG diagram embedded directly (`Report.Graph`) — both byte-compared in CI
 (`core/report_golden_test.go`, `core/report_html_golden_test.go`), each with its own
 negative control. There is no `aws.report.pdf` fixture: PC-122's own PDF export
-(`render/pdf.go`) is explicitly NOT claimed byte-stable (wkhtmltopdf embeds a real
-CreationDate and can vary font subsetting by installed fonts) — see that file's own
-doc comment for the full determinism decision. Regenerating: same
+(`render/pdf.go`, headless Chromium) is NOT claimed byte-stable across machines — its
+dates are normalized so two renders in one environment are identical, but PDF bytes
+also depend on the Chromium build and installed fonts — see that file's own doc comment
+for the full determinism decision. The PDF is a print of `aws.report.html`. Regenerating: same
 `go run ./cmd/gen-golden-fixtures` command as above; requires a real `dot` (Graphviz)
 on PATH to render the diagram, exactly like every other command that touches this
 directory already does via `render.SVG`.

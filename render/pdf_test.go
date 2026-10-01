@@ -1,63 +1,101 @@
 package render_test
 
-// PC-122's own PDF half. Unlike render_test.go's own SVG tests (which fail hard —
-// Graphviz is an already-established, CI-installed dependency this whole project
-// assumes), these tests SKIP gracefully when wkhtmltopdf is absent: it is a brand
-// new dependency introduced by this ticket, not yet verified installed/working
-// anywhere (including this development environment) — failing hard here would make
-// the whole suite red in every environment that hasn't installed it yet, which is
-// exactly the "less trustworthy than it should be" outcome CLAUDE.md's own honesty
-// standard warns against. See render/pdf.go's own doc comment for the PDF
-// determinism decision (not byte-fixture-tested, unlike the HTML report).
+// PC-122's PDF half, now headless Chromium. Tests that need a real browser SKIP when none
+// is available (it is a binary this project's CI installs and pins, but a developer
+// machine may not have): failing hard there would make the suite red for an unrelated
+// reason. See render/pdf.go for the determinism decision — dates normalized, so two renders
+// in one environment are byte-identical; no golden PDF, because PDF bytes also depend on the
+// Chromium build and installed fonts.
 
 import (
-	"os/exec"
+	"bytes"
+	"os"
+	"regexp"
 	"testing"
+	"time"
 
 	"preflight/render"
 )
 
-func skipIfNoWkhtmltopdf(t *testing.T) {
+func skipIfNoChromium(t *testing.T) {
 	t.Helper()
-	if _, err := exec.LookPath("wkhtmltopdf"); err != nil {
-		t.Skip("wkhtmltopdf not installed on PATH — skipping (see render/pdf.go's own doc comment; CI installs it, see .github/workflows/ci.yml)")
+	if _, err := render.PDFRendererVersion(); err != nil {
+		t.Skipf("no headless Chromium available (%v) — skipping; CI installs and pins one", err)
 	}
 }
 
-func TestPDF_SmallHTML_ProducesRealPDF(t *testing.T) {
-	skipIfNoWkhtmltopdf(t)
-	pdf, err := render.PDF(`<html><body><h1>hello</h1></body></html>`)
+// goldenReportHTML is the real, golden-fixtured report HTML — the exact artifact the PDF is
+// a print of, per the decision that the PDF must not be a second layout engine.
+func goldenReportHTML(t *testing.T) string {
+	t.Helper()
+	b, err := os.ReadFile("../golden/fixtures/aws.report.html")
+	if err != nil {
+		t.Fatalf("read golden report html: %v", err)
+	}
+	return string(b)
+}
+
+func TestPDF_GoldenReportHTML_ProducesARealPDF(t *testing.T) {
+	skipIfNoChromium(t)
+	pdf, err := render.PDF(goldenReportHTML(t))
 	if err != nil {
 		t.Fatalf("PDF: %v", err)
 	}
-	if len(pdf) < 4 || string(pdf[:4]) != "%PDF" {
-		t.Errorf("output does not start with the real PDF magic bytes (%%PDF): got %q", pdf[:min(4, len(pdf))])
+	if !bytes.HasPrefix(pdf, []byte("%PDF-")) || !bytes.Contains(pdf[max(0, len(pdf)-1024):], []byte("%%EOF")) {
+		t.Fatalf("output is not a complete PDF (starts %q)", pdf[:min(8, len(pdf))])
+	}
+	if len(pdf) < 20_000 {
+		t.Errorf("a full report should be a substantial PDF, got only %d bytes", len(pdf))
+	}
+	if !bytes.Contains(pdf, []byte("Chromium")) {
+		t.Errorf("the PDF's own metadata should name Chromium as its creator — that is what makes the renderer auditable")
 	}
 }
 
-func TestPDFRendererVersion_ReturnsRealVersionString(t *testing.T) {
-	skipIfNoWkhtmltopdf(t)
-	v, err := render.PDFRendererVersion()
+// The determinism claim, tested rather than asserted: two renders of the same HTML in the
+// same environment are byte-identical once the embedded dates are normalized. (Without
+// normalization they differ in the seconds of CreationDate/ModDate; the unit test below
+// proves the normalizer is what closes that gap.) Rendered >1s apart so a wall-clock
+// difference would show if it were not neutralised.
+func TestPDF_TwoRendersInOneEnvironmentAreByteIdentical(t *testing.T) {
+	skipIfNoChromium(t)
+	html := goldenReportHTML(t)
+	a, err := render.PDF(html)
 	if err != nil {
-		t.Fatalf("PDFRendererVersion: %v", err)
+		t.Fatal(err)
 	}
-	if v == "" {
-		t.Error("got an empty version string, want a real one")
+	waitOverASecond()
+	b, err := render.PDF(html)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !bytes.Equal(a, b) {
+		t.Fatalf("two renders of the same HTML differ (%d vs %d bytes) — something besides the normalized dates is nondeterministic", len(a), len(b))
+	}
+	if !regexp.MustCompile(`/CreationDate \(D:20000101000000\+00'00'\)`).Match(a) {
+		t.Errorf("the embedded creation date must be the fixed normalized value")
 	}
 }
 
-func TestPDF_MissingBinary_ReturnsRealError(t *testing.T) {
-	// This test does NOT skip — it specifically proves the "tool not found" path
-	// (render.go's own SVG has the identical guarantee for a missing dot), which is
-	// exactly the path this development environment (no wkhtmltopdf installed)
-	// actually exercises today. If wkhtmltopdf IS installed here later, this test
-	// naturally becomes untestable via LookPath and is skipped instead — never a
-	// false failure either way.
-	if _, err := exec.LookPath("wkhtmltopdf"); err == nil {
-		t.Skip("wkhtmltopdf IS installed — this test only proves the not-found path")
+func TestPDFRendererVersion_NamesChromium(t *testing.T) {
+	skipIfNoChromium(t)
+	v, err := render.PDFRendererVersion()
+	if err != nil || v == "" {
+		t.Fatalf("PDFRendererVersion: %q, %v", v, err)
 	}
-	_, err := render.PDF(`<html></html>`)
-	if err == nil {
-		t.Fatal("got nil error with wkhtmltopdf absent, want a real, specific error")
+	if !regexp.MustCompile(`(?i)chrom`).MatchString(v) {
+		t.Errorf("version %q should name Chromium", v)
 	}
 }
+
+// Does NOT skip: a pinned-but-missing binary must be a real, specific error, never an empty
+// or fabricated PDF — the same guarantee SVG has for a missing dot.
+func TestPDF_MissingBinary_ReturnsRealError(t *testing.T) {
+	t.Setenv("PREFLIGHT_CHROMIUM", "/definitely/not/chromium")
+	pdf, err := render.PDF(`<html></html>`)
+	if err == nil || len(pdf) != 0 {
+		t.Fatalf("got %d bytes and error %v, want no PDF and a specific error", len(pdf), err)
+	}
+}
+
+func waitOverASecond() { time.Sleep(1100 * time.Millisecond) }
