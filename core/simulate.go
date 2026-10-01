@@ -75,6 +75,12 @@ type SimulateResponse struct {
 	// "after" utilization for one fault without a second round-trip or reimplementing
 	// the load engine. Empty (never nil) when the workload declares no journeys.
 	Load []ComponentLoad `json:"load"`
+
+	// Latency is PC-128's own addition — Layer 3 latency/saturation under the SAME
+	// fault-mutated IR and killed set as FlowDetail/Load, one entry per declared
+	// journey: assessed (conditional on the listed declared inputs) or not_assessable
+	// naming what is missing. Empty (never nil) when the workload declares no journeys.
+	Latency []JourneyLatency `json:"latency"`
 }
 
 // Simulate applies a declared fault set against an IR + Workload, reusing PC-14's
@@ -134,7 +140,7 @@ func Simulate(ir *IR, workload Workload, faults []Fault, prov Provenance) Simula
 	mutatedIR, killed, ok, reason := resolveFaults(ir, workload, faults)
 	if !ok {
 		na := NotAssessable[any](reason, prov).ToEnvelope()
-		return SimulateResponse{Journeys: make([]Journey, 0), SeveredPaths: make([]string, 0), Cascade: make([]string, 0), FlowDetail: make([]JourneyFlowResult, 0), Load: make([]ComponentLoad, 0), Capacity: na, Verdict: na}
+		return SimulateResponse{Journeys: make([]Journey, 0), SeveredPaths: make([]string, 0), Cascade: make([]string, 0), FlowDetail: make([]JourneyFlowResult, 0), Load: make([]ComponentLoad, 0), Latency: make([]JourneyLatency, 0), Capacity: na, Verdict: na}
 	}
 	ir = mutatedIR
 
@@ -221,9 +227,11 @@ func Simulate(ir *IR, workload Workload, faults []Fault, prov Provenance) Simula
 	// journeys, for every fault type, not specially cased to the two new ones.
 	flowDetail := make([]JourneyFlowResult, 0)
 	load := make([]ComponentLoad, 0)
+	latency := make([]JourneyLatency, 0)
 	if len(workload.Journeys) > 0 {
 		flowDetail = ComputeAllJourneyFlows(ir, workload, killed)
 		load = RankBottlenecks(ComputeComponentLoad(ir, workload, killed))
+		latency = ComputeDegradedLatency(ir, workload, killed, prov)
 	}
 
 	return SimulateResponse{
@@ -234,6 +242,7 @@ func Simulate(ir *IR, workload Workload, faults []Fault, prov Provenance) Simula
 		Verdict:      verdict,
 		FlowDetail:   flowDetail,
 		Load:         load,
+		Latency:      latency,
 	}
 }
 

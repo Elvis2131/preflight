@@ -40,20 +40,26 @@ func EvaluateJourneyLoadReadiness(ir *IR, workload Workload, j DeclaredJourney, 
 		byID[n.ID] = n
 	}
 
-	for _, nodeID := range j.Path {
-		if nodeID == JourneyInternetSentinel {
-			// Not a real IR node by design (core/journey_flow.go's own convention,
-			// mirroring BuildTrace's) — has no node type and needs no declared
-			// capacity of its own.
-			continue
-		}
-		node, ok := byID[nodeID]
-		if !ok {
-			return NotAssessable[any](fmt.Sprintf("journey %q references component %q, which does not exist in this IR", j.ID, nodeID), prov).ToEnvelope()
-		}
-		key := JourneyCapacityKey(node.Type)
-		if _, hasCapacity := workload.Capacity[key]; !hasCapacity {
-			return NotAssessable[any](fmt.Sprintf("journey %q has no declared capacity for component %q (expected Workload.Capacity[%q])", j.ID, nodeID, key), prov).ToEnvelope()
+	// A Path element may be a parallel group ("db|db2", JourneyParallelSeparator —
+	// PC-125/126); every member is a real node needing its own declared capacity. The
+	// readiness gate originally looked the whole "db|db2" string up as one node ID and
+	// so could never pass for a parallel-path journey (found by PC-128's latency tests).
+	for _, hop := range j.Path {
+		for _, nodeID := range splitJourneyHopGroup(hop) {
+			if nodeID == JourneyInternetSentinel {
+				// Not a real IR node by design (core/journey_flow.go's own convention,
+				// mirroring BuildTrace's) — has no node type and needs no declared
+				// capacity of its own.
+				continue
+			}
+			node, ok := byID[nodeID]
+			if !ok {
+				return NotAssessable[any](fmt.Sprintf("journey %q references component %q, which does not exist in this IR", j.ID, nodeID), prov).ToEnvelope()
+			}
+			key := JourneyCapacityKey(node.Type)
+			if _, hasCapacity := workload.Capacity[key]; !hasCapacity {
+				return NotAssessable[any](fmt.Sprintf("journey %q has no declared capacity for component %q (expected Workload.Capacity[%q])", j.ID, nodeID, key), prov).ToEnvelope()
+			}
 		}
 	}
 

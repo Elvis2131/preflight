@@ -1,5 +1,5 @@
 import type { DeclaredJourney } from "./workloadTypes";
-import type { JourneyFlowResult, ComponentLoad } from "./api";
+import type { JourneyFlowResult, ComponentLoad, JourneyLatency, JourneyLatencyEstimate } from "./api";
 
 // JourneyPanel (PC-127) is a thin, read-only view over /simulate's own
 // flow_detail/load — same discipline as ReportView.tsx (PC-123): every number and
@@ -12,11 +12,12 @@ export interface JourneyPanelProps {
   journeys: DeclaredJourney[];
   flowDetail: JourneyFlowResult[];
   load: ComponentLoad[];
+  latency?: JourneyLatency[];
   selectedJourneyID: string | null;
   onSelectJourney: (id: string) => void;
 }
 
-export function JourneyPanel({ journeys, flowDetail, load, selectedJourneyID, onSelectJourney }: JourneyPanelProps) {
+export function JourneyPanel({ journeys, flowDetail, load, latency, selectedJourneyID, onSelectJourney }: JourneyPanelProps) {
   if (journeys.length === 0) {
     return (
       <div style={{ padding: 12, fontSize: 12, color: "#64748b" }}>
@@ -27,6 +28,8 @@ export function JourneyPanel({ journeys, flowDetail, load, selectedJourneyID, on
   }
 
   const flow = flowDetail.find((f) => f.JourneyID === selectedJourneyID) ?? null;
+  const lat = latency?.find((l) => l.journey_id === selectedJourneyID)?.result ?? null;
+  const latEstimate = lat?.state === "assessed" ? (lat.value as JourneyLatencyEstimate) : null;
 
   return (
     <div style={{ padding: 12, fontSize: 12, overflowY: "auto" }}>
@@ -83,6 +86,23 @@ export function JourneyPanel({ journeys, flowDetail, load, selectedJourneyID, on
           </table>
         </div>
       )}
+      {flow && lat && (
+        <div style={{ marginBottom: 12 }} data-testid="latency">
+          <div style={{ fontWeight: 600 }}>Latency (Layer 3)</div>
+          {latEstimate ? (
+            <>
+              <div>{latEstimate.statement}</div>
+              <div style={{ color: "#64748b" }}>
+                Inputs: {latEstimate.inputs.map((i) => `${i.name} = ${i.value} (${i.source})`).join("; ")}
+              </div>
+              <div style={{ color: "#64748b" }}>Assumed: {latEstimate.assumptions.join("; ")}</div>
+            </>
+          ) : (
+            <div style={{ color: "#94a3b8" }}>Not assessable: {lat.reason}</div>
+          )}
+        </div>
+      )}
+
 
       <h4 style={{ fontSize: 12, margin: "8px 0 4px" }}>Component load</h4>
       {load.length === 0 ? (

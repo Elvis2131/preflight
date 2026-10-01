@@ -601,6 +601,7 @@ function CanvasInner() {
           <JourneyPanel
             journeys={journeys}
             flowDetail={simSummary?.flow_detail ?? []}
+            latency={simSummary?.latency}
             load={simSummary?.load ?? []}
             selectedJourneyID={selectedJourneyID}
             onSelectJourney={setSelectedJourneyID}

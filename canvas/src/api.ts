@@ -91,6 +91,24 @@ export interface SimulateResponse {
   // client-side — see core/simulate.go's own SimulateResponse doc comment.
   flow_detail: JourneyFlowResult[];
   load: ComponentLoad[];
+  // latency (PC-128): Layer 3 per-journey latency/saturation, assessed (a conditional
+  // statement + the declared inputs it was computed from) or not_assessable naming
+  // what is missing. Shown verbatim — never recomputed here.
+  latency?: JourneyLatency[];
+}
+
+export interface JourneyLatencyEstimate {
+  statement: string;
+  mean_ms?: number;
+  saturated_at?: string;
+  inputs: Array<{ name: string; value: number; source: string }>;
+  assumptions: string[];
+  seed: string;
+}
+
+export interface JourneyLatency {
+  journey_id: string;
+  result: AssessmentEnvelope;
 }
 
 // APIError (PC-95) mirrors server.APIError's own wire shape ({error_code, message}) —
