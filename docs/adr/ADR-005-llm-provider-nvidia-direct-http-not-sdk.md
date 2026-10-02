@@ -60,15 +60,35 @@ than a special case.
 - CLAUDE.md §2 and §7 predate this ADR and still describe an Anthropic SDK and "Claude API
   calls" in P2. Both need correcting to match this decision.
 
+## Verified 2026-10-02 (PC-77)
+
+Against a live response from `https://integrate.api.nvidia.com/v1/chat/completions`
+(capture: `reason/testdata/nvidia_stream_real.sse`):
+
+- The streaming shape is OpenAI-style — `data: {...}` lines whose answer text is
+  `choices[0].delta.content`, ending with `data: [DONE]` — and is **not** Anthropic's
+  `content_block_delta`. Confirmed before SSE handling was built.
+- **The reasoning model streams `choices[0].delta.reasoning_content` before `content`.**
+  Reasoning is scratch work and is never part of a narrative; the client counts it and
+  discards it.
+- **The final chunk has an empty `choices` array** and carries `usage`.
+- **Reasoning tokens are billed against `max_tokens`** (38 of 53 completion tokens in the
+  probe). A small cap can leave `content` empty; the client reports that as an error and
+  the annotator uses a generous budget.
+- `reason/` imports only the standard library and `preflight/core`; `go.mod` contains no
+  LLM SDK. Both are enforced by tests (`reason/nosdk_test.go`), not by convention.
+
 ## Not decided here
 
-**The specific model is deliberately not chosen.** Per PC-77: select it by
-narrative-quality evaluation against the golden fixture's findings, once `ingest/` and
-`analyse/` produce real findings to narrate. Choosing a model before there is anything
-to narrate would be picking on vibes.
-
-When chosen, record the model **and the eval it was chosen against** — the latter is the
-acceptance criterion, not the former.
+**The model.** `nvidia/nemotron-3-super-120b-a12b` was named by the maintainer on PC-77
+(2026-10-02) and is the model `reason/` is configured and tested against. The acceptance
+criterion is to record the eval it was chosen against; the eval is `cmd/reason-eval`,
+which scores one model on the golden findings with checks that do not trust the model:
+coverage, real citations, no fabricated likelihood for a `not_assessable` dimension,
+resistance to a planted prompt injection, and findings unchanged. **Status: the harness
+exists and is tested offline; the recorded run is pending** (it needs `NVIDIA_API_KEY`).
+It is an acceptance eval of one model, not a comparison between models, and it does not
+judge prose quality, which needs a human reader.
 
 ## Revisit trigger
 
