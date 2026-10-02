@@ -11,6 +11,7 @@ package ingest
 import (
 	"encoding/json"
 	"fmt"
+	"sort"
 
 	"preflight/core"
 )
@@ -135,19 +136,31 @@ func mergeIAMPolicies(nodes []core.Node, parsed []ParsedResource) {
 			if !ok || len(roleRefs) != 1 {
 				continue
 			}
-			attachIdentityPolicy(nodes, byID, roleRefs[0].Key(), r.Key(), r.Attributes["policy"])
+			attachIdentityPolicy(nodes, byID, roleRefs[0].Key(), r.Key(), r)
 
 		case "aws_iam_role_policy_attachment":
 			roleRefs, hasRole := r.AttributeReferences["role"]
-			policyRefs, hasPolicy := r.AttributeReferences["policy_arn"]
-			if !hasRole || len(roleRefs) != 1 || !hasPolicy || len(policyRefs) != 1 {
+			if !hasRole || len(roleRefs) != 1 {
 				continue
 			}
-			managedPolicy, ok := managedPolicies[policyRefs[0].Key()]
-			if !ok {
-				continue // an AWS-managed policy ARN, not one declared in this bundle
+			policyRefs := r.AttributeReferences["policy_arn"]
+			if len(policyRefs) == 1 {
+				if managedPolicy, ok := managedPolicies[policyRefs[0].Key()]; ok {
+					attachIdentityPolicy(nodes, byID, roleRefs[0].Key(), managedPolicy.Key(), managedPolicy)
+					continue
+				}
 			}
-			attachIdentityPolicy(nodes, byID, roleRefs[0].Key(), managedPolicy.Key(), managedPolicy.Attributes["policy"])
+			// An AWS-managed policy ARN (a literal string, no resource of its own), or a policy declared
+			// outside this bundle: its permissions are not modelled. Recorded on the role (PC-157), never
+			// read as "grants nothing".
+			name := r.Key()
+			if arn, ok := r.Attributes["policy_arn"].(string); ok && arn != "" {
+				name = arn
+			} else if len(policyRefs) == 1 {
+				name = policyRefs[0].Key()
+			}
+			recordUnresolvedIdentityPolicy(nodes, byID, roleRefs[0].Key(), name,
+				"an attached policy defined outside this bundle (for example an AWS-managed policy); its permissions are not modelled")
 
 		case "aws_s3_bucket_policy":
 			bucketRefs, ok := r.AttributeReferences["bucket"]
@@ -172,19 +185,45 @@ func mergeIAMPolicies(nodes []core.Node, parsed []ParsedResource) {
 	}
 }
 
-func attachIdentityPolicy(nodes []core.Node, byID map[string]int, roleID, policyID string, rawPolicy any) {
+// attachIdentityPolicy reads the policy document carried by res onto roleID. A document that cannot be
+// read (not a static value, malformed JSON, absent) is recorded on the role as unresolved (PC-157): an
+// unread policy must make the role's IAM evaluation not_assessable, never an implicit "grants nothing".
+func attachIdentityPolicy(nodes []core.Node, byID map[string]int, roleID, policyID string, res ParsedResource) {
 	idx, ok := byID[roleID]
 	if !ok {
 		return
 	}
-	policyJSON, _ := rawPolicy.(string)
+	policyJSON, _ := res.Attributes["policy"].(string)
 	if policyJSON == "" {
+		reason := "the policy attribute is absent"
+		if res.NonLiteralAttributes["policy"] {
+			reason = "the policy document is not a static value (it references a resource or variable, or uses a function other than jsonencode of constants)"
+		}
+		recordUnresolvedIdentityPolicy(nodes, byID, roleID, policyID, reason)
 		return
 	}
 	prov := core.NewProvenance(core.KindStated, "ingest/iam:"+policyID)
 	doc, err := parsePolicyDocument(policyID, policyJSON, prov)
 	if err != nil {
+		recordUnresolvedIdentityPolicy(nodes, byID, roleID, policyID, "the policy document is not valid IAM policy JSON")
 		return
 	}
 	nodes[idx].IAMIdentityPolicies = append(nodes[idx].IAMIdentityPolicies, doc)
+}
+
+// UnresolvedIdentityPoliciesAttr is the RawAttributes key naming each identity policy ingest could not read.
+const UnresolvedIdentityPoliciesAttr = "unresolved_identity_policies"
+
+func recordUnresolvedIdentityPolicy(nodes []core.Node, byID map[string]int, roleID, policyID, reason string) {
+	idx, ok := byID[roleID]
+	if !ok {
+		return
+	}
+	if nodes[idx].RawAttributes == nil {
+		nodes[idx].RawAttributes = map[string]any{}
+	}
+	existing, _ := nodes[idx].RawAttributes[UnresolvedIdentityPoliciesAttr].([]string)
+	existing = append(existing, policyID+": "+reason)
+	sort.Strings(existing)
+	nodes[idx].RawAttributes[UnresolvedIdentityPoliciesAttr] = existing
 }

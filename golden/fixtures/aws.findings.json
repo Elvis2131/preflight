@@ -604,13 +604,13 @@
     "evidence": [
       {
         "node_id": "aws_iam_role.eks_cluster",
-        "description": "no identity policy statement grants every action (\"*\") on every resource (\"*\")",
+        "description": "principal \"aws_iam_role.eks_cluster\" has identity policies that could not be read: arn:aws:iam::aws:policy/AmazonEKSClusterPolicy: an attached policy defined outside this bundle (for example an AWS-managed policy); its permissions are not modelled",
         "attribute": "iam_identity_policies"
       }
     ],
     "outcome": {
-      "state": "assessed",
-      "value": "satisfied",
+      "state": "not_assessable",
+      "reason": "principal \"aws_iam_role.eks_cluster\" has identity policies that could not be read: arn:aws:iam::aws:policy/AmazonEKSClusterPolicy: an attached policy defined outside this bundle (for example an AWS-managed policy); its permissions are not modelled",
       "provenance": {
         "kind": "derived",
         "source": "core/iam_evaluate:least-privilege-wildcard-admin:aws_iam_role.eks_cluster"
@@ -740,13 +740,13 @@
     "evidence": [
       {
         "node_id": "aws_iam_role.eks_node",
-        "description": "no identity policy statement grants every action (\"*\") on every resource (\"*\")",
+        "description": "principal \"aws_iam_role.eks_node\" has identity policies that could not be read: arn:aws:iam::aws:policy/AmazonEC2ContainerRegistryReadOnly: an attached policy defined outside this bundle (for example an AWS-managed policy); its permissions are not modelled; arn:aws:iam::aws:policy/AmazonEKSWorkerNodePolicy: an attached policy defined outside this bundle (for example an AWS-managed policy); its permissions are not modelled; arn:aws:iam::aws:policy/AmazonEKS_CNI_Policy: an attached policy defined outside this bundle (for example an AWS-managed policy); its permissions are not modelled",
         "attribute": "iam_identity_policies"
       }
     ],
     "outcome": {
-      "state": "assessed",
-      "value": "satisfied",
+      "state": "not_assessable",
+      "reason": "principal \"aws_iam_role.eks_node\" has identity policies that could not be read: arn:aws:iam::aws:policy/AmazonEC2ContainerRegistryReadOnly: an attached policy defined outside this bundle (for example an AWS-managed policy); its permissions are not modelled; arn:aws:iam::aws:policy/AmazonEKSWorkerNodePolicy: an attached policy defined outside this bundle (for example an AWS-managed policy); its permissions are not modelled; arn:aws:iam::aws:policy/AmazonEKS_CNI_Policy: an attached policy defined outside this bundle (for example an AWS-managed policy); its permissions are not modelled",
       "provenance": {
         "kind": "derived",
         "source": "core/iam_evaluate:least-privilege-wildcard-admin:aws_iam_role.eks_node"
@@ -876,13 +876,13 @@
     "evidence": [
       {
         "node_id": "aws_iam_role.payments_app",
-        "description": "no identity policy statement grants every action (\"*\") on every resource (\"*\")",
+        "description": "principal \"aws_iam_role.payments_app\" has identity policies that could not be read: aws_iam_policy.payments_app: the policy document is not a static value (it references a resource or variable, or uses a function other than jsonencode of constants)",
         "attribute": "iam_identity_policies"
       }
     ],
     "outcome": {
-      "state": "assessed",
-      "value": "satisfied",
+      "state": "not_assessable",
+      "reason": "principal \"aws_iam_role.payments_app\" has identity policies that could not be read: aws_iam_policy.payments_app: the policy document is not a static value (it references a resource or variable, or uses a function other than jsonencode of constants)",
       "provenance": {
         "kind": "derived",
         "source": "core/iam_evaluate:least-privilege-wildcard-admin:aws_iam_role.payments_app"

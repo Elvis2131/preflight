@@ -92,9 +92,54 @@ func applyScriptedFix(t *testing.T, workDir, findingID string) (applied bool) {
 		fixRDSMultiAZAndEncryption(t, workDir)
 		return true
 
+	case "finding.compliance.iam-least-privilege-wildcard-admin.aws_iam_role.payments_app":
+		fixIAMWildcardAdmin(t, workDir)
+		return true
+
 	default:
 		return false
 	}
+}
+
+// fixIAMWildcardAdmin resolves golden/aws-broken's defect 7 (PC-157: detected since ingest reads
+// jsonencode() policy documents) by replacing the Action "*" / Resource "*" statement with the two
+// scoped statements golden/aws's own iam.tf uses (copied from it, not invented). Those statements
+// reference resource ARNs, which the engine cannot resolve statically, so the fixed role's least-
+// privilege result is not_assessable rather than satisfied: honest, and not "unsatisfied", so the loop
+// converges.
+func fixIAMWildcardAdmin(t *testing.T, workDir string) {
+	t.Helper()
+	path := filepath.Join(workDir, "iam.tf")
+	content := readFile(t, path)
+	content = replaceExactlyOnce(t, content,
+		`      {
+        Sid      = "AppAccess"
+        Effect   = "Allow"
+        Action   = "*"
+        Resource = "*"
+      }`,
+		`      {
+        Sid    = "SettlementQueueAccess"
+        Effect = "Allow"
+        Action = [
+          "sqs:SendMessage",
+          "sqs:ReceiveMessage",
+          "sqs:DeleteMessage",
+          "sqs:GetQueueAttributes"
+        ]
+        Resource = aws_sqs_queue.settlement.arn
+      },
+      {
+        Sid    = "PaymentsDataKeyUse"
+        Effect = "Allow"
+        Action = [
+          "kms:Decrypt",
+          "kms:GenerateDataKey"
+        ]
+        Resource = aws_kms_key.payments.arn
+      }`,
+		"payments_app wildcard statement")
+	writeFile(t, path, content)
 }
 
 // fixNATGatewayRedundancy resolves golden/aws-broken's defect 1 by rewriting

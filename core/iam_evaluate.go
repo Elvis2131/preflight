@@ -477,6 +477,13 @@ func EvaluateIAMRequest(ir *IR, req IAMRequest, prov Provenance) IAMEvaluationRe
 		return notAssessableResult(fmt.Sprintf("principal %q is not an identity node (type %q)", req.PrincipalID, principal.Type), prov)
 	}
 
+	// PC-157: an identity policy ingest could not read (not a static value, malformed, or defined outside
+	// the bundle) could hold any statement, including an explicit Deny, so no decision about this
+	// principal is safe: not_assessable, naming each, never an implicit "grants nothing".
+	if unread := stringList(principal.RawAttributes["unresolved_identity_policies"]); len(unread) > 0 {
+		return notAssessableResult(fmt.Sprintf("principal %q has identity policies that could not be read: %s", req.PrincipalID, strings.Join(unread, "; ")), prov)
+	}
+
 	var candidates []candidateStatement
 	for _, doc := range principal.IAMIdentityPolicies {
 		for _, stmt := range doc.Statements {
@@ -547,4 +554,22 @@ func EvaluateAssumeRole(ir *IR, req IAMAssumeRoleRequest, prov Provenance) IAMEv
 
 func notAssessableResult(reason string, prov Provenance) IAMEvaluationResult {
 	return IAMEvaluationResult{Decision: IAMDecisionNotAssessable, Reasoning: []string{reason}, Provenance: prov}
+}
+
+// stringList reads a RawAttributes value that is a list of strings, whether it is still the []string
+// ingest wrote or the []any a JSON round trip produces.
+func stringList(v any) []string {
+	switch t := v.(type) {
+	case []string:
+		return t
+	case []any:
+		var out []string
+		for _, x := range t {
+			if s, ok := x.(string); ok {
+				out = append(out, s)
+			}
+		}
+		return out
+	}
+	return nil
 }

@@ -747,8 +747,8 @@ code{background:#f1f5f9;padding:0 .2rem}
 <tr><td>4 component(s) affected</td><td>1</td></tr>
 <tr><td>5 of 7 rules on the security groups and NACLs along this journey&#39;s path (every rule on those groups, not only the ones this journey uses) would break it if changed alone</td><td>1</td></tr>
 <tr><td>consistent: declared public, and a real default route to an internet gateway confirms it</td><td>3</td></tr>
-<tr><td>not_assessable</td><td>1</td></tr>
-<tr><td>satisfied</td><td>9</td></tr>
+<tr><td>not_assessable</td><td>4</td></tr>
+<tr><td>satisfied</td><td>6</td></tr>
 </table>
 <h3>NFR conformance</h3>
 <p>1 evaluated, 2 not evaluated.</p>
@@ -969,8 +969,8 @@ consistent: declared public, and a real default route to an internet gateway con
 <td class="not-assessable">
 <span class="reason">not_assessable: impact dimension not evaluated by this compliance check</span>
 </td>
-<td>
-satisfied
+<td class="not-assessable">
+<span class="reason">not_assessable: principal &#34;aws_iam_role.eks_cluster&#34; has identity policies that could not be read: arn:aws:iam::aws:policy/AmazonEKSClusterPolicy: an attached policy defined outside this bundle (for example an AWS-managed policy); its permissions are not modelled</span>
 </td>
 </tr><tr>
 <td><code>finding.compliance.iam-least-privilege-assumable-by-any-principal.aws_iam_role.eks_cluster</code><br>IAM role aws_iam_role.eks_cluster: least-privilege check for an overly broad trust policy</td>
@@ -989,8 +989,8 @@ satisfied
 <td class="not-assessable">
 <span class="reason">not_assessable: impact dimension not evaluated by this compliance check</span>
 </td>
-<td>
-satisfied
+<td class="not-assessable">
+<span class="reason">not_assessable: principal &#34;aws_iam_role.eks_node&#34; has identity policies that could not be read: arn:aws:iam::aws:policy/AmazonEC2ContainerRegistryReadOnly: an attached policy defined outside this bundle (for example an AWS-managed policy); its permissions are not modelled; arn:aws:iam::aws:policy/AmazonEKSWorkerNodePolicy: an attached policy defined outside this bundle (for example an AWS-managed policy); its permissions are not modelled; arn:aws:iam::aws:policy/AmazonEKS_CNI_Policy: an attached policy defined outside this bundle (for example an AWS-managed policy); its permissions are not modelled</span>
 </td>
 </tr><tr>
 <td><code>finding.compliance.iam-least-privilege-assumable-by-any-principal.aws_iam_role.eks_node</code><br>IAM role aws_iam_role.eks_node: least-privilege check for an overly broad trust policy</td>
@@ -1009,8 +1009,8 @@ satisfied
 <td class="not-assessable">
 <span class="reason">not_assessable: impact dimension not evaluated by this compliance check</span>
 </td>
-<td>
-satisfied
+<td class="not-assessable">
+<span class="reason">not_assessable: principal &#34;aws_iam_role.payments_app&#34; has identity policies that could not be read: aws_iam_policy.payments_app: the policy document is not a static value (it references a resource or variable, or uses a function other than jsonencode of constants)</span>
 </td>
 </tr><tr>
 <td><code>finding.compliance.iam-least-privilege-assumable-by-any-principal.aws_iam_role.payments_app</code><br>IAM role aws_iam_role.payments_app: least-privilege check for an overly broad trust policy</td>

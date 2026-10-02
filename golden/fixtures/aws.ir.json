@@ -1,7 +1,7 @@
 {
   "schema_version": "1.4.0",
   "version_number": 1,
-  "version_hash": "sha256:3355c65e192f1c44f667bd284e10b16ae260a925563b4c6e46b5c829e70e42fb",
+  "version_hash": "sha256:b8bd5d09fff58cbdc44530bd97058fca4b12b0de124fbd0e1f2b65b908ecbeef",
   "nodes": [
     {
       "id": "aws_db_instance.payments",
@@ -236,7 +236,10 @@
         "name": "payments-eks-cluster-role",
         "tags": {
           "Name": "payments-eks-cluster-role"
-        }
+        },
+        "unresolved_identity_policies": [
+          "arn:aws:iam::aws:policy/AmazonEKSClusterPolicy: an attached policy defined outside this bundle (for example an AWS-managed policy); its permissions are not modelled"
+        ]
       },
       "provenance": {
         "kind": "stated",
@@ -273,7 +276,12 @@
         "name": "payments-eks-node-role",
         "tags": {
           "Name": "payments-eks-node-role"
-        }
+        },
+        "unresolved_identity_policies": [
+          "arn:aws:iam::aws:policy/AmazonEC2ContainerRegistryReadOnly: an attached policy defined outside this bundle (for example an AWS-managed policy); its permissions are not modelled",
+          "arn:aws:iam::aws:policy/AmazonEKSWorkerNodePolicy: an attached policy defined outside this bundle (for example an AWS-managed policy); its permissions are not modelled",
+          "arn:aws:iam::aws:policy/AmazonEKS_CNI_Policy: an attached policy defined outside this bundle (for example an AWS-managed policy); its permissions are not modelled"
+        ]
       },
       "provenance": {
         "kind": "stated",
@@ -312,7 +320,10 @@
         "tags": {
           "Compliance": "PCI",
           "Name": "payments-app-role"
-        }
+        },
+        "unresolved_identity_policies": [
+          "aws_iam_policy.payments_app: the policy document is not a static value (it references a resource or variable, or uses a function other than jsonencode of constants)"
+        ]
       },
       "provenance": {
         "kind": "stated",

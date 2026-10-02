@@ -17,6 +17,8 @@ import (
 	"github.com/hashicorp/hcl/v2"
 	"github.com/hashicorp/hcl/v2/hclparse"
 	"github.com/hashicorp/hcl/v2/hclsyntax"
+	"github.com/zclconf/go-cty/cty/function"
+	"github.com/zclconf/go-cty/cty/function/stdlib"
 )
 
 // reservedTraversalRoots are traversal roots that are never a resource reference —
@@ -268,13 +270,19 @@ func resourceRefFromTraversal(trav hcl.Traversal) (ResourceRef, bool) {
 	return ResourceRef{ResourceType: root.Name, ResourceName: attr.Name}, true
 }
 
-// literalValue evaluates expr with a nil context — per hcl.Expression's own contract,
+// staticEvalContext lets literalValue evaluate jsonencode() of constants (PC-157): the way Terraform
+// authors write an IAM policy document. jsonencode is pure and deterministic (object keys are sorted),
+// and a call that references a resource or variable still fails to evaluate, so it stays non-literal.
+// No other function is offered, so nothing needing a runtime context is evaluated.
+var staticEvalContext = &hcl.EvalContext{Functions: map[string]function.Function{"jsonencode": stdlib.JSONEncodeFunc}}
+
+// literalValue evaluates expr with a context that offers only jsonencode — per hcl.Expression's own contract,
 // this succeeds only for a pure constant (no variables, no functions needing a runtime
 // context). Anything else (a function call, a conditional, a variable reference, real
 // string interpolation) fails here and is simply omitted from ParsedResource.Attributes
 // — never fabricated, per §15's "complex interpolation... out of scope for v1."
 func literalValue(expr hcl.Expression) (any, bool) {
-	val, diags := expr.Value(nil)
+	val, diags := expr.Value(staticEvalContext)
 	if diags.HasErrors() || !val.IsWhollyKnown() {
 		return nil, false
 	}

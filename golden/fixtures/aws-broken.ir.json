@@ -1,7 +1,7 @@
 {
   "schema_version": "1.4.0",
   "version_number": 1,
-  "version_hash": "sha256:ee2d0f794df02680a218c0fdcc30f2929a29d9669d7fdf90c58ff0b51c11339a",
+  "version_hash": "sha256:d0371795b0678fedeffb12c71bbaba125b4d9320fa4e165d200396ae9b26c683",
   "nodes": [
     {
       "id": "aws_db_instance.payments",
@@ -199,7 +199,10 @@
         "name": "payments-eks-cluster-role",
         "tags": {
           "Name": "payments-eks-cluster-role"
-        }
+        },
+        "unresolved_identity_policies": [
+          "arn:aws:iam::aws:policy/AmazonEKSClusterPolicy: an attached policy defined outside this bundle (for example an AWS-managed policy); its permissions are not modelled"
+        ]
       },
       "provenance": {
         "kind": "stated",
@@ -236,7 +239,12 @@
         "name": "payments-eks-node-role",
         "tags": {
           "Name": "payments-eks-node-role"
-        }
+        },
+        "unresolved_identity_policies": [
+          "arn:aws:iam::aws:policy/AmazonEC2ContainerRegistryReadOnly: an attached policy defined outside this bundle (for example an AWS-managed policy); its permissions are not modelled",
+          "arn:aws:iam::aws:policy/AmazonEKSWorkerNodePolicy: an attached policy defined outside this bundle (for example an AWS-managed policy); its permissions are not modelled",
+          "arn:aws:iam::aws:policy/AmazonEKS_CNI_Policy: an attached policy defined outside this bundle (for example an AWS-managed policy); its permissions are not modelled"
+        ]
       },
       "provenance": {
         "kind": "stated",
@@ -248,6 +256,28 @@
       "type": "identity",
       "resolution": "known",
       "capability": {},
+      "iam_identity_policies": [
+        {
+          "id": "aws_iam_policy.payments_app",
+          "version": "2012-10-17",
+          "statements": [
+            {
+              "sid": "AppAccess",
+              "effect": "Allow",
+              "action": [
+                "*"
+              ],
+              "resource": [
+                "*"
+              ]
+            }
+          ],
+          "provenance": {
+            "kind": "stated",
+            "source": "ingest/iam:aws_iam_policy.payments_app"
+          }
+        }
+      ],
       "iam_trust_policy": {
         "id": "aws_iam_role.payments_app",
         "version": "2012-10-17",

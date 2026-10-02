@@ -181,9 +181,40 @@ multi-core database. Evidence: `docs/eval/latency-predicted-vs-observed-10ms-ser
 (+ `-run1`), `latency-predicted-vs-observed-fast-select.json`, and the two earlier means-only
 fast-select runs `latency-fast-select-means-only-1/2.json`.
 
+## Scenario 5: a seeded IAM defect the engine never saw (PC-157) — a real miss
+
+**Predicted:** golden/aws-broken seeds defect 7, an application role with `Action = "*"` on
+`Resource = "*"`, so the engine's least-privilege check should report that role `unsatisfied`, and
+golden/aws's scoped role should report `satisfied`.
+
+**Observed:** the broken role reported **satisfied**, and so did the good one. Neither was ever
+evaluated. Both bundles write the policy as `jsonencode({...})`; ingest only read literal strings, so
+the document was silently dropped, the role ended up with no statements, and the evaluator read "no
+statement allows it" as an implicit deny. The agent-iteration acceptance test passed throughout because
+it never needed to fix defect 7.
+
+**How it surfaced:** reading the SOC 2 and PCI DSS criteria to cite CC6.3 and 7.2.2 against the existing
+IAM evidence (PC-121). A control that cites "least privilege" has to be checked against a bundle that
+violates it, and this one did not fail.
+
+**Class:** the same one as the misses above, an input silently dropped between two components that each
+believed the other handled it, plus an I4 failure (an unread document is not a pass).
+
+**Fix:** ingest evaluates `jsonencode` of constants, so the policy is read; a policy it still cannot read
+(it references a resource or variable, is malformed, or is an AWS-managed policy defined outside the
+bundle) is recorded on the role and makes every IAM evaluation of it `not_assessable`, because an unread
+statement could hold an explicit Deny. Negative controls: dropping either half fails tests. Result:
+defect 7 is now `unsatisfied`; golden/aws's roles are honestly `not_assessable` (their policies reference
+resource ARNs, and two attach AWS-managed policies), where they used to read as a vacuous `satisfied`. The
+agent-iteration loop now fixes defect 7 too and still converges in 2 iterations (bound 5).
+
+**Limit, stated:** a policy that references a resource ARN is not assessable at all today. Evaluating the
+parts of such a policy that do not depend on the unresolved ARN is a larger change (tri-state resource
+matching) and is not attempted here.
+
 ## What this adds up to
 
-Two real, consequential misses are documented above (and a third, in the latency model, whose measurement was itself wrong first), both eventually caught, both with
+Several real, consequential misses are documented above (the latency-model one's measurement was itself wrong first), both eventually caught, both with
 actual engine fixes rather than caveats — and both belong to the same failure class:
 independent code paths silently disagreeing about what a shared value means. That
 pattern, once named, is now something this codebase tests for directly rather than
