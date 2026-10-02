@@ -6,7 +6,7 @@ name: rung3-web
 criticality: tier2
 data_classification: internal
 regions:
-  - us-east-1
+  - eu-north-1
 requirements:
   - id: availability.target
     value: 99.9

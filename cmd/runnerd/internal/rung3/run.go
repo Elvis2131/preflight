@@ -75,7 +75,7 @@ func (c *Config) defaults() {
 		c.Log = func(string, ...any) {}
 	}
 	if c.Region == "" {
-		c.Region = "us-east-1"
+		c.Region = "eu-north-1"
 	}
 	if c.BaselineFor == 0 {
 		c.BaselineFor = 20 * time.Second
@@ -150,7 +150,7 @@ func Run(ctx context.Context, c Config) (res Result, err error) {
 		return res, err
 	}
 	res = Result{
-		Experiment: "stop one of two ALB targets with AWS FIS (aws:ec2:stop-instances)",
+		Experiment: "stop one of two ALB targets with EC2 StopInstances",
 		RunID:      c.RunID, Account: c.Account, Region: c.Region, StartedAt: time.Now().UTC(),
 		Probes: []Probe{}, Health: []HealthSample{}, Comparison: []Comparison{},
 	}
@@ -231,8 +231,8 @@ func Run(ctx context.Context, c Config) (res Result, err error) {
 		}
 	}()
 
-	c.Log("starting FIS experiment %s", outs["experiment_template_id"])
-	expID, err := startExperiment(ctx, c, outs["experiment_template_id"])
+	c.Log("stopping instance %s (EC2 StopInstances)", outs["instance_a_id"])
+	err = stopInstance(ctx, c, outs["instance_a_id"])
 	if err != nil {
 		stopHealth()
 		<-healthDone
@@ -245,7 +245,7 @@ func Run(ctx context.Context, c Config) (res Result, err error) {
 			err = serr
 			break
 		}
-		if s, gerr := experimentState(ctx, c, expID); gerr == nil {
+		if s, gerr := instanceState(ctx, c, outs["instance_a_id"]); gerr == nil {
 			state = s
 		}
 	}
@@ -258,7 +258,7 @@ func Run(ctx context.Context, c Config) (res Result, err error) {
 	res.Probes = relativeProbes(raw, faultStart)
 	mu.Unlock()
 	res.Health = relativeHealth(samples, faultStart)
-	res.Provenance = observedProvenance("fis-stop-instances")
+	res.Provenance = observedProvenance("ec2-stop-instances")
 	res.Observed = Analyse(res.Probes, res.Health, state)
 	if cmp, cerr := Compare(c.PredictionsPath, res.Probes, res.Observed); cerr == nil {
 		res.Comparison = cmp
@@ -290,7 +290,7 @@ func terraformOutputs(ctx context.Context, tf func(context.Context, ...string) (
 	for k, v := range raw {
 		out[k] = fmt.Sprint(v.Value)
 	}
-	for _, need := range []string{"alb_dns_name", "target_group_arn", "experiment_template_id", "instance_a_id", "instance_b_id"} {
+	for _, need := range []string{"alb_dns_name", "target_group_arn", "instance_a_id", "instance_b_id"} {
 		if out[need] == "" {
 			return nil, fmt.Errorf("rung3: terraform output %q is missing", need)
 		}
@@ -339,32 +339,19 @@ func waitHealthy(ctx context.Context, c Config, health func(context.Context) (ma
 	}
 }
 
-func startExperiment(ctx context.Context, c Config, templateID string) (string, error) {
-	b, err := c.Exec(ctx, "aws", "fis", "start-experiment", "--experiment-template-id", templateID, "--client-token", c.RunID, "--region", c.Region, "--output", "json")
-	if err != nil {
-		return "", err
-	}
-	var d struct{ Experiment struct{ Id string } }
-	if err := json.Unmarshal(b, &d); err != nil || d.Experiment.Id == "" {
-		return "", fmt.Errorf("rung3: could not read the experiment id from %q", string(b))
-	}
-	return d.Experiment.Id, nil
+// stopInstance is the fault: one EC2 StopInstances call (the call AWS FIS's aws:ec2:stop-instances
+// makes; FIS itself is denied in this account by an organisation service control policy).
+func stopInstance(ctx context.Context, c Config, id string) error {
+	_, err := c.Exec(ctx, "aws", "ec2", "stop-instances", "--instance-ids", id, "--region", c.Region, "--output", "json")
+	return err
 }
 
-func experimentState(ctx context.Context, c Config, id string) (string, error) {
-	b, err := c.Exec(ctx, "aws", "fis", "get-experiment", "--id", id, "--region", c.Region, "--output", "json")
+func instanceState(ctx context.Context, c Config, id string) (string, error) {
+	b, err := c.Exec(ctx, "aws", "ec2", "describe-instances", "--instance-ids", id, "--region", c.Region, "--query", "Reservations[0].Instances[0].State.Name", "--output", "text")
 	if err != nil {
 		return "", err
 	}
-	var d struct {
-		Experiment struct {
-			State struct{ Status, Reason string }
-		}
-	}
-	if err := json.Unmarshal(b, &d); err != nil {
-		return "", err
-	}
-	return d.Experiment.State.Status + " (" + d.Experiment.State.Reason + ")", nil
+	return "instance " + strings.TrimSpace(string(b)), nil
 }
 
 type rawProbe struct {

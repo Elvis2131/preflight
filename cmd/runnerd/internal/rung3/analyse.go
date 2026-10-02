@@ -11,8 +11,8 @@ func ptr(f float64) *float64 { return &f }
 
 // Analyse turns the raw timeline into the measured numbers. It is pure: same timeline, same result.
 // A probe with AtMs < 0 happened before the fault was started (the baseline).
-func Analyse(probes []Probe, health []HealthSample, experimentState string) Observed {
-	o := Observed{ExperimentState: experimentState, BaselineServedBy: []string{}, ServedByAfterLastFail: []string{}}
+func Analyse(probes []Probe, health []HealthSample, faultState string) Observed {
+	o := Observed{FaultState: faultState, BaselineServedBy: []string{}, ServedByAfterLastFail: []string{}}
 	baseline := map[string]bool{}
 	var firstFail, lastFail int64 = -1, -1
 	for _, p := range probes {

@@ -25,7 +25,7 @@ type fakeCloud struct {
 	budgets     bool
 	budgetAlert bool
 	applyErr    error
-	fisErr      error
+	stopErr     error
 	destroyErrs int // fail this many destroy attempts first
 	leftover    []string
 	calls       []string
@@ -62,7 +62,7 @@ func (f *fakeCloud) exec(_ context.Context, name string, args ...string) ([]byte
 		}
 		return nil, nil
 	case name == "terraform" && strings.Contains(joined, " output "):
-		return []byte(fmt.Sprintf(`{"alb_dns_name":{"value":%q},"target_group_arn":{"value":"arn:tg"},"experiment_template_id":{"value":"EXT1"},"instance_a_id":{"value":"i-a"},"instance_b_id":{"value":"i-b"}}`, f.albURL)), nil
+		return []byte(fmt.Sprintf(`{"alb_dns_name":{"value":%q},"target_group_arn":{"value":"arn:tg"},"instance_a_id":{"value":"i-a"},"instance_b_id":{"value":"i-b"}}`, f.albURL)), nil
 	case name == "terraform" && strings.Contains(joined, " state list"):
 		return nil, nil
 	case name == "terraform":
@@ -73,14 +73,14 @@ func (f *fakeCloud) exec(_ context.Context, name string, args ...string) ([]byte
 			a = `{"State":"unused","Reason":"Target.InvalidState"}`
 		}
 		return []byte(fmt.Sprintf(`{"TargetHealthDescriptions":[{"Target":{"Id":"i-a"},"TargetHealth":%s},{"Target":{"Id":"i-b"},"TargetHealth":{"State":"healthy"}}]}`, a)), nil
-	case name == "aws" && strings.HasPrefix(joined, "fis start-experiment"):
-		if f.fisErr != nil {
-			return nil, f.fisErr
+	case name == "aws" && strings.HasPrefix(joined, "ec2 stop-instances"):
+		if f.stopErr != nil {
+			return nil, f.stopErr
 		}
 		f.faultAt.Store(time.Now().UnixNano())
-		return []byte(`{"experiment":{"id":"EXP1"}}`), nil
-	case name == "aws" && strings.HasPrefix(joined, "fis get-experiment"):
-		return []byte(`{"experiment":{"state":{"status":"completed","reason":"done"}}}`), nil
+		return []byte(`{"StoppingInstances":[{"InstanceId":"i-a"}]}`), nil
+	case name == "aws" && strings.HasPrefix(joined, "ec2 describe-instances"):
+		return []byte("stopped\n"), nil
 	case name == "aws" && strings.HasPrefix(joined, "resourcegroupstaggingapi"):
 		var parts []string
 		for _, l := range f.leftover {
@@ -177,7 +177,7 @@ func TestRun_RefusedPreconditionsCreateNothing(t *testing.T) {
 	if _, err := Run(context.Background(), testConfig(t, f)); err == nil {
 		t.Fatal("expected a refusal")
 	}
-	if f.sawCall(" apply ") || f.sawCall(" init ") || f.sawCall("fis start-experiment") {
+	if f.sawCall(" apply ") || f.sawCall(" init ") || f.sawCall("ec2 stop-instances") {
 		t.Errorf("nothing may be applied or started when a precondition fails; calls: %v", f.calls)
 	}
 }
@@ -221,7 +221,7 @@ func TestRun_HappyPath_ObservesAndDestroys(t *testing.T) {
 func TestRun_DestroysEvenWhenTheRunFails(t *testing.T) {
 	for name, mut := range map[string]func(*fakeCloud){
 		"apply fails (a partial apply may exist)": func(f *fakeCloud) { f.applyErr = errors.New("apply boom") },
-		"the fault cannot be started":             func(f *fakeCloud) { f.fisErr = errors.New("fis boom") },
+		"the fault cannot be started":             func(f *fakeCloud) { f.stopErr = errors.New("stop boom") },
 	} {
 		f := newFake(t)
 		mut(f)

@@ -1,13 +1,13 @@
 // Package rung3 holds the PREDICTION half of PC-25's predicted-vs-observed experiment: what
-// Preflight (and AWS's own documentation) says will happen when AWS FIS stops one of two web
-// instances behind an ALB. It touches no cloud and holds no credential. The observing half, which
+// Preflight (and AWS's own documentation) says will happen when one of two web
+// instances behind an ALB is stopped with EC2 StopInstances. It touches no cloud and holds no credential. The observing half, which
 // does, lives in cmd/runnerd/internal/rung3 (P3, the only process allowed credentials, ADR-003).
 //
 // The prediction is written to predictions.json and committed BEFORE the experiment is run, so the
 // comparison cannot be adjusted after the fact.
 //
-// Scope, stated rather than implied: the experiment injects NODE loss (FIS aws:ec2:stop-instances on
-// one instance). It is not an availability-zone failure. Preflight's zone-kill findings are written
+// Scope, stated rather than implied: the experiment injects NODE loss (EC2 StopInstances on one
+// instance, the same call FIS's aws:ec2:stop-instances makes; FIS itself is denied in this account). It is not an availability-zone failure. Preflight's zone-kill findings are written
 // for the golden bundle's own subnets (core/findings_builder.go) and report not_assessable for
 // any other bundle, so they predict nothing here; the node_loss simulation is what applies.
 package rung3
@@ -28,7 +28,7 @@ const (
 	UnhealthyThresholdCount    = 2
 )
 
-// FaultTarget is the instance FIS stops (terraform: aws_fis_experiment_template.stop_az_a).
+// FaultTarget is the instance the runner stops (terraform: aws_instance.web_a).
 const FaultTarget = "aws_instance.web_a"
 
 // Statement is one checkable claim made before the run.
@@ -83,7 +83,7 @@ func Predict(bundleDir, workloadPath string) (Prediction, error) {
 	docs := core.NewProvenance(core.KindDerived, "AWS ELB docs (target-group-health-checks) applied to the declared health_check settings")
 
 	p := Prediction{
-		Experiment: "stop one of two ALB targets with AWS FIS (aws:ec2:stop-instances)",
+		Experiment: "stop one of two ALB targets with EC2 StopInstances",
 		Fault:      FaultTarget,
 	}
 	if viaB.Flows && !viaA.Flows {
@@ -141,7 +141,6 @@ func MirrorsTerraform(mainTF string) error {
 	for _, want := range []string{
 		fmt.Sprintf("interval            = %d", HealthCheckIntervalSeconds),
 		fmt.Sprintf("unhealthy_threshold = %d", UnhealthyThresholdCount),
-		`resource_arns  = [aws_instance.web_a.arn]`,
 	} {
 		if !strings.Contains(s, want) {
 			return fmt.Errorf("%s no longer declares %q", mainTF, want)

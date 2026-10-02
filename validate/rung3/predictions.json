@@ -1,5 +1,5 @@
 {
-  "experiment": "stop one of two ALB targets with AWS FIS (aws:ec2:stop-instances)",
+  "experiment": "stop one of two ALB targets with EC2 StopInstances",
   "fault": "aws_instance.web_a",
   "statements": [
     {

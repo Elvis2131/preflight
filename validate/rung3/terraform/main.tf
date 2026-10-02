@@ -1,6 +1,8 @@
-# PC-25 — Rung 3 experiment bundle: two web instances in two AZs behind an internet-facing ALB,
-# plus an AWS FIS experiment that stops the instance in AZ "a". Everything is ephemeral: the runner
-# applies, injects the fault, captures, and destroys in one run (cmd/runnerd/internal/rung3).
+# PC-25 — Rung 3 experiment bundle: two web instances in two AZs behind an internet-facing ALB.
+# The runner stops the instance in AZ "a" with a direct EC2 StopInstances call (the same API call AWS
+# FIS's aws:ec2:stop-instances action makes; FIS itself is denied in this account by an organisation
+# service control policy, so it is not used). Everything is ephemeral: the runner applies, injects the
+# fault, captures, and destroys in one run (cmd/runnerd/internal/rung3).
 #
 # Deliberately small and cheap: no NAT gateway, no public IPs on the instances (they never need the
 # internet), two t3.micro and one ALB — roughly USD 0.05 per hour while it exists.
@@ -21,7 +23,7 @@ terraform {
 
 variable "region" {
   type    = string
-  default = "us-east-1"
+  default = "eu-north-1"
 }
 
 variable "run_id" {
@@ -31,12 +33,12 @@ variable "run_id" {
 
 variable "az_a" {
   type    = string
-  default = "us-east-1a"
+  default = "eu-north-1a"
 }
 
 variable "az_b" {
   type    = string
-  default = "us-east-1b"
+  default = "eu-north-1b"
 }
 
 provider "aws" {
@@ -289,82 +291,12 @@ resource "aws_lb_listener" "http" {
   }
 }
 
-# --- the fault: AWS FIS stops the instance in AZ "a" -------------------------------------------
-
-resource "aws_iam_role" "fis" {
-  name = "preflight-rung3-fis-${var.run_id}"
-  assume_role_policy = jsonencode({
-    Version = "2012-10-17"
-    Statement = [{
-      Effect    = "Allow"
-      Principal = { Service = "fis.amazonaws.com" }
-      Action    = "sts:AssumeRole"
-    }]
-  })
-}
-
-# Least privilege for the one action used (aws:ec2:stop-instances needs ec2:StopInstances and
-# ec2:StartInstances; ec2:DescribeInstances is optional), restricted to this run's instances by tag.
-resource "aws_iam_role_policy" "fis" {
-  name = "stop-this-runs-instances"
-  role = aws_iam_role.fis.id
-  policy = jsonencode({
-    Version = "2012-10-17"
-    Statement = [
-      {
-        Effect   = "Allow"
-        Action   = ["ec2:StopInstances", "ec2:StartInstances"]
-        Resource = "arn:aws:ec2:${var.region}:*:instance/*"
-        Condition = {
-          StringEquals = { "aws:ResourceTag/preflight-run" = var.run_id }
-        }
-      },
-      {
-        Effect   = "Allow"
-        Action   = ["ec2:DescribeInstances"]
-        Resource = "*"
-      }
-    ]
-  })
-}
-
-resource "aws_fis_experiment_template" "stop_az_a" {
-  description = "Preflight Rung 3: stop the web instance in AZ a"
-  role_arn    = aws_iam_role.fis.arn
-
-  # No stop condition alarm: the experiment is one StopInstances call on one instance and the run
-  # is bounded by the runner's own timeout and by destroy. Recorded rather than silently omitted.
-  stop_condition {
-    source = "none"
-  }
-
-  action {
-    name      = "stop-web-a"
-    action_id = "aws:ec2:stop-instances"
-    target {
-      key   = "Instances"
-      value = "web-a"
-    }
-  }
-
-  target {
-    name           = "web-a"
-    resource_type  = "aws:ec2:instance"
-    selection_mode = "ALL"
-    resource_arns  = [aws_instance.web_a.arn]
-  }
-}
-
 output "alb_dns_name" {
   value = aws_lb.main.dns_name
 }
 
 output "target_group_arn" {
   value = aws_lb_target_group.web.arn
-}
-
-output "experiment_template_id" {
-  value = aws_fis_experiment_template.stop_az_a.id
 }
 
 output "instance_a_id" {

@@ -1,5 +1,5 @@
 // Package rung3 is PC-25: the Rung 3 experiment runner. It applies the bundle in validate/rung3,
-// injects one real fault with AWS FIS, captures what the load balancer and the clients actually
+// injects one real fault (EC2 StopInstances on one of two ALB targets), captures what the load balancer and the clients actually
 // saw, and destroys everything, in one run.
 //
 // It lives under cmd/runnerd/internal/ so that Go itself keeps every other process from importing
@@ -58,7 +58,7 @@ type Target struct {
 
 // Observed is what was measured. Every number comes from the run; none is derived from the model.
 type Observed struct {
-	ExperimentState        string   `json:"experiment_state"`
+	FaultState             string   `json:"fault_state"`
 	BaselineProbes         int      `json:"baseline_probes"`
 	BaselineFailures       int      `json:"baseline_failures"`
 	BaselineServedBy       []string `json:"baseline_served_by"`
