@@ -372,17 +372,22 @@ func BuildTrace(ir *IR, sourceID, destID, sourceCIDR, protocol string, port int)
 		return finalize(trace)
 	}
 
-	// 7b. LB target registration (PC-130): when the source is a load balancer whose
-	// targets are modelled (canvas routes_to edges), the destination must still be one
-	// of them. No modelled registration (HCL bundles) = no claim, never a guessed deny.
+	// 7b. LB target registration (PC-130, PC-150): when the source is a load balancer whose
+	// targets are modelled (canvas routes_to edges, or HCL attachment resources), the
+	// destination must still be one of them. Attachments-only registration can prove a target
+	// registered but never that one is not, so an unlisted target is not_assessable there. No
+	// modelled registration at all = no claim, never a guessed deny.
 	if sourceID != "" && sourceNode.Type == NodeTypeLoadBalancer {
-		if known, registered := targetRegistration(ir, sourceID, destID); known {
-			if registered {
-				step("target_registration", destID, "check the destination is a registered target of the load balancer", TraceAllow, destID+" is registered with "+sourceID, "")
-			} else {
-				step("target_registration", destID, "check the destination is a registered target of the load balancer", TraceDeny, destID+" is not a registered target of "+sourceID+" (deregistered or never registered)", "LB "+sourceID+" targets")
-				return finalize(trace)
-			}
+		switch targetRegistration(ir, sourceID, destID) {
+		case registrationRegistered:
+			step("target_registration", destID, "check the destination is a registered target of the load balancer", TraceAllow, destID+" is registered with "+sourceID, "")
+		case registrationDeregistered, registrationAbsent:
+			step("target_registration", destID, "check the destination is a registered target of the load balancer", TraceDeny, destID+" is not a registered target of "+sourceID+" (deregistered or never registered)", "LB "+sourceID+" targets")
+			return finalize(trace)
+		case registrationNotListed:
+			step("target_registration", destID, "check the destination is a registered target of the load balancer", TraceNotAssessable,
+				destID+" is not among the targets the design registers with "+sourceID+" through attachment resources, and a target group can also be filled by an Auto Scaling group, an ECS service or a controller, none of which the design shows", "")
+			return finalize(trace)
 		}
 	}
 

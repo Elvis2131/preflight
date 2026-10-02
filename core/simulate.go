@@ -308,7 +308,7 @@ func resolveFaults(ir *IR, workload Workload, faults []Fault) (mutatedIR *IR, ki
 		case "target_deregistration":
 			mutated, ok := WithTargetDeregistered(mutatedIR, f.Target, f.DeregisterTarget)
 			if !ok {
-				return nil, nil, false, "target_deregistration target \"" + f.Target + "\" is not a load balancer with a modelled registration of \"" + f.DeregisterTarget + "\" (load-balancer targets are authored on the canvas; HCL bundles carry none) — refusing to guess"
+				return nil, nil, false, "target_deregistration target \"" + f.Target + "\" is not a load balancer with a modelled registration of \"" + f.DeregisterTarget + "\" (registrations come from canvas-authored targets or HCL aws_lb_target_group_attachment resources; targets registered by an Auto Scaling group, ECS service or controller are not visible) — refusing to guess"
 			}
 			mutatedIR = mutated
 		case "nacl_rule_change":

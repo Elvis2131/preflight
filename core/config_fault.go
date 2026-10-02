@@ -125,10 +125,10 @@ func fromNACLRule(r NACLRule) map[string]any {
 
 // lbTargetEdges returns the routes_to edges that mean "this load balancer serves
 // traffic to that target" — a routes_to edge OUT of a load_balancer node with no
-// destination_cidr (route-table routes always carry one). This is a fact the canvas
-// producer authors explicitly; HCL ingest does not (golden/aws has no
-// aws_lb_target_group_attachment), so for HCL bundles an LB has no such edges and
-// registration is UNKNOWN — never assumed either way (I4).
+// destination_cidr (route-table routes always carry one). The canvas authors these
+// explicitly; HCL ingest derives them from aws_lb_target_group_attachment (PC-150) and
+// marks them attachments-only. A load balancer with none (golden/aws registers its
+// targets through a controller) has registration UNKNOWN — never assumed either way (I4).
 func lbTargetEdges(ir *IR, lbID string) []Edge {
 	var out []Edge
 	for _, e := range ir.Edges {
@@ -170,17 +170,50 @@ func WithTargetDeregistered(ir *IR, lbID, targetID string) (*IR, bool) {
 	return out, true
 }
 
-// targetRegistration reports, for a hop whose source is a load balancer, whether
-// registration is modelled at all (known) and whether destID is registered.
-func targetRegistration(ir *IR, lbID, destID string) (known, registered bool) {
+// registrationState is what the IR says about whether a destination is registered with a load balancer.
+type registrationState int
+
+const (
+	// registrationUnmodelled: the IR carries no registration facts for this load balancer at all
+	// (an HCL bundle with no attachment resources, or controller-managed targets). No claim.
+	registrationUnmodelled registrationState = iota
+	registrationRegistered
+	// registrationDeregistered: the destination WAS registered and a deregistration fault removed it.
+	// The only way an attachments-only load balancer yields a deny.
+	registrationDeregistered
+	// registrationNotListed: registration facts exist, the destination is not among them, and they are
+	// attachments-only (PC-150), so the destination may still be registered by an Auto Scaling group, an
+	// ECS service or a controller. Not assessable, never a deny.
+	registrationNotListed
+	// registrationAbsent: complete registration facts (canvas-authored) and the destination is not in them.
+	registrationAbsent
+)
+
+// registrationAttachmentsOnly is the value ingest stamps as RawAttributes["registration_scope"] on an
+// edge derived only from HCL attachment resources (ingest.RegistrationScopeAttachments).
+const registrationAttachmentsOnly = "attachments"
+
+// targetRegistration reports, for a hop whose source is a load balancer, what the IR says about
+// whether destID is registered.
+func targetRegistration(ir *IR, lbID, destID string) registrationState {
 	edges := lbTargetEdges(ir, lbID)
 	if len(edges) == 0 {
-		return false, false
+		return registrationUnmodelled
 	}
 	for _, e := range edges {
 		if e.To == destID {
-			return true, true
+			return registrationRegistered
 		}
 	}
-	return true, false
+	for _, e := range edges {
+		if e.To == removedRouteTargetPrefix+destID {
+			return registrationDeregistered
+		}
+	}
+	for _, e := range edges {
+		if e.RawAttributes["registration_scope"] != registrationAttachmentsOnly {
+			return registrationAbsent
+		}
+	}
+	return registrationNotListed
 }

@@ -165,6 +165,7 @@ func Ingest(dir string, registry providers.Registry, versionNumber int) (Result,
 	edges := buildEdges(parsed, byKey, registry, ownedRouteRefs)
 	edges = append(edges, mappedEdges...)
 	edges = append(edges, routeEdges...)
+	edges = append(edges, buildLBTargetEdges(parsed, byKey, registry)...)
 	mergeSecurityGroupRules(nodes, parsed)
 	mergeNetworkACLRules(nodes, parsed)
 	markMainRouteTables(nodes, parsed)
