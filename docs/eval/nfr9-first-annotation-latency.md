@@ -41,3 +41,53 @@ Fresh live eval, same model: 18/18 accepted, 0 rejected, fabricated-likelihood 0
 injection complied = false, findings unchanged = true. `go run ./cmd/reason-eval -check-detection
 docs/eval/reason-eval.json` → 0 of 18. The previous report is kept as `reason-eval-pc77-run1.json`
 (it scored 1 of 17).
+
+## Sweep by reasoning mode (PC-160)
+Same method, fresh session per run, each run drained to `done`. Raw output: `nfr9-latency-sweep-raw.txt`.
+Modes use NVIDIA's documented `chat_template_kwargs` (`enable_thinking`, `low_effort`; model card), opt-in via
+`PREFLIGHT_REASON_REASONING` on `reasond`. Default behaviour is unchanged.
+
+| mode | runs | median | min | max | runs under 3 s | sorted first-annotation seconds |
+|---|---|---|---|---|---|---|
+| provider default | 6 (3 + 3, see note) | ~9 s | 6.4 | 46.5 | 0 of 6 | 6.41, 6.79, 7.59, 10.54, 38.9, 46.45 |
+| `off` | 10 | 3.8 s | 1.3 | 24.6 | 4 of 10 | 1.26, 1.31, 2.12, 2.23, 3.23, 4.32, 4.43, 9.47, 14.04, 24.55 |
+| `low_effort` | 10 | 2.4 s | 0.9 | 5.2 | 7 of 10 | 0.94, 1.53, 1.58, 2.05, 2.16, 2.58, 2.73, 3.49, 4.21, 5.21 |
+
+Note on the default row: the 10-run default sweep stopped after 3 runs (the sweep process was no longer
+running when checked; cause not established), so the default is the 3 runs above plus the 3 from the first
+measurement. Two default runs (38.9 s, 46.5 s) are far above the earlier 6.4 - 10.5 s; free-tier contention is a
+plausible cause but was not verified.
+
+Full-run eval per mode (18 findings each, same scorer; reports in this folder):
+
+| mode | accepted | rejected | fabricated likelihood | detection overstated | injection complied | total time | tokens |
+|---|---|---|---|---|---|---|---|
+| default | 18/18 | 0 | 0 | 0 | no | 168 s | 32,061 |
+| `off` | 18/18 | 0 | 0 | 0 | no | 55 s | 17,685 |
+| `low_effort` | 18/18 | 0 | 0 | 0 | no | 50 s | 19,288 |
+
+On a read-through of three findings side by side, the narratives in the three modes say the same things; `off` and
+`low_effort` are somewhat shorter (mean 513 / 477 characters against 618).
+
+### What this shows, and does not
+- Turning reasoning down is the lever: `low_effort` gets the median under 3 s and cuts a full run from 168 s to
+  50 s, with no loss on any scored check. Even so only 7 of 10 first annotations met 3 s, and the worst was 5.2 s.
+  A hard "under 3 s" is therefore not reliably met in any mode on this free tier. Variance is large (`off` ranged
+  1.3 - 24.6 s), so ten runs per mode is still a small sample.
+- Not shown: quality beyond the automated checks and one short read-through; behaviour under a paid tier or
+  concurrent users (P2 serialises runs, `reason/handler_test.go` pins it).
+
+### Disconnect behaviour (verified)
+`reasond` cancels a run when its client hangs up (a first draft of the pinning test freed the worker exactly
+that way). P1 does not hang up: it runs the job detached so a complete set can be stored for replay (ADR-005).
+So the 180 - 200 s waits in the first attempt were the P1 job of the abandoned request still holding the
+serialised worker. That is by design; the consequence is head-of-line blocking between sessions. Pinned by
+`TestHandler_SecondRunWaitsForTheFirst`.
+
+### Options for NFR-9 (decision for the owner; none applied)
+1. **Recommended: restate and tune.** Make `low_effort` the reasond default and restate NFR-9 as a percentile
+   (for example first annotation within 5 s for at least 90% of runs, measured live), keeping "never blocks
+   NFR-6" as is. The measured data supports roughly this and no more.
+2. Restate only: first stream event (`started`) as the 3 s figure, first annotation separate. Cheapest, but the
+   `started` event carries no content, so it would meet the letter and not the intent.
+3. Keep 3 s and change model/hosting (paid tier, smaller non-reasoning model). Needs its own evaluation.

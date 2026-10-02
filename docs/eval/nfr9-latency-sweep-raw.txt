@@ -1,0 +1,73 @@
+== mode off
+{"run": 1, "assess_s": 0.249, "first_event": "event: annotation @ 14.04s", "first_annotation_s": 14.04}
+{"run": 2, "assess_s": 0.175, "first_event": "event: annotation @ 2.23s", "first_annotation_s": 2.23}
+{"run": 3, "assess_s": 0.2, "first_event": "event: annotation @ 3.23s", "first_annotation_s": 3.23}
+{"run": 4, "assess_s": 0.137, "first_event": "event: annotation @ 4.43s", "first_annotation_s": 4.43}
+{"run": 5, "assess_s": 0.166, "first_event": "event: annotation @ 1.31s", "first_annotation_s": 1.31}
+{"run": 6, "assess_s": 0.205, "first_event": "event: annotation @ 2.12s", "first_annotation_s": 2.12}
+{"run": 7, "assess_s": 0.176, "first_event": "event: annotation @ 1.26s", "first_annotation_s": 1.26}
+{"run": 8, "assess_s": 0.137, "first_event": "event: rejected @ 0.03s", "first_annotation_s": 9.47}
+{"run": 9, "assess_s": 0.235, "first_event": "event: annotation @ 4.32s", "first_annotation_s": 4.32}
+{"run": 10, "assess_s": 0.164, "first_event": "event: annotation @ 24.55s", "first_annotation_s": 24.55}
+== mode low_effort
+{"run": 1, "assess_s": 0.202, "first_event": "event: annotation @ 2.16s", "first_annotation_s": 2.16}
+{"run": 2, "assess_s": 0.205, "first_event": "event: annotation @ 1.53s", "first_annotation_s": 1.53}
+{"run": 3, "assess_s": 0.185, "first_event": "event: annotation @ 2.58s", "first_annotation_s": 2.58}
+{"run": 4, "assess_s": 0.174, "first_event": "event: annotation @ 0.94s", "first_annotation_s": 0.94}
+{"run": 5, "assess_s": 0.199, "first_event": "event: annotation @ 4.21s", "first_annotation_s": 4.21}
+{"run": 6, "assess_s": 0.178, "first_event": "event: annotation @ 1.58s", "first_annotation_s": 1.58}
+{"run": 7, "assess_s": 0.211, "first_event": "event: annotation @ 5.21s", "first_annotation_s": 5.21}
+{"run": 8, "assess_s": 0.161, "first_event": "event: annotation @ 2.05s", "first_annotation_s": 2.05}
+{"run": 9, "assess_s": 0.182, "first_event": "event: annotation @ 3.49s", "first_annotation_s": 3.49}
+{"run": 10, "assess_s": 0.141, "first_event": "event: annotation @ 2.73s", "first_annotation_s": 2.73}
+== mode default
+{"run": 1, "assess_s": 0.139, "first_event": "event: annotation @ 38.90s", "first_annotation_s": 38.9}
+{"run": 2, "assess_s": 0.191, "first_event": "event: annotation @ 46.45s", "first_annotation_s": 46.45}
+{"run": 3, "assess_s": 0.11, "first_event": "event: annotation @ 7.59s", "first_annotation_s": 7.59}
+Traceback (most recent call last):
+  File "/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/urllib/request.py", line 1344, in do_open
+    h.request(req.get_method(), req.selector, req.data, headers,
+  File "/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/http/client.py", line 1336, in request
+    self._send_request(method, url, body, headers, encode_chunked)
+  File "/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/http/client.py", line 1382, in _send_request
+    self.endheaders(body, encode_chunked=encode_chunked)
+  File "/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/http/client.py", line 1331, in endheaders
+    self._send_output(message_body, encode_chunked=encode_chunked)
+  File "/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/http/client.py", line 1091, in _send_output
+    self.send(msg)
+  File "/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/http/client.py", line 1035, in send
+    self.connect()
+  File "/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/http/client.py", line 1001, in connect
+    self.sock = self._create_connection(
+                ^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/socket.py", line 865, in create_connection
+    raise exceptions[0]
+  File "/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/socket.py", line 850, in create_connection
+    sock.connect(sa)
+ConnectionRefusedError: [Errno 61] Connection refused
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/private/tmp/claude-501/-Users-larteyelvis-Documents-Developer-preflight/be39818d-6b9e-4621-a2b2-3c465eb64978/scratchpad/latency.py", line 11, in <module>
+    r = urllib.request.urlopen(urllib.request.Request(API + "/assess", body, {"Content-Type": "application/json"}), timeout=60)
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/urllib/request.py", line 215, in urlopen
+    return opener.open(url, data, timeout)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/urllib/request.py", line 515, in open
+    response = self._open(req, data)
+               ^^^^^^^^^^^^^^^^^^^^^
+  File "/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/urllib/request.py", line 532, in _open
+    result = self._call_chain(self.handle_open, protocol, protocol +
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/urllib/request.py", line 492, in _call_chain
+    result = func(*args)
+             ^^^^^^^^^^^
+  File "/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/urllib/request.py", line 1373, in http_open
+    return self.do_open(http.client.HTTPConnection, req)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/urllib/request.py", line 1347, in do_open
+    raise URLError(err)
+urllib.error.URLError: <urlopen error [Errno 61] Connection refused>
+/private/tmp/claude-501/-Users-larteyelvis-Documents-Developer-preflight/be39818d-6b9e-4621-a2b2-3c465eb64978/scratchpad/runmodes.sh:kill:13: kill 77067 failed: no such process
