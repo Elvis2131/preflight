@@ -1186,5 +1186,77 @@
         "source": "core/config_blast_surface:settlement"
       }
     }
+  },
+  {
+    "id": "finding.resilience.configuration-blast-surface.payment-rail",
+    "title": "Journey \"Payment rail: EKS -\u003e NAT -\u003e internet\": configuration blast surface (single rule changes that would break it)",
+    "dimensions": {
+      "trigger": "a single security-group or NACL rule is tightened, removed, or misconfigured — infrastructure intact, a rule changed",
+      "affected_components": [
+        "aws_eks_cluster.payments",
+        "internet"
+      ],
+      "detection": "unknown",
+      "impact": {
+        "state": "not_assessable",
+        "reason": "impact dimension not evaluated by this check",
+        "provenance": {
+          "kind": "derived",
+          "source": "core/config_blast_surface:payment-rail"
+        }
+      },
+      "likelihood": {
+        "state": "not_assessable",
+        "reason": "likelihood is not assessable from structural analysis alone — no frequency/probability data exists to assume from; an assumed guess here would be exactly the fabrication CLAUDE.md §10 warns against",
+        "provenance": {
+          "kind": "derived",
+          "source": "core/config_blast_surface:payment-rail"
+        }
+      },
+      "detectability": {
+        "state": "not_assessable",
+        "reason": "no detection mechanism is known or declared for this failure",
+        "provenance": {
+          "kind": "derived",
+          "source": "core/config_blast_surface:payment-rail"
+        }
+      },
+      "recoverability": {
+        "failover_path_exists": {
+          "state": "not_assessable",
+          "reason": "recoverability not evaluated by this check",
+          "provenance": {
+            "kind": "derived",
+            "source": "core/config_blast_surface:payment-rail"
+          }
+        },
+        "rpo_feasible": {
+          "state": "not_assessable",
+          "reason": "recoverability not evaluated by this check",
+          "provenance": {
+            "kind": "derived",
+            "source": "core/config_blast_surface:payment-rail"
+          }
+        }
+      }
+    },
+    "evidence": [
+      {
+        "description": "1 of 4 real rules on this journey's own path, if removed alone, would break it"
+      },
+      {
+        "node_id": "aws_security_group.workload",
+        "description": "removing this rule (egress tcp) alone breaks the journey",
+        "attribute": "security_group_rules"
+      }
+    ],
+    "outcome": {
+      "state": "assessed",
+      "value": "1 of 4 real rules on this journey's path would break it if changed alone",
+      "provenance": {
+        "kind": "derived",
+        "source": "core/config_blast_surface:payment-rail"
+      }
+    }
   }
 ]

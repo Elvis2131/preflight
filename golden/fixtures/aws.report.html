@@ -700,6 +700,7 @@ code{background:#f1f5f9;padding:0 .2rem}
 <p>Per-dimension counts only — no composite architecture score.</p>
 <h3>Scorecard status counts</h3>
 <table><tr><th>Status</th><th>Count</th></tr>
+<tr><td>1 of 4 real rules on this journey&#39;s path would break it if changed alone</td><td>1</td></tr>
 <tr><td>2 component(s) affected</td><td>1</td></tr>
 <tr><td>4 component(s) affected</td><td>1</td></tr>
 <tr><td>5 of 7 real rules on this journey&#39;s path would break it if changed alone</td><td>1</td></tr>
@@ -999,13 +1000,23 @@ satisfied
 <td class="not-assessable">
 <span class="reason">not_assessable: journey &#34;settlement&#34; does not structurally flow today (Blocked at aws_sqs_queue.settlement (route_selection): destination has no resolvable effective route table) — a configuration blast surface is not meaningful without a working baseline</span>
 </td>
+</tr><tr>
+<td><code>finding.resilience.configuration-blast-surface.payment-rail</code><br>Journey &#34;Payment rail: EKS -&gt; NAT -&gt; internet&#34;: configuration blast surface (single rule changes that would break it)</td>
+<td>a single security-group or NACL rule is tightened, removed, or misconfigured — infrastructure intact, a rule changed</td>
+<td>unknown</td>
+<td class="not-assessable">
+<span class="reason">not_assessable: impact dimension not evaluated by this check</span>
+</td>
+<td>
+1 of 4 real rules on this journey&#39;s path would break it if changed alone
+</td>
 </tr></table>
 
 
 <h2>Traffic and capacity</h2>
 
 <table><tr><th>Journey</th><th>Flows</th><th>Blocked at</th><th>Reason</th></tr>
-<tr><td>checkout</td><td>true</td><td></td><td class="reason"></td></tr><tr><td>settlement</td><td>false</td><td>aws_sqs_queue.settlement</td><td class="reason">Blocked at aws_sqs_queue.settlement (route_selection): destination has no resolvable effective route table</td></tr>
+<tr><td>checkout</td><td>true</td><td></td><td class="reason"></td></tr><tr><td>settlement</td><td>false</td><td>aws_sqs_queue.settlement</td><td class="reason">Blocked at aws_sqs_queue.settlement (route_selection): destination has no resolvable effective route table</td></tr><tr><td>payment-rail</td><td>true</td><td></td><td class="reason"></td></tr>
 </table>
 
 

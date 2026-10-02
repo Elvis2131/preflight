@@ -94,6 +94,25 @@ journeys:
     protocol: tcp
     port: 443
     criticality: tier1
+  # PC-155: an outbound journey. The workload calls the external payment rail over the
+  # internet, through its AZ's NAT gateway. The far side is outside the design and is not
+  # modelled; the journey is allowed or blocked only on the route, NACL and security-group
+  # decisions the design itself makes. Payload sizes are declared estimates, like
+  # checkout's: a card-authorisation request and its response.
+  - id: payment-rail
+    name: "Payment rail: EKS -> NAT -> internet"
+    path:
+      - aws_eks_cluster.payments
+      - internet
+    protocol: tcp
+    port: 443
+    criticality: tier1
+    # steady_rps is declared (usage cost needs it); peak_rps is deliberately NOT. The rail
+    # call is made while serving a checkout request, so its load on the workload is already
+    # inside checkout's offered load; declaring a peak here would count it twice.
+    steady_rps: 60
+    avg_request_bytes: 4096
+    avg_response_bytes: 2048
 
 # --- Everything below is NOT part of the frozen Workload schema -----------------------
 #

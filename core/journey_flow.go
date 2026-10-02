@@ -201,7 +201,10 @@ func computeJourneyPathFlow(ir *IR, j DeclaredJourney, killed map[string]bool) J
 			var lastSource, lastReason string
 			for _, s := range sources {
 				var trace Trace
-				if s == JourneyInternetSentinel {
+				if d == JourneyInternetSentinel {
+					// PC-155: an outbound hop leaves the design; there is no destination node.
+					trace = BuildOutboundTrace(ir, s, j.Protocol, hopPort)
+				} else if s == JourneyInternetSentinel {
 					trace = BuildTrace(ir, "", d, "0.0.0.0/0", j.Protocol, hopPort)
 				} else {
 					trace = BuildTrace(ir, s, d, "", j.Protocol, hopPort)
