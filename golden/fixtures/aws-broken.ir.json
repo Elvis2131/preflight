@@ -1,7 +1,7 @@
 {
   "schema_version": "1.4.0",
   "version_number": 1,
-  "version_hash": "sha256:cccd542636046f1e51e01722728e3c4acd5650535fe8a7f192279b8114c1b616",
+  "version_hash": "sha256:ee2d0f794df02680a218c0fdcc30f2929a29d9669d7fdf90c58ff0b51c11339a",
   "nodes": [
     {
       "id": "aws_db_instance.payments",
@@ -70,6 +70,23 @@
       "provenance": {
         "kind": "stated",
         "source": "/Users/larteyelvis/Documents/Developer/preflight/golden/aws-broken/rds.tf:15:aws_db_subnet_group.payments"
+      }
+    },
+    {
+      "id": "aws_eip.nat_a",
+      "type": "network_boundary",
+      "resolution": "known",
+      "raw_attributes": {
+        "capability_level": "NETWORK_BEHAVIOR",
+        "domain": "vpc",
+        "network_role": "elastic_ip",
+        "tags": {
+          "Name": "payments-nat-eip-a"
+        }
+      },
+      "provenance": {
+        "kind": "stated",
+        "source": "/Users/larteyelvis/Documents/Developer/preflight/golden/aws-broken/network.tf:143:aws_eip.nat_a"
       }
     },
     {
@@ -1008,6 +1025,17 @@
       "provenance": {
         "kind": "stated",
         "source": "/Users/larteyelvis/Documents/Developer/preflight/golden/aws-broken/alb.tf:5:aws_lb.payments"
+      }
+    },
+    {
+      "id": "aws_nat_gateway.nat_a-\u003eaws_eip.nat_a",
+      "type": "depends_on",
+      "from": "aws_nat_gateway.nat_a",
+      "to": "aws_eip.nat_a",
+      "resolution": "known",
+      "provenance": {
+        "kind": "stated",
+        "source": "/Users/larteyelvis/Documents/Developer/preflight/golden/aws-broken/network.tf:151:aws_nat_gateway.nat_a"
       }
     },
     {

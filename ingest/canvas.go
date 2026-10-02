@@ -242,6 +242,12 @@ func resolveCanvasCapabilityLevel(raw map[string]any, registry providers.Registr
 	if !ok || mapping.IsEdgeMapping() || mapping.NodeType != nodeType {
 		return raw
 	}
+	// An ingest-only mapping is one the canvas cannot author (the palette already hides it,
+	// server/catalog.go). Honouring it here keeps a hand-built canvas node of that service
+	// unmapped, so it never claims a capability the canvas cannot back (PC-156: aws_instance).
+	if mapping.IngestOnly {
+		return raw
+	}
 	if raw == nil {
 		raw = make(map[string]any, 1)
 	}

@@ -53,14 +53,28 @@ func BuildOutboundTrace(ir *IR, sourceID, protocol string, port int) Trace {
 	case !allowed:
 		step("route_selection", subnetID, "select the subnet's default route (0.0.0.0/0) toward the internet", TraceDeny, reason, "")
 		return finalizeOutbound(trace)
-	case targetKind != "nat_gateway":
-		// An internet gateway route only carries traffic for a resource with a public IPv4
-		// address or Elastic IP, which the IR does not model; never guessed.
+	case targetKind != "nat_gateway" && targetKind != "internet_gateway":
 		step("route_selection", subnetID, "select the subnet's default route (0.0.0.0/0) toward the internet", TraceNotAssessable,
-			"the default route targets a "+orUnknown(targetKind)+", not a NAT gateway; whether the source has a public address to use it is not modelled", "")
+			"the default route targets a "+orUnknown(targetKind)+", which is not modelled as an outbound path", "")
 		return finalizeOutbound(trace)
 	}
 	step("route_selection", subnetID, "select the subnet's default route (0.0.0.0/0) toward the internet", TraceAllow, reason, "")
+
+	// An internet gateway only carries IPv4 traffic for a resource that holds a public IPv4
+	// address (a NAT gateway supplies its own, so that route needs no such check).
+	if targetKind == "internet_gateway" {
+		pa := ResolvePublicIPv4(ir, sourceID, subnetID)
+		pubProv := prov
+		if pa.Assumed {
+			pubProv = NewProvenance(KindAssumed, "core/trace_outbound:"+subnetID+":map_public_ip_on_launch-default").WithReason(pa.Reason)
+		}
+		trace.Steps = append(trace.Steps, TraceStep{Step: "public_address", Component: sourceID,
+			Operation: "check the source holds a public IPv4 address (an internet gateway only carries IPv4 traffic for one)",
+			Decision:  pa.Decision, Reason: pa.Reason, RuleCited: pa.Rule, Reached: reached, Provenance: pubProv})
+		if pa.Decision != TraceAllow {
+			return finalizeOutbound(trace)
+		}
+	}
 
 	// NACL: the outbound rule on the source subnet, and the stateless return leg. The
 	// internet side has no NACL of its own, so a permissive placeholder stands in for it.
@@ -108,6 +122,98 @@ func BuildOutboundTrace(ir *IR, sourceID, protocol string, port int) Trace {
 	step("internet_boundary", JourneyInternetSentinel, "the request leaves the design at the internet boundary", TraceAllow,
 		"the far side is outside the design; its own network behaviour is not modelled and nothing is claimed about it", "")
 	return finalizeOutbound(trace)
+}
+
+// PublicAddress is ResolvePublicIPv4's answer: whether a resource holds a public IPv4 address,
+// and from which declared fact.
+type PublicAddress struct {
+	Decision TraceDecision
+	Reason   string
+	Rule     string
+	// Assumed is true when the answer rests on a documented default for an attribute the design
+	// does not declare, rather than on a stated value.
+	Assumed bool
+}
+
+// ResolvePublicIPv4 decides whether sourceID holds a public IPv4 address, from facts the design
+// declares, in AWS's own precedence (VPC User Guide, "Enable internet access for a VPC using an
+// internet gateway" and "IP addressing"):
+//  1. an Elastic IP associated with the resource gives it one, whatever else is set;
+//  2. otherwise a launch-time setting on the resource overrides the subnet's attribute;
+//  3. otherwise the subnet's auto-assign attribute decides, and when it is not declared the
+//     Terraform provider's documented default (false) applies, tagged assumed.
+//
+// A value declared but not literal (a variable) is unknown, never read as absent. A resource
+// type whose mapping gives no public_address_model is not_assessable: how that service obtains a
+// public address is not modelled (a Lambda function in a VPC, for one, is never given one by the
+// subnet attribute, so applying it would be wrong).
+func ResolvePublicIPv4(ir *IR, sourceID, subnetID string) PublicAddress {
+	src, ok := findNode(ir, sourceID)
+	if !ok {
+		return PublicAddress{Decision: TraceNotAssessable, Reason: "source node not found in the IR"}
+	}
+	if src.RawAttributes["public_address_model"] != "launch_attribute" {
+		return PublicAddress{Decision: TraceNotAssessable,
+			Reason: "how " + sourceID + " obtains a public IPv4 address is not modelled, so whether it can use an internet gateway is not assessable"}
+	}
+
+	for _, e := range ir.Edges {
+		if e.From == "" || e.To != sourceID {
+			continue
+		}
+		if n, ok := findNode(ir, e.From); ok && n.RawAttributes["network_role"] == "elastic_ip" {
+			return PublicAddress{Decision: TraceAllow, Reason: "an Elastic IP (" + e.From + ") is associated with " + sourceID,
+				Rule: "VPC User Guide, Enable internet access for a VPC using an internet gateway"}
+		}
+	}
+
+	const instanceAttr, subnetAttr = "associate_public_ip_address", "map_public_ip_on_launch"
+	if attrUnresolved(src, instanceAttr) {
+		return PublicAddress{Decision: TraceNotAssessable, Reason: sourceID + " sets " + instanceAttr + " to a value the design does not resolve, and no Elastic IP is associated"}
+	}
+	if v, ok := src.RawAttributes[instanceAttr].(bool); ok {
+		rule := "VPC User Guide, IP addressing: the launch-time setting overrides the subnet's attribute"
+		if v {
+			return PublicAddress{Decision: TraceAllow, Reason: sourceID + " is launched with " + instanceAttr + " = true", Rule: rule}
+		}
+		return PublicAddress{Decision: TraceDeny, Reason: sourceID + " is launched with " + instanceAttr + " = false and no Elastic IP is associated, so it has no public IPv4 address for the internet gateway to translate", Rule: rule}
+	}
+
+	sub, ok := findNode(ir, subnetID)
+	if !ok {
+		return PublicAddress{Decision: TraceNotAssessable, Reason: "subnet " + subnetID + " not found in the IR"}
+	}
+	if attrUnresolved(sub, subnetAttr) {
+		return PublicAddress{Decision: TraceNotAssessable, Reason: subnetID + " sets " + subnetAttr + " to a value the design does not resolve, and " + sourceID + " neither overrides it nor has an Elastic IP"}
+	}
+	rule := "VPC User Guide, IP addressing: the subnet attribute decides whether a network interface created in it receives a public IPv4 address"
+	if v, ok := sub.RawAttributes[subnetAttr].(bool); ok {
+		if v {
+			return PublicAddress{Decision: TraceAllow, Reason: subnetID + " auto-assigns a public IPv4 address (" + subnetAttr + " = true) and " + sourceID + " does not override it", Rule: rule}
+		}
+		return PublicAddress{Decision: TraceDeny, Reason: subnetID + " does not auto-assign a public IPv4 address (" + subnetAttr + " = false), " + sourceID + " does not override it, and no Elastic IP is associated", Rule: rule}
+	}
+	return PublicAddress{Decision: TraceDeny, Assumed: true, Rule: rule,
+		Reason: subnetID + " does not declare " + subnetAttr + ", so the Terraform AWS provider's documented default (false) applies; " + sourceID + " does not override it and no Elastic IP is associated"}
+}
+
+// attrUnresolved reports whether the node declared attr with a non-literal expression.
+func attrUnresolved(n Node, attr string) bool {
+	switch names := n.RawAttributes["unresolved_attributes"].(type) {
+	case []string:
+		for _, x := range names {
+			if x == attr {
+				return true
+			}
+		}
+	case []any:
+		for _, x := range names {
+			if s, _ := x.(string); s == attr {
+				return true
+			}
+		}
+	}
+	return false
 }
 
 func orUnknown(s string) string {

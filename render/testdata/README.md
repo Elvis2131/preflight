@@ -65,4 +65,4 @@ tolerate, and (b) bloat every report with the same artwork. The report diagram t
 label-based, and the golden SVG/HTML fixtures are byte-identical with or without the icon
 directory (the full suite proves it). If a future ticket wants icons in the report, the
 Graphviz version scope note in `render.go` applies and the fixtures would be regenerated and
-hand-verified.
+hand-verified. Regenerated 2026-10-02 (PC-156: golden/aws's IR gained the three NAT gateways' aws_eip nodes and their edges once aws_eip became a mapped type — same Graphviz 16.1.0, so content-only).

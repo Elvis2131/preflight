@@ -253,7 +253,7 @@ func buildNode(r ParsedResource, mapping providers.ResourceMapping) core.Node {
 		Capability:     buildCapability(r, mapping),
 		Sizing:         buildSizing(r.Attributes),
 		IAMTrustPolicy: buildTrustPolicy(r, prov),
-		RawAttributes:  withNetworkRole(withCapabilityLevel(r.Attributes, mapping.CapabilityLevel), mapping.NetworkRole),
+		RawAttributes:  withTrackedUnresolved(withPublicAddressModel(withNetworkRole(withCapabilityLevel(r.Attributes, mapping.CapabilityLevel), mapping.NetworkRole), mapping.PublicAddressModel), r, mapping),
 		Provenance:     prov,
 	}
 }
@@ -297,6 +297,33 @@ func withNetworkRole(attrs map[string]any, role string) map[string]any {
 		return attrs
 	}
 	attrs["network_role"] = role
+	return attrs
+}
+
+// withPublicAddressModel stamps the mapping's public-address model (PC-156), when it has one.
+func withPublicAddressModel(attrs map[string]any, model string) map[string]any {
+	if model == "" {
+		return attrs
+	}
+	attrs["public_address_model"] = model
+	return attrs
+}
+
+// withTrackedUnresolved records which of the mapping's tracked attributes were declared with a
+// non-literal expression (PC-156), sorted so the IR stays deterministic. A resource with no
+// such attribute gets no key at all, so existing fixtures do not change.
+func withTrackedUnresolved(attrs map[string]any, r ParsedResource, mapping providers.ResourceMapping) map[string]any {
+	var names []string
+	for _, name := range mapping.TrackUnresolved {
+		if r.NonLiteralAttributes[name] {
+			names = append(names, name)
+		}
+	}
+	if len(names) == 0 {
+		return attrs
+	}
+	sort.Strings(names)
+	attrs["unresolved_attributes"] = names
 	return attrs
 }
 

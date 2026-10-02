@@ -4,6 +4,9 @@ digraph preflight {
   edge [fontname="Helvetica", fontsize=9];
   "aws_db_instance.payments" [label="aws_db_instance.payments\nmanaged_database"];
   "aws_db_subnet_group.payments" [label="aws_db_subnet_group.payments\nnetwork_boundary"];
+  "aws_eip.nat_a" [label="aws_eip.nat_a\nnetwork_boundary"];
+  "aws_eip.nat_b" [label="aws_eip.nat_b\nnetwork_boundary"];
+  "aws_eip.nat_c" [label="aws_eip.nat_c\nnetwork_boundary"];
   "aws_eks_cluster.payments" [label="aws_eks_cluster.payments\ncontainer_workload"];
   "aws_elasticache_replication_group.payments" [label="aws_elasticache_replication_group.payments\ncache"];
   "aws_elasticache_subnet_group.payments" [label="aws_elasticache_subnet_group.payments\nnetwork_boundary"];
@@ -58,10 +61,13 @@ digraph preflight {
   "aws_lb.payments" -> "aws_subnet.public_b" [label="contained_in"];
   "aws_lb.payments" -> "aws_subnet.public_c" [label="contained_in"];
   "aws_lb.payments" -> "aws_wafv2_web_acl.payments" [label="depends_on"];
+  "aws_nat_gateway.nat_a" -> "aws_eip.nat_a" [label="depends_on"];
   "aws_nat_gateway.nat_a" -> "aws_internet_gateway.payments" [label="depends_on"];
   "aws_nat_gateway.nat_a" -> "aws_subnet.public_a" [label="contained_in"];
+  "aws_nat_gateway.nat_b" -> "aws_eip.nat_b" [label="depends_on"];
   "aws_nat_gateway.nat_b" -> "aws_internet_gateway.payments" [label="depends_on"];
   "aws_nat_gateway.nat_b" -> "aws_subnet.public_b" [label="contained_in"];
+  "aws_nat_gateway.nat_c" -> "aws_eip.nat_c" [label="depends_on"];
   "aws_nat_gateway.nat_c" -> "aws_internet_gateway.payments" [label="depends_on"];
   "aws_nat_gateway.nat_c" -> "aws_subnet.public_c" [label="contained_in"];
   "aws_route53_record.api" -> "aws_lb.payments" [label="depends_on"];

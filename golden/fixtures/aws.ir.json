@@ -1,7 +1,7 @@
 {
   "schema_version": "1.4.0",
   "version_number": 1,
-  "version_hash": "sha256:e2fef2590da8ac9511f4b294ae993969f3ba188e693cc43a65cf4528489ff1b5",
+  "version_hash": "sha256:3355c65e192f1c44f667bd284e10b16ae260a925563b4c6e46b5c829e70e42fb",
   "nodes": [
     {
       "id": "aws_db_instance.payments",
@@ -70,6 +70,57 @@
       "provenance": {
         "kind": "stated",
         "source": "/Users/larteyelvis/Documents/Developer/preflight/golden/aws/rds.tf:6:aws_db_subnet_group.payments"
+      }
+    },
+    {
+      "id": "aws_eip.nat_a",
+      "type": "network_boundary",
+      "resolution": "known",
+      "raw_attributes": {
+        "capability_level": "NETWORK_BEHAVIOR",
+        "domain": "vpc",
+        "network_role": "elastic_ip",
+        "tags": {
+          "Name": "payments-nat-eip-a"
+        }
+      },
+      "provenance": {
+        "kind": "stated",
+        "source": "/Users/larteyelvis/Documents/Developer/preflight/golden/aws/network.tf:139:aws_eip.nat_a"
+      }
+    },
+    {
+      "id": "aws_eip.nat_b",
+      "type": "network_boundary",
+      "resolution": "known",
+      "raw_attributes": {
+        "capability_level": "NETWORK_BEHAVIOR",
+        "domain": "vpc",
+        "network_role": "elastic_ip",
+        "tags": {
+          "Name": "payments-nat-eip-b"
+        }
+      },
+      "provenance": {
+        "kind": "stated",
+        "source": "/Users/larteyelvis/Documents/Developer/preflight/golden/aws/network.tf:147:aws_eip.nat_b"
+      }
+    },
+    {
+      "id": "aws_eip.nat_c",
+      "type": "network_boundary",
+      "resolution": "known",
+      "raw_attributes": {
+        "capability_level": "NETWORK_BEHAVIOR",
+        "domain": "vpc",
+        "network_role": "elastic_ip",
+        "tags": {
+          "Name": "payments-nat-eip-c"
+        }
+      },
+      "provenance": {
+        "kind": "stated",
+        "source": "/Users/larteyelvis/Documents/Developer/preflight/golden/aws/network.tf:155:aws_eip.nat_c"
       }
     },
     {
@@ -1085,6 +1136,17 @@
       }
     },
     {
+      "id": "aws_nat_gateway.nat_a-\u003eaws_eip.nat_a",
+      "type": "depends_on",
+      "from": "aws_nat_gateway.nat_a",
+      "to": "aws_eip.nat_a",
+      "resolution": "known",
+      "provenance": {
+        "kind": "stated",
+        "source": "/Users/larteyelvis/Documents/Developer/preflight/golden/aws/network.tf:163:aws_nat_gateway.nat_a"
+      }
+    },
+    {
       "id": "aws_nat_gateway.nat_a-\u003eaws_internet_gateway.payments",
       "type": "depends_on",
       "from": "aws_nat_gateway.nat_a",
@@ -1107,6 +1169,17 @@
       }
     },
     {
+      "id": "aws_nat_gateway.nat_b-\u003eaws_eip.nat_b",
+      "type": "depends_on",
+      "from": "aws_nat_gateway.nat_b",
+      "to": "aws_eip.nat_b",
+      "resolution": "known",
+      "provenance": {
+        "kind": "stated",
+        "source": "/Users/larteyelvis/Documents/Developer/preflight/golden/aws/network.tf:173:aws_nat_gateway.nat_b"
+      }
+    },
+    {
       "id": "aws_nat_gateway.nat_b-\u003eaws_internet_gateway.payments",
       "type": "depends_on",
       "from": "aws_nat_gateway.nat_b",
@@ -1126,6 +1199,17 @@
       "provenance": {
         "kind": "stated",
         "source": "/Users/larteyelvis/Documents/Developer/preflight/golden/aws/network.tf:173:aws_nat_gateway.nat_b"
+      }
+    },
+    {
+      "id": "aws_nat_gateway.nat_c-\u003eaws_eip.nat_c",
+      "type": "depends_on",
+      "from": "aws_nat_gateway.nat_c",
+      "to": "aws_eip.nat_c",
+      "resolution": "known",
+      "provenance": {
+        "kind": "stated",
+        "source": "/Users/larteyelvis/Documents/Developer/preflight/golden/aws/network.tf:183:aws_nat_gateway.nat_c"
       }
     },
     {

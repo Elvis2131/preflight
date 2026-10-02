@@ -1,0 +1,24 @@
+# EC2 instance -> compute (PC-156). Added for one reason: an instance is the resource whose
+# public-address behaviour AWS documents precisely, so an outbound journey through an internet
+# gateway can be answered rather than left not_assessable.
+#
+# Public address rule, from AWS's own documentation:
+#   - VPC User Guide, "Enable internet access for a VPC using an internet gateway": "To enable
+#     communication over the internet for IPv4, your instance must have a public IPv4 address.
+#     You can either configure your VPC to automatically assign public IPv4 addresses to your
+#     instances, or you can assign Elastic IP addresses to your instances."
+#   - VPC User Guide, "IP addressing": the subnet attribute decides whether a network interface
+#     created in it receives a public IPv4 address, and "Enabling or disabling the public IP
+#     addressing feature during instance launch ... overrides the subnet's public IP addressing
+#     attribute."
+# associate_public_ip_address is that launch-time setting; absent, the subnet's attribute applies.
+#
+# Ingest only: the canvas cannot author the launch setting or an Elastic IP, so the palette
+# must not offer a service whose semantics it would silently drop (the PC-149 precedent).
+resource_type: aws_instance
+node_type: compute
+capability_level: REQUEST_SIMULATION
+public_address_model: launch_attribute
+ingest_only: true
+track_unresolved:
+  - associate_public_ip_address

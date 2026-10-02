@@ -127,11 +127,25 @@ type ResourceMapping struct {
 	IngestOnly bool `yaml:"ingest_only,omitempty"`
 
 	// NetworkRole names a structural role core needs to recognise without knowing a
-	// provider's resource names (PC-151): "subnet", "vpc" or "route_table". Ingest stamps it on the node
+	// provider's resource names (PC-151): "subnet", "vpc", "route_table" or "elastic_ip". Ingest stamps it on the node
 	// as RawAttributes["network_role"]. Before this, core could only identify a subnet by
 	// its having an explicit route table association, so a subnet relying on the VPC's
 	// implicit main route table was not recognised as a subnet at all.
 	NetworkRole string `yaml:"network_role,omitempty"`
+
+	// PublicAddressModel says HOW a resource of this type comes to hold a public IPv4 address,
+	// so core can answer "can it use an internet gateway" without naming a provider (PC-156).
+	// "launch_attribute" means the address is assigned at launch: a launch-time setting on the
+	// resource overrides the subnet's own auto-assign attribute, and an Elastic IP association
+	// gives it one regardless. Unset means the service's public-address behaviour is not
+	// modelled, and a journey from it through an internet gateway is not_assessable.
+	PublicAddressModel string `yaml:"public_address_model,omitempty"`
+
+	// TrackUnresolved lists attribute names whose presence-but-not-literal state must be
+	// recorded on the node (RawAttributes["unresolved_attributes"]). A non-literal attribute is
+	// otherwise indistinguishable from an absent one, and absence means a documented default
+	// while a variable means "unknown" (I4).
+	TrackUnresolved []string `yaml:"track_unresolved,omitempty"`
 
 	// CapabilityLevel is PC-107's own registry entry: how much of this specific AWS
 	// service Preflight can actually simulate, on core.CapabilityLevel's 9-rung
@@ -184,8 +198,11 @@ func (m ResourceMapping) validate() error {
 	if ceiling := core.MaxImplementedCapabilityLevel(m.NodeType); !ceiling.AtLeast(m.CapabilityLevel) {
 		return fmt.Errorf("mapping %s: capability_level %q exceeds the real ceiling %q for node_type %q (core.MaxImplementedCapabilityLevel) — no engine in this codebase implements that much behaviour for this structural type yet", m.ResourceType, m.CapabilityLevel, ceiling, m.NodeType)
 	}
-	if m.NetworkRole != "" && m.NetworkRole != "subnet" && m.NetworkRole != "vpc" && m.NetworkRole != "route_table" {
-		return fmt.Errorf("mapping %s: network_role %q must be \"subnet\", \"vpc\" or \"route_table\"", m.ResourceType, m.NetworkRole)
+	if m.NetworkRole != "" && m.NetworkRole != "subnet" && m.NetworkRole != "vpc" && m.NetworkRole != "route_table" && m.NetworkRole != "elastic_ip" {
+		return fmt.Errorf("mapping %s: network_role %q must be \"subnet\", \"vpc\", \"route_table\" or \"elastic_ip\"", m.ResourceType, m.NetworkRole)
+	}
+	if m.PublicAddressModel != "" && m.PublicAddressModel != "launch_attribute" {
+		return fmt.Errorf("mapping %s: public_address_model %q must be \"launch_attribute\"", m.ResourceType, m.PublicAddressModel)
 	}
 	if m.ReferenceEdgeType != "" {
 		switch m.ReferenceEdgeType {

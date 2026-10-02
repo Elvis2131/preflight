@@ -1,0 +1,13 @@
+# Elastic IP -> network_boundary, role "elastic_ip" (PC-156). An Elastic IP associated with an
+# instance gives it a public IPv4 address whatever its subnet's auto-assign attribute says (VPC
+# User Guide, "Enable internet access for a VPC using an internet gateway"). `instance = ...`
+# on the aws_eip becomes an edge to that instance; core recognises the role, not the type name.
+#
+# Only an Elastic IP referencing an instance is modelled. One associated through a network
+# interface, or a NAT gateway's allocation, produces no edge to a workload, so it never makes a
+# workload look publicly addressed.
+resource_type: aws_eip
+node_type: network_boundary
+capability_level: NETWORK_BEHAVIOR
+network_role: elastic_ip
+ingest_only: true

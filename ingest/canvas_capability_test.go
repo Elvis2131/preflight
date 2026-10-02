@@ -179,3 +179,31 @@ func TestParity_CanvasVsTerraform_SameServiceYieldsIdenticalCapabilityLevel(t *t
 		}
 	}
 }
+
+// PC-156: aws_instance is mapped for HCL ingest only (the canvas cannot author a launch-time
+// public-address setting or an Elastic IP). A hand-built canvas node naming that service must
+// stay unmapped, never claiming a capability the canvas cannot back.
+func TestIngestCanvas_IngestOnlyService_IsNotResolved(t *testing.T) {
+	reg := loadRegistry(t)
+	if m, ok := reg["aws_instance"]; !ok || !m.IngestOnly {
+		t.Fatal("test premise: aws_instance must be an ingest-only mapping")
+	}
+	doc := core.CanvasDocument{Nodes: []core.CanvasNode{
+		{ID: "lb", Type: "load_balancer", Label: "LB", Capability: map[string]string{}},
+		{ID: "ec2", Type: "compute", ServiceID: "aws_instance", Label: "EC2", Capability: map[string]string{}},
+		{ID: "db", Type: "managed_database", Label: "DB", Capability: map[string]string{}},
+	}}
+	result, err := ingest.IngestCanvas(doc, providers.Registry(reg), 1)
+	if err != nil {
+		t.Fatalf("IngestCanvas: %v", err)
+	}
+	for _, n := range result.IR.Nodes {
+		if n.ID == "ec2" {
+			if v, ok := n.RawAttributes["capability_level"]; ok {
+				t.Errorf("capability_level = %v, want absent for an ingest-only service", v)
+			}
+			return
+		}
+	}
+	t.Fatal("no node ec2")
+}

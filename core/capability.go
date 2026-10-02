@@ -80,19 +80,23 @@ func (l CapabilityLevel) AtLeast(min CapabilityLevel) bool {
 //   - container_workload, load_balancer, queue/stream, dns: REQUEST_SIMULATION — a
 //     valid source/destination in PC-114's BuildTrace pipeline, but no dedicated
 //     per-service failure claim of their own yet.
-//   - compute, object_store, identity, external_dependency: CONFIGURATION — no
-//     dedicated engine touches these structurally yet (no aws_instance/S3/IAM-
-//     evaluation/external-dependency engine exists); raising any of these requires
-//     shipping that engine first, not just adding a palette entry.
+//   - compute: REQUEST_SIMULATION (PC-156) — a compute node placed in a subnet with
+//     security groups is a valid source/destination in BuildTrace, and BuildOutboundTrace
+//     decides its outbound path including public-address assignment. A mapping still
+//     declares its OWN level (Lambda stays CONFIGURATION: no placement is resolved for it).
+//   - object_store, identity, external_dependency: CONFIGURATION — no dedicated engine
+//     touches these structurally yet (no S3/IAM-evaluation/external-dependency engine
+//     exists); raising any of these requires shipping that engine first, not just adding
+//     a palette entry.
 func MaxImplementedCapabilityLevel(t NodeType) CapabilityLevel {
 	switch t {
 	case NodeTypeNetworkBoundary:
 		return CapabilityNetworkBehavior
 	case NodeTypeManagedDatabase, NodeTypeCache:
 		return CapabilityFailureSimulation
-	case NodeTypeContainerWorkload, NodeTypeLoadBalancer, NodeTypeQueueStream, NodeTypeDNS:
+	case NodeTypeContainerWorkload, NodeTypeCompute, NodeTypeLoadBalancer, NodeTypeQueueStream, NodeTypeDNS:
 		return CapabilityRequestSimulation
-	case NodeTypeCompute, NodeTypeObjectStore, NodeTypeIdentity, NodeTypeExternalDependency:
+	case NodeTypeObjectStore, NodeTypeIdentity, NodeTypeExternalDependency:
 		return CapabilityConfiguration
 	default:
 		return CapabilityMetadataOnly

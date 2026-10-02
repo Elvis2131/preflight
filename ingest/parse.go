@@ -63,6 +63,11 @@ type ParsedResource struct {
 	// documented as "additional," not required, so this is a safe, honest omission.
 	Attributes map[string]any
 
+	// NonLiteralAttributes names the top-level attributes that ARE declared but whose
+	// expression is not a literal (a variable, a function call). Attributes omits them, so
+	// without this an unknown value and an absent one look the same (PC-156).
+	NonLiteralAttributes map[string]bool
+
 	// References are every resource-to-resource traversal found anywhere in this
 	// resource's body (including inside function calls like jsonencode(), and inside
 	// list/object literals) — hcl.Expression.Variables() walks nested expressions
@@ -155,12 +160,13 @@ func ParseDir(dir string) ([]ParsedResource, error) {
 
 func parseResourceBlock(block *hclsyntax.Block, sourceFile string) ParsedResource {
 	r := ParsedResource{
-		Type:                block.Labels[0],
-		Name:                block.Labels[1],
-		Attributes:          map[string]any{},
-		AttributeReferences: map[string][]ResourceRef{},
-		SourceFile:          sourceFile,
-		SourceLine:          block.TypeRange.Start.Line,
+		Type:                 block.Labels[0],
+		Name:                 block.Labels[1],
+		Attributes:           map[string]any{},
+		NonLiteralAttributes: map[string]bool{},
+		AttributeReferences:  map[string][]ResourceRef{},
+		SourceFile:           sourceFile,
+		SourceLine:           block.TypeRange.Start.Line,
 	}
 
 	for name, attr := range block.Body.Attributes {
@@ -174,6 +180,8 @@ func parseResourceBlock(block *hclsyntax.Block, sourceFile string) ParsedResourc
 		collectAttributeReferences(attr.Expr, name, r.AttributeReferences)
 		if v, ok := literalValue(attr.Expr); ok {
 			r.Attributes[name] = v
+		} else {
+			r.NonLiteralAttributes[name] = true
 		}
 	}
 
