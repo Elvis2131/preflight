@@ -27,3 +27,8 @@ ui/*.zip
 # PC-121: licensed source standards, read locally to build the control mappings. Never committed.
 /docs/PCI-DSS-*.pdf
 /docs/Trust-services-criteria*.pdf
+
+# Terraform working files (PC-25 Rung 3): state and provider binaries never belong in git.
+/validate/rung3/terraform/.terraform/
+/validate/rung3/terraform/*.tfstate*
+/validate/rung3/terraform/*.tfplan

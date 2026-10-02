@@ -1,0 +1,51 @@
+{
+  "experiment": "stop one of two ALB targets with AWS FIS (aws:ec2:stop-instances)",
+  "fault": "aws_instance.web_a",
+  "statements": [
+    {
+      "id": "P1",
+      "claim": "After the fault, the surviving path internet -\u003e ALB -\u003e web-b still flows and the path through web-a no longer does: the service stays reachable and every request is served by web-b.",
+      "source": "Preflight /simulate node_loss: flow_detail via-b flows, via-a blocked",
+      "provenance": {
+        "kind": "derived",
+        "source": "preflight node_loss simulation of aws_instance.web_a"
+      },
+      "observable": "HTTP requests to the ALB succeed after the detection window and are all answered by web-b"
+    },
+    {
+      "id": "P2",
+      "claim": "The simulation verdict for losing one instance is \"unaffected\": no entry point loses its path to stateful storage.",
+      "source": "Preflight /simulate node_loss: verdict",
+      "provenance": {
+        "kind": "derived",
+        "source": "preflight node_loss simulation of aws_instance.web_a"
+      },
+      "observable": "not_observed (a structural verdict; the run observes request outcomes, not storage reachability)"
+    },
+    {
+      "id": "P3",
+      "claim": "The ALB stops sending traffic to the stopped instance within 30 s of it ceasing to respond: 2 consecutive failed checks at one check every 10 s, plus at most one interval of phase. Until then some requests (about half, with two targets) fail.",
+      "source": "AWS docs: health checks run every HealthCheckIntervalSeconds; a target is out of service after UnhealthyThresholdCount consecutive failures",
+      "provenance": {
+        "kind": "derived",
+        "source": "AWS ELB docs (target-group-health-checks) applied to the declared health_check settings"
+      },
+      "observable": "last failed request time relative to the first failed request; probe failure share during the window"
+    },
+    {
+      "id": "P4",
+      "claim": "Once the instance reaches the stopped state the target group reports it as unused with reason Target.InvalidState (not unhealthy).",
+      "source": "AWS docs: target health status table (unused / Target.InvalidState: target is in the stopped state)",
+      "provenance": {
+        "kind": "derived",
+        "source": "AWS ELB docs (target-group-health-checks) applied to the declared health_check settings"
+      },
+      "observable": "describe-target-health for web-a after the stop completes"
+    }
+  ],
+  "engine_silent_on": [
+    "how long the failover takes (the engine has no health-check detection model; rto_seconds is declared as a requirement but no RTO finding is produced for this bundle)",
+    "how many requests fail while the ALB detects the loss",
+    "availability-zone loss (zone-kill findings exist only for the golden bundle's own subnets)"
+  ]
+}

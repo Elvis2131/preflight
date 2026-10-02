@@ -1,0 +1,43 @@
+# Declared workload for the Rung 3 experiment bundle (validate/rung3/terraform). Declared, not
+# measured: the capacity figure is what a t3.micro running a static file server is declared to
+# carry, chosen only so one survivor can carry the declared peak. It is never an observed value.
+schema_version: "1.0.0"
+name: rung3-web
+criticality: tier2
+data_classification: internal
+regions:
+  - us-east-1
+requirements:
+  - id: availability.target
+    value: 99.9
+    priority: hard
+  - id: rto_seconds
+    value: 60
+    priority: hard
+capacity:
+  app_node_rps: 100
+  load_balancer_rps: 1000
+  compute_rps: 100
+journeys:
+  - id: via-b
+    name: "Request served by the surviving instance: internet -> ALB -> web-b"
+    path:
+      - internet
+      - aws_lb.main
+      - aws_instance.web_b
+    protocol: tcp
+    port: 80
+    criticality: tier2
+    peak_rps: 50
+    steady_rps: 20
+  - id: via-a
+    name: "Request served by the faulted instance: internet -> ALB -> web-a"
+    path:
+      - internet
+      - aws_lb.main
+      - aws_instance.web_a
+    protocol: tcp
+    port: 80
+    criticality: tier2
+    peak_rps: 50
+    steady_rps: 20
