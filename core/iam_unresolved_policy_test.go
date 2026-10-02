@@ -84,13 +84,6 @@ resource "aws_iam_role_policy" "p" {
 // explicit Deny).
 func TestIAMUnreadablePolicy_IsNotAssessable_NeverAPass(t *testing.T) {
 	cases := map[string]string{
-		"policy references a resource (ARN not resolvable statically)": roleBlock + `
-resource "aws_sqs_queue" "q" { name = "q" }
-resource "aws_iam_role_policy" "p" {
-  name   = "p"
-  role   = aws_iam_role.app.id
-  policy = jsonencode({ Version = "2012-10-17", Statement = [{ Effect = "Allow", Action = ["sqs:SendMessage"], Resource = aws_sqs_queue.q.arn }] })
-}`,
 		"policy comes from a variable": roleBlock + `
 resource "aws_iam_role_policy" "p" {
   name   = "p"
@@ -151,8 +144,8 @@ func TestIAMUnresolvedMarker_SurvivesJSONRoundTrip(t *testing.T) {
 	}
 }
 
-// golden/aws-broken's seeded defect 7 is now detected, and golden/aws's own policy (which references
-// resource ARNs) is honestly not_assessable rather than the vacuous "satisfied" it used to report.
+// golden/aws-broken's seeded defect 7 is detected (PC-157), and golden/aws's own policy, which references in-bundle
+// resource ARNs, is read symbolically (PC-159) and is genuinely satisfied.
 func TestIAMGolden_Defect7DetectedAndGoodBundleHonest(t *testing.T) {
 	reg, err := awsprovider.Load()
 	if err != nil {
@@ -176,8 +169,10 @@ func TestIAMGolden_Defect7DetectedAndGoodBundleHonest(t *testing.T) {
 	if got := statusFor("aws-broken"); got != string(core.ComplianceUnsatisfied) {
 		t.Errorf("aws-broken payments_app = %q, want unsatisfied (seeded defect 7)", got)
 	}
-	if got := statusFor("aws"); got != "not_assessable" {
-		t.Errorf("aws payments_app = %q, want not_assessable (its policy references resource ARNs)", got)
+	// PC-159: golden/aws's own policy references in-bundle resource ARNs, which resolve symbolically, so the
+	// role is now assessable and its scoped grants are not a wildcard.
+	if got := statusFor("aws"); got != string(core.ComplianceSatisfied) {
+		t.Errorf("aws payments_app = %q, want satisfied (scoped grants on specific in-bundle resources)", got)
 	}
 }
 

@@ -63,3 +63,8 @@ type PolicyDocument struct {
 func (d PolicyDocument) Validate() error {
 	return validate.Struct(d)
 }
+
+// SymbolicResourcePrefix marks a policy Resource element that stands for a resource declared in the bundle
+// whose concrete ARN is only known after apply (PC-159): "preflight-ref:aws_s3_bucket.data", optionally followed
+// by "/*" for the objects within it. It is a specific, non-wildcard target.
+const SymbolicResourcePrefix = "preflight-ref:"

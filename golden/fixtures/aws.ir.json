@@ -1,7 +1,7 @@
 {
   "schema_version": "1.4.0",
   "version_number": 1,
-  "version_hash": "sha256:e59fe98851221c7867db3103a4f46c17bbb9846954f833d4a499c8b2b4d2e1c6",
+  "version_hash": "sha256:153fd960c3f67b9a3d3bff2c25ea85a392f44dae3cc468515cf83ca58f0328ef",
   "nodes": [
     {
       "id": "aws_db_instance.payments",
@@ -293,6 +293,43 @@
       "type": "identity",
       "resolution": "known",
       "capability": {},
+      "iam_identity_policies": [
+        {
+          "id": "aws_iam_policy.payments_app",
+          "version": "2012-10-17",
+          "statements": [
+            {
+              "sid": "SettlementQueueAccess",
+              "effect": "Allow",
+              "action": [
+                "sqs:SendMessage",
+                "sqs:ReceiveMessage",
+                "sqs:DeleteMessage",
+                "sqs:GetQueueAttributes"
+              ],
+              "resource": [
+                "preflight-ref:aws_sqs_queue.settlement"
+              ]
+            },
+            {
+              "sid": "PaymentsDataKeyUse",
+              "effect": "Allow",
+              "action": [
+                "kms:Decrypt",
+                "kms:GenerateDataKey"
+              ],
+              "resource": [
+                "preflight-ref:aws_kms_key.payments"
+              ]
+            }
+          ],
+          "provenance": {
+            "kind": "derived",
+            "source": "ingest/iam:aws_iam_policy.payments_app",
+            "reason": "resource references resolved symbolically (each stands for a specific resource declared in this bundle): aws_kms_key.payments, aws_sqs_queue.settlement"
+          }
+        }
+      ],
       "iam_trust_policy": {
         "id": "aws_iam_role.payments_app",
         "version": "2012-10-17",
@@ -320,10 +357,7 @@
         "tags": {
           "Compliance": "PCI",
           "Name": "payments-app-role"
-        },
-        "unresolved_identity_policies": [
-          "aws_iam_policy.payments_app: the policy document is not a static value (it references a resource or variable, or uses a function other than jsonencode of constants)"
-        ]
+        }
       },
       "provenance": {
         "kind": "stated",

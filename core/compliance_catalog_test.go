@@ -218,8 +218,9 @@ func assertResults(t *testing.T, results []core.ComplianceControlResult, want []
 //   - 3.5.1.2 / CC6.1: rds.tf has storage_encrypted = true: supports, but disk-level encryption alone does not
 //     satisfy PCI 3.5.1.2, so applicable.
 //   - 6.4.2: alb.tf's load balancer is internet-facing and waf.tf associates a web ACL: applicable.
-//   - 7.2.2 / CC6.3: every role's policy is unreadable to the engine (two attach AWS-managed policies, the
-//     third's policy references resource ARNs): not_assessable, where it used to read a vacuous "satisfied" (PC-157).
+//   - 7.2.2 / CC6.3: eks_cluster and eks_node attach AWS-managed policies the engine cannot read: not_assessable.
+//     payments_app's policy grants sqs and kms actions on specific in-bundle resources (symbolic references,
+//     PC-159), so no statement is a wildcard: applicable (not satisfied: it is a partial control).
 //   - 4.2.1 / CC6.7: TLS settings are not modelled: not_assessable.
 //   - A1.2: rds.tf has multi_az = true (a synchronous standby): applicable.
 func TestPCIDSSAndSOC2_GoldenBundle_HandVerified(t *testing.T) {
@@ -242,8 +243,12 @@ func TestPCIDSSAndSOC2_GoldenBundle_HandVerified(t *testing.T) {
 		{"soc2:A1.2", db, core.ComplianceApplicable},
 	}
 	for _, r := range roles {
-		pci = append(pci, expectedResult{"pci_dss_4:7.2.2", r, core.ComplianceNotAssessable})
-		soc2 = append(soc2, expectedResult{"soc2:CC6.3", r, core.ComplianceNotAssessable})
+		want := core.ComplianceNotAssessable
+		if r == "aws_iam_role.payments_app" {
+			want = core.ComplianceApplicable
+		}
+		pci = append(pci, expectedResult{"pci_dss_4:7.2.2", r, want})
+		soc2 = append(soc2, expectedResult{"soc2:CC6.3", r, want})
 	}
 	assertResults(t, core.BuildPCIDSS4Catalog(ir, core.Workload{}), pci)
 	assertResults(t, core.BuildSOC2Catalog(ir, core.Workload{}), soc2)

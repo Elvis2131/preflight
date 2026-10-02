@@ -70,6 +70,10 @@ type ParsedResource struct {
 	// without this an unknown value and an absent one look the same (PC-156).
 	NonLiteralAttributes map[string]bool
 
+	// Exprs keeps each top-level attribute's expression, for the few places that must evaluate more than a
+	// literal (an IAM policy document that references resources, PC-159).
+	Exprs map[string]hcl.Expression
+
 	// AttrInfo classifies every declared attribute, keyed by name (top level) or "block.attr" (one level
 	// of nesting; a repeated block keeps the last occurrence here, see NestedBlocks[...].Info for each).
 	AttrInfo map[string]AttrInfo
@@ -236,6 +240,7 @@ func parseResourceBlock(block *hclsyntax.Block, sourceFile string) ParsedResourc
 		Attributes:           map[string]any{},
 		NonLiteralAttributes: map[string]bool{},
 		AttrInfo:             map[string]AttrInfo{},
+		Exprs:                map[string]hcl.Expression{},
 		AttributeReferences:  map[string][]ResourceRef{},
 		SourceFile:           sourceFile,
 		SourceLine:           block.TypeRange.Start.Line,
@@ -251,6 +256,7 @@ func parseResourceBlock(block *hclsyntax.Block, sourceFile string) ParsedResourc
 		collectReferences(attr.Expr, &r.References)
 		collectAttributeReferences(attr.Expr, name, r.AttributeReferences)
 		r.AttrInfo[name] = classifyAttr(attr.Expr)
+		r.Exprs[name] = attr.Expr
 		if v, ok := literalValue(attr.Expr); ok {
 			r.Attributes[name] = v
 		} else {

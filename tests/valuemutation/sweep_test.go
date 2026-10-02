@@ -393,6 +393,10 @@ var declaredDependencies = []dependency{
 	{"aws-broken", "aws_iam_policy.payments_app.policy", []string{
 		"finding|finding.compliance.iam-least-privilege-wildcard-admin.aws_iam_role.payments_app",
 		"compliance|pci_dss_4:7.2.2|aws_iam_role.payments_app", "compliance|soc2:CC6.3|aws_iam_role.payments_app"}},
+	// PC-159: golden/aws's own policy references in-bundle ARNs; making it unreadable must withdraw the verdict.
+	{"aws", "aws_iam_policy.payments_app.policy", []string{
+		"finding|finding.compliance.iam-least-privilege-wildcard-admin.aws_iam_role.payments_app",
+		"compliance|pci_dss_4:7.2.2|aws_iam_role.payments_app", "compliance|soc2:CC6.3|aws_iam_role.payments_app"}},
 	{"aws", "aws_db_instance.payments.storage_encrypted", []string{
 		"finding|finding.compliance.rds-storage-encryption.aws_db_instance.payments",
 		"compliance|pci_dss_4:3.5.1.2|aws_db_instance.payments", "compliance|cis_aws.storage_encryption|aws_db_instance.payments"}},

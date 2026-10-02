@@ -9,8 +9,8 @@
       "4 component(s) affected": 1,
       "5 of 7 rules on the security groups and NACLs along this journey's path (every rule on those groups, not only the ones this journey uses) would break it if changed alone": 1,
       "consistent: declared public, and a real default route to an internet gateway confirms it": 3,
-      "not_assessable": 4,
-      "satisfied": 6
+      "not_assessable": 3,
+      "satisfied": 7
     },
     "compliance_catalog_counts": {
       "cis_aws": {
@@ -39,17 +39,17 @@
       },
       "pci_dss_4": {
         "Satisfied": 0,
-        "Applicable": 4,
+        "Applicable": 5,
         "Partial": 0,
         "Unsatisfied": 0,
-        "NotAssessable": 17
+        "NotAssessable": 16
       },
       "soc2": {
         "Satisfied": 0,
-        "Applicable": 2,
+        "Applicable": 3,
         "Partial": 0,
         "Unsatisfied": 0,
-        "NotAssessable": 38
+        "NotAssessable": 37
       }
     },
     "nfr_evaluated_count": 1,
@@ -282,10 +282,10 @@
       },
       "result_counts": {
         "Satisfied": 0,
-        "Applicable": 4,
+        "Applicable": 5,
         "Partial": 0,
         "Unsatisfied": 0,
-        "NotAssessable": 17
+        "NotAssessable": 16
       },
       "controls": [
         {
@@ -520,13 +520,13 @@
           "Classification": "partially_assessable",
           "NodeID": "aws_iam_role.payments_app",
           "Result": {
-            "status": "not_assessable",
+            "status": "applicable",
             "provenance": {
               "kind": "derived",
               "source": "core/compliance_pci_dss"
             }
           },
-          "Rationale": "principal \"aws_iam_role.payments_app\" has identity policies that could not be read: aws_iam_policy.payments_app: the policy document is not a static value (it references a resource or variable, or uses a function other than jsonencode of constants)"
+          "Rationale": "no identity policy statement grants every action on every resource; the architectural aspect is supported, but the full requirement also needs evidence a diagram cannot show"
         },
         {
           "ControlID": "pci_dss_4:7.rest",
@@ -635,10 +635,10 @@
       },
       "result_counts": {
         "Satisfied": 0,
-        "Applicable": 2,
+        "Applicable": 3,
         "Partial": 0,
         "Unsatisfied": 0,
-        "NotAssessable": 38
+        "NotAssessable": 37
       },
       "controls": [
         {
@@ -985,13 +985,13 @@
           "Classification": "partially_assessable",
           "NodeID": "aws_iam_role.payments_app",
           "Result": {
-            "status": "not_assessable",
+            "status": "applicable",
             "provenance": {
               "kind": "derived",
               "source": "core/compliance_soc2"
             }
           },
-          "Rationale": "principal \"aws_iam_role.payments_app\" has identity policies that could not be read: aws_iam_policy.payments_app: the policy document is not a static value (it references a resource or variable, or uses a function other than jsonencode of constants)"
+          "Rationale": "no identity policy statement grants every action on every resource; the architectural aspect is supported, but the full requirement also needs evidence a diagram cannot show"
         },
         {
           "ControlID": "soc2:CC6.4",
@@ -2213,13 +2213,13 @@
         "evidence": [
           {
             "node_id": "aws_iam_role.payments_app",
-            "description": "principal \"aws_iam_role.payments_app\" has identity policies that could not be read: aws_iam_policy.payments_app: the policy document is not a static value (it references a resource or variable, or uses a function other than jsonencode of constants)",
+            "description": "no identity policy statement grants every action (\"*\") on every resource (\"*\")",
             "attribute": "iam_identity_policies"
           }
         ],
         "outcome": {
-          "state": "not_assessable",
-          "reason": "principal \"aws_iam_role.payments_app\" has identity policies that could not be read: aws_iam_policy.payments_app: the policy document is not a static value (it references a resource or variable, or uses a function other than jsonencode of constants)",
+          "state": "assessed",
+          "value": "satisfied",
           "provenance": {
             "kind": "derived",
             "source": "core/iam_evaluate:least-privilege-wildcard-admin:aws_iam_role.payments_app"

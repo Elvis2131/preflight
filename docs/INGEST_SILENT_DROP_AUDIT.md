@@ -53,7 +53,6 @@ S = value-level sweep, K = kitchen-sink sweep, R = code review.
 * **Canvas capability strings** that should be boolean (`"true"`/`"false"`) are not domain-validated; anything else
   reads as "not true".
 * **Two-level nested blocks** (a block inside a block) are not classified.
-* A policy that references a resource ARN is not assessable at all (PC-159).
 
 ## The sweep (`tests/valuemutation`)
 
@@ -70,3 +69,13 @@ A mutation sweep alone cannot see a bug that blinds the *baseline* (that is exac
 2. **Declared dependencies must go not_assessable**, not merely stay unchanged.
 3. **Negative control:** an engine that ignores the unreadable-input records is run through the same sweep and must fail
    (`TestSweep_NegativeControl_*`).
+
+## Symbolic policy references (PC-159)
+
+A policy that references an in-bundle resource (`aws_sqs_queue.q.arn`, `"${aws_s3_bucket.data.arn}/*"`) is read with each
+reference bound to a placeholder, `preflight-ref:<resource key>`, and tagged `derived`. The evaluator treats a
+placeholder as a specific, non-wildcard target: it matches only a request that names that same node, never covers the
+`*` probe, and where a request does not say which resource it targets the answer is `not_assessable`. Anything else (a
+variable, a data source, a resource not declared in the bundle, an attribute other than `arn`, text combined with a
+reference other than the `/*` suffix, a reference used as a principal, condition or NotResource) is unreadable and names
+the cause.

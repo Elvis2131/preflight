@@ -279,10 +279,8 @@ func (s *unresolvedStamper) stampResourcePolicies(parsed []ParsedResource) {
 			continue
 		}
 		problem := ""
-		if policy, _ := r.Attributes["policy"].(string); policy == "" {
-			problem = "the policy document is not a static value"
-		} else if _, err := parsePolicyDocument(r.Key(), policy, core.NewProvenance(core.KindStated, sourceRef(r))); err != nil {
-			problem = "the policy document is not valid IAM policy JSON"
+		if _, readable, why := readPolicyAttribute(r, "policy", r.Key(), s.byKey); !readable {
+			problem = why
 		}
 		owner := r.AttrInfo["bucket"]
 		if s.relationshipProblem(owner) != "" || len(owner.Refs) != 1 {

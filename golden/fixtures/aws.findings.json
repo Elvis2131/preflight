@@ -876,13 +876,13 @@
     "evidence": [
       {
         "node_id": "aws_iam_role.payments_app",
-        "description": "principal \"aws_iam_role.payments_app\" has identity policies that could not be read: aws_iam_policy.payments_app: the policy document is not a static value (it references a resource or variable, or uses a function other than jsonencode of constants)",
+        "description": "no identity policy statement grants every action (\"*\") on every resource (\"*\")",
         "attribute": "iam_identity_policies"
       }
     ],
     "outcome": {
-      "state": "not_assessable",
-      "reason": "principal \"aws_iam_role.payments_app\" has identity policies that could not be read: aws_iam_policy.payments_app: the policy document is not a static value (it references a resource or variable, or uses a function other than jsonencode of constants)",
+      "state": "assessed",
+      "value": "satisfied",
       "provenance": {
         "kind": "derived",
         "source": "core/iam_evaluate:least-privilege-wildcard-admin:aws_iam_role.payments_app"

@@ -253,14 +253,14 @@ resource "aws_iam_role_policy" "inline" {
   role   = aws_iam_role.app.id
   policy = jsonencode({
     Version   = "2012-10-17"
-    Statement = [{ Effect = "Allow", Action = ["sqs:SendMessage"], Resource = "arn:aws:sqs:eu-west-1:123456789012:q" }]
+    Statement = [{ Effect = "Allow", Action = ["sqs:SendMessage"], Resource = aws_sqs_queue.q.arn }]
   })
 }
 resource "aws_iam_policy" "extra" {
   name   = "extra"
   policy = jsonencode({
     Version   = "2012-10-17"
-    Statement = [{ Effect = "Allow", Action = ["s3:GetObject"], Resource = "arn:aws:s3:::data/*" }]
+    Statement = [{ Effect = "Allow", Action = ["s3:GetObject"], Resource = "${aws_s3_bucket.data.arn}/*" }]
   })
 }
 resource "aws_iam_role_policy_attachment" "extra" {
@@ -268,10 +268,11 @@ resource "aws_iam_role_policy_attachment" "extra" {
   policy_arn = aws_iam_policy.extra.arn
 }
 resource "aws_s3_bucket" "data" { bucket = "data" }
+resource "aws_sqs_queue" "q" { name = "q" }
 resource "aws_s3_bucket_policy" "data" {
   bucket = aws_s3_bucket.data.id
   policy = jsonencode({
     Version   = "2012-10-17"
-    Statement = [{ Effect = "Deny", Principal = "*", Action = "s3:*", Resource = "arn:aws:s3:::data/*" }]
+    Statement = [{ Effect = "Deny", Principal = "*", Action = "s3:DeleteObject", Resource = "${aws_s3_bucket.data.arn}/*" }]
   })
 }

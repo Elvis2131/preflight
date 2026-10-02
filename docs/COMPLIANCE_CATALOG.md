@@ -53,8 +53,10 @@ Totals: 0 assessable, 5 partial, 33 not assessable.
   here): not_assessable. The CIS control, a different standard, still judges unencrypted storage unsatisfied.
 * **No web ACL is not a failure** (6.4.2): a firewall in front of the load balancer (a content-delivery or API
   layer) is outside the model.
-* **IAM controls depend on PC-157.** A role whose policy references a resource ARN, or attaches an AWS-managed
-  policy, is not_assessable today.
+* **IAM controls depend on how a policy reads.** A policy with in-bundle resource references
+  (`aws_s3_bucket.data.arn`, `"${...arn}/*"`) is evaluated symbolically (PC-159), so ordinary Terraform policies
+  are assessable. A policy it cannot read (a variable, a data source, a resource outside the bundle, a reference
+  used as a principal or condition value) and an attached AWS-managed policy are not_assessable, naming the cause.
 
 ## Revisit trigger (Design §4.6)
 

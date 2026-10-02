@@ -747,8 +747,8 @@ code{background:#f1f5f9;padding:0 .2rem}
 <tr><td>4 component(s) affected</td><td>1</td></tr>
 <tr><td>5 of 7 rules on the security groups and NACLs along this journey&#39;s path (every rule on those groups, not only the ones this journey uses) would break it if changed alone</td><td>1</td></tr>
 <tr><td>consistent: declared public, and a real default route to an internet gateway confirms it</td><td>3</td></tr>
-<tr><td>not_assessable</td><td>4</td></tr>
-<tr><td>satisfied</td><td>6</td></tr>
+<tr><td>not_assessable</td><td>3</td></tr>
+<tr><td>satisfied</td><td>7</td></tr>
 </table>
 <h3>NFR conformance</h3>
 <p>1 evaluated, 2 not evaluated.</p>
@@ -834,8 +834,8 @@ code{background:#f1f5f9;padding:0 .2rem}
 <td class="reason">principal &#34;aws_iam_role.eks_node&#34; has identity policies that could not be read: arn:aws:iam::aws:policy/AmazonEC2ContainerRegistryReadOnly: an attached policy defined outside this bundle (for example an AWS-managed policy); its permissions are not modelled; arn:aws:iam::aws:policy/AmazonEKSWorkerNodePolicy: an attached policy defined outside this bundle (for example an AWS-managed policy); its permissions are not modelled; arn:aws:iam::aws:policy/AmazonEKS_CNI_Policy: an attached policy defined outside this bundle (for example an AWS-managed policy); its permissions are not modelled</td>
 </tr><tr>
 <td><code>pci_dss_4:7.2.2</code></td><td>7.2.2</td><td>Access is granted by job function using least privilege</td><td>partially_assessable</td>
-<td class="not-assessable">not_assessable</td>
-<td class="reason">principal &#34;aws_iam_role.payments_app&#34; has identity policies that could not be read: aws_iam_policy.payments_app: the policy document is not a static value (it references a resource or variable, or uses a function other than jsonencode of constants)</td>
+<td>applicable</td>
+<td class="reason">no identity policy statement grants every action on every resource; the architectural aspect is supported, but the full requirement also needs evidence a diagram cannot show</td>
 </tr><tr>
 <td><code>pci_dss_4:7.rest</code></td><td>7</td><td>Rest of Requirement 7: access model, account reviews, other access controls</td><td>not_assessable_from_architecture</td>
 <td class="not-assessable">not_assessable</td>
@@ -950,8 +950,8 @@ code{background:#f1f5f9;padding:0 .2rem}
 <td class="reason">principal &#34;aws_iam_role.eks_node&#34; has identity policies that could not be read: arn:aws:iam::aws:policy/AmazonEC2ContainerRegistryReadOnly: an attached policy defined outside this bundle (for example an AWS-managed policy); its permissions are not modelled; arn:aws:iam::aws:policy/AmazonEKSWorkerNodePolicy: an attached policy defined outside this bundle (for example an AWS-managed policy); its permissions are not modelled; arn:aws:iam::aws:policy/AmazonEKS_CNI_Policy: an attached policy defined outside this bundle (for example an AWS-managed policy); its permissions are not modelled</td>
 </tr><tr>
 <td><code>soc2:CC6.3</code></td><td>CC6.3</td><td>Access is role-based and follows least privilege</td><td>partially_assessable</td>
-<td class="not-assessable">not_assessable</td>
-<td class="reason">principal &#34;aws_iam_role.payments_app&#34; has identity policies that could not be read: aws_iam_policy.payments_app: the policy document is not a static value (it references a resource or variable, or uses a function other than jsonencode of constants)</td>
+<td>applicable</td>
+<td class="reason">no identity policy statement grants every action on every resource; the architectural aspect is supported, but the full requirement also needs evidence a diagram cannot show</td>
 </tr><tr>
 <td><code>soc2:CC6.4</code></td><td>CC6.4</td><td>Physical access to facilities and assets restricted</td><td>not_assessable_from_architecture</td>
 <td class="not-assessable">not_assessable</td>
@@ -1169,8 +1169,8 @@ satisfied
 <td class="not-assessable">
 <span class="reason">not_assessable: impact dimension not evaluated by this compliance check</span>
 </td>
-<td class="not-assessable">
-<span class="reason">not_assessable: principal &#34;aws_iam_role.payments_app&#34; has identity policies that could not be read: aws_iam_policy.payments_app: the policy document is not a static value (it references a resource or variable, or uses a function other than jsonencode of constants)</span>
+<td>
+satisfied
 </td>
 </tr><tr>
 <td><code>finding.compliance.iam-least-privilege-assumable-by-any-principal.aws_iam_role.payments_app</code><br>IAM role aws_iam_role.payments_app: least-privilege check for an overly broad trust policy</td>

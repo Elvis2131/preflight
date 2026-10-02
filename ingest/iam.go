@@ -122,6 +122,10 @@ func mergeIAMPolicies(nodes []core.Node, parsed []ParsedResource) {
 		byID[n.ID] = i
 	}
 
+	byKey := map[string]ParsedResource{}
+	for _, r := range parsed {
+		byKey[r.Key()] = r
+	}
 	managedPolicies := map[string]ParsedResource{}
 	for _, r := range parsed {
 		if r.Type == "aws_iam_policy" {
@@ -137,7 +141,7 @@ func mergeIAMPolicies(nodes []core.Node, parsed []ParsedResource) {
 				markEveryRoleUnresolved(nodes, byID, r)
 				continue
 			}
-			attachIdentityPolicy(nodes, byID, roleRefs[0].Key(), r.Key(), r)
+			attachIdentityPolicy(nodes, byID, roleRefs[0].Key(), r.Key(), r, byKey)
 
 		case "aws_iam_role_policy_attachment":
 			roleRefs, hasRole := r.AttributeReferences["role"]
@@ -148,7 +152,7 @@ func mergeIAMPolicies(nodes []core.Node, parsed []ParsedResource) {
 			policyRefs := r.AttributeReferences["policy_arn"]
 			if len(policyRefs) == 1 {
 				if managedPolicy, ok := managedPolicies[policyRefs[0].Key()]; ok {
-					attachIdentityPolicy(nodes, byID, roleRefs[0].Key(), managedPolicy.Key(), managedPolicy)
+					attachIdentityPolicy(nodes, byID, roleRefs[0].Key(), managedPolicy.Key(), managedPolicy, byKey)
 					continue
 				}
 			}
@@ -173,14 +177,9 @@ func mergeIAMPolicies(nodes []core.Node, parsed []ParsedResource) {
 			if !ok {
 				continue
 			}
-			policyJSON, _ := r.Attributes["policy"].(string)
-			if policyJSON == "" {
-				continue
-			}
-			prov := core.NewProvenance(core.KindStated, sourceRef(r))
-			doc, err := parsePolicyDocument(r.Key(), policyJSON, prov)
-			if err != nil {
-				continue
+			doc, readable, _ := readPolicyAttribute(r, "policy", r.Key(), byKey)
+			if !readable {
+				continue // recorded on the bucket by stampResourcePolicies
 			}
 			nodes[idx].IAMResourcePolicy = &doc
 		}
@@ -190,24 +189,14 @@ func mergeIAMPolicies(nodes []core.Node, parsed []ParsedResource) {
 // attachIdentityPolicy reads the policy document carried by res onto roleID. A document that cannot be
 // read (not a static value, malformed JSON, absent) is recorded on the role as unresolved (PC-157): an
 // unread policy must make the role's IAM evaluation not_assessable, never an implicit "grants nothing".
-func attachIdentityPolicy(nodes []core.Node, byID map[string]int, roleID, policyID string, res ParsedResource) {
+func attachIdentityPolicy(nodes []core.Node, byID map[string]int, roleID, policyID string, res ParsedResource, byKey map[string]ParsedResource) {
 	idx, ok := byID[roleID]
 	if !ok {
 		return
 	}
-	policyJSON, _ := res.Attributes["policy"].(string)
-	if policyJSON == "" {
-		reason := "the policy attribute is absent"
-		if res.NonLiteralAttributes["policy"] {
-			reason = "the policy document is not a static value (it references a resource or variable, or uses a function other than jsonencode of constants)"
-		}
-		recordUnresolvedIdentityPolicy(nodes, byID, roleID, policyID, reason)
-		return
-	}
-	prov := core.NewProvenance(core.KindStated, "ingest/iam:"+policyID)
-	doc, err := parsePolicyDocument(policyID, policyJSON, prov)
-	if err != nil {
-		recordUnresolvedIdentityPolicy(nodes, byID, roleID, policyID, "the policy document is not valid IAM policy JSON")
+	doc, readable, why := readPolicyAttribute(res, "policy", policyID, byKey)
+	if !readable {
+		recordUnresolvedIdentityPolicy(nodes, byID, roleID, policyID, why)
 		return
 	}
 	nodes[idx].IAMIdentityPolicies = append(nodes[idx].IAMIdentityPolicies, doc)

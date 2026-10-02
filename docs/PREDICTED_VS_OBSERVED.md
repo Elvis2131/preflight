@@ -208,9 +208,10 @@ defect 7 is now `unsatisfied`; golden/aws's roles are honestly `not_assessable` 
 resource ARNs, and two attach AWS-managed policies), where they used to read as a vacuous `satisfied`. The
 agent-iteration loop now fixes defect 7 too and still converges in 2 iterations (bound 5).
 
-**Limit, stated:** a policy that references a resource ARN is not assessable at all today. Evaluating the
-parts of such a policy that do not depend on the unresolved ARN is a larger change (tri-state resource
-matching) and is not attempted here.
+**Limit, stated at the time, since lifted (PC-159):** a policy that referenced a resource ARN was not
+assessable at all. It is now read symbolically: each in-bundle reference stands for a specific resource, a
+placeholder is never a wildcard, and where a request does not say which resource it targets the answer is
+not_assessable, not a guess.
 
 ## Scenario 6: the value-level sweep (PC-158): two misses, one of them in the sweep itself
 

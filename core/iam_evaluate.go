@@ -315,6 +315,71 @@ func actionResourceApplies(stmt PolicyStatement, action, resourceARN string) boo
 	}
 }
 
+// actionResourceTri is actionResourceApplies for statements whose Resource may contain symbolic references
+// (PC-159: "preflight-ref:<resource key>", a specific in-bundle resource whose concrete ARN is unknown). Three
+// outcomes: the statement applies; it does not; or it might (uncertain, with why), in which case the caller must
+// not decide the request as if it did not.
+//
+//   - A symbolic element is a specific resource, never a wildcard: it cannot cover the "*" probe (every
+//     resource), so wildcard detection is the same on symbolic and literal references.
+//   - With a ResourceID, a symbolic element matches exactly the node it names; "objects within X" ("<X>/*")
+//     additionally needs the request to name a path inside X (an object ARN), and does not cover X itself.
+//   - Without a ResourceID the request's ARN may or may not be that resource's: uncertain.
+func actionResourceTri(stmt PolicyStatement, action, resourceARN, resourceID string) (applies bool, uncertain string) {
+	if !hasSymbolicResource(stmt.Resource) || resourceARN == "" {
+		return actionResourceApplies(stmt, action, resourceARN), ""
+	}
+	// The action must match for the resource to matter at all.
+	probe := stmt
+	probe.Resource, probe.NotResource = nil, nil
+	if !actionResourceApplies(probe, action, "arn:probe") {
+		return false, ""
+	}
+	var literals []string
+	for _, r := range stmt.Resource {
+		if !strings.HasPrefix(r, SymbolicResourcePrefix) {
+			literals = append(literals, r)
+		}
+	}
+	if len(literals) > 0 && matchesAny(literals, resourceARN, false) {
+		return true, ""
+	}
+	if resourceARN == "*" {
+		return false, "" // a specific resource cannot be every resource
+	}
+	for _, r := range stmt.Resource {
+		rest, isSym := strings.CutPrefix(r, SymbolicResourcePrefix)
+		if !isSym {
+			continue
+		}
+		target, objects := strings.CutSuffix(rest, "/*")
+		switch {
+		case resourceID == "":
+			return false, "statement targets " + target + ", and the request names only an ARN, so whether it is that resource is unknown"
+		case resourceID == target && !objects:
+			return true, ""
+		case resourceID == target && isObjectLevelARN(resourceARN):
+			return true, "" // "objects within X", and the request names an object path inside X
+		}
+	}
+	return false, ""
+}
+
+// isObjectLevelARN reports whether an ARN names something inside a resource (a path after its last ":"), as an
+// S3 object ARN does, so it is covered by an "objects within X" element ("<X>/*") and a bare bucket ARN is not.
+func isObjectLevelARN(arn string) bool {
+	return strings.Contains(arn[strings.LastIndex(arn, ":")+1:], "/")
+}
+
+func hasSymbolicResource(rs []string) bool {
+	for _, r := range rs {
+		if strings.HasPrefix(r, SymbolicResourcePrefix) {
+			return true
+		}
+	}
+	return false
+}
+
 // principalApplies reports whether a resource-based or trust policy statement's
 // Principal element matches identifier — the literal ARN/account-ID/service string
 // PC-133 preserved verbatim. identifier == "" never matches anything (see IAMRequest's
@@ -346,6 +411,9 @@ func principalApplies(principal any, identifier string) bool {
 type candidateStatement struct {
 	policyID string
 	stmt     PolicyStatement
+	// uncertain is set when the statement MIGHT apply (a symbolic resource reference whose identity the request
+	// does not settle, PC-159); it is then treated like a statement with an unevaluable condition.
+	uncertain string
 }
 
 // evaluateStatements is the shared core of EvaluateIAMRequest and EvaluateAssumeRole:
@@ -359,6 +427,9 @@ func evaluateStatements(candidates []candidateStatement, ctx map[string]string, 
 	for i := range candidates {
 		c := candidates[i]
 		outcome, _ := evaluateCondition(c.stmt.Condition, ctx)
+		if c.uncertain != "" && outcome != conditionUnsatisfied {
+			outcome = conditionIndeterminate
+		}
 		switch outcome {
 		case conditionUnsatisfied:
 			continue // does not apply — a known, resolved fact, not a gap
@@ -447,6 +518,9 @@ func evaluateStatements(candidates []candidateStatement, ctx map[string]string, 
 // string for the deciding-statement/reasoning output, rather than threading an extra
 // parallel slice through evaluateStatements' main loop.
 func indeterminateReasonFor(c candidateStatement, ctx map[string]string) string {
+	if c.uncertain != "" {
+		return fmt.Sprintf("statement %s (policy %s): %s", statementLabel(c.stmt), c.policyID, c.uncertain)
+	}
 	_, reason := evaluateCondition(c.stmt.Condition, ctx)
 	return fmt.Sprintf("statement %s (policy %s): unsupported %s", statementLabel(c.stmt), c.policyID, reason)
 }
@@ -487,8 +561,8 @@ func EvaluateIAMRequest(ir *IR, req IAMRequest, prov Provenance) IAMEvaluationRe
 	var candidates []candidateStatement
 	for _, doc := range principal.IAMIdentityPolicies {
 		for _, stmt := range doc.Statements {
-			if actionResourceApplies(stmt, req.Action, req.ResourceARN) {
-				candidates = append(candidates, candidateStatement{policyID: doc.ID, stmt: stmt})
+			if applies, unc := actionResourceTri(stmt, req.Action, req.ResourceARN, req.ResourceID); applies || unc != "" {
+				candidates = append(candidates, candidateStatement{policyID: doc.ID, stmt: stmt, uncertain: unc})
 			}
 		}
 	}
@@ -505,13 +579,14 @@ func EvaluateIAMRequest(ir *IR, req IAMRequest, prov Provenance) IAMEvaluationRe
 		}
 		if resourceNode.IAMResourcePolicy != nil {
 			for _, stmt := range resourceNode.IAMResourcePolicy.Statements {
-				if !actionResourceApplies(stmt, req.Action, req.ResourceARN) {
+				applies, unc := actionResourceTri(stmt, req.Action, req.ResourceARN, req.ResourceID)
+				if !applies && unc == "" {
 					continue
 				}
 				if !principalApplies(stmt.Principal, req.PrincipalIdentifier) {
 					continue
 				}
-				candidates = append(candidates, candidateStatement{policyID: resourceNode.IAMResourcePolicy.ID, stmt: stmt})
+				candidates = append(candidates, candidateStatement{policyID: resourceNode.IAMResourcePolicy.ID, stmt: stmt, uncertain: unc})
 			}
 		}
 	}
