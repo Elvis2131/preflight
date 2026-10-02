@@ -6,7 +6,7 @@
 //   E2E_ONLY=02 npm run e2e          # just specs whose filename starts with 02
 //   UI_URL=... API_URL=... npm run e2e   # use servers you already started (nothing is spawned)
 import { spawn, spawnSync } from "node:child_process";
-import { mkdtempSync, readdirSync, rmSync } from "node:fs";
+import { mkdtempSync, readdirSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -46,6 +46,13 @@ try {
     const port = new URL(api).port || "8099";
     const uiPort = new URL(ui).port || "5183";
     const env = { ...process.env, PREFLIGHT_DB_PATH: join(tmp, "sessions.db"), PREFLIGHT_PRICING_DB_PATH: pricingDB, PREFLIGHT_ASSESSD_PORT: port };
+    // PC-154: a stand-in reason worker (no key, no network) so the narrative flows run against a real assessd.
+    const stubPort = "8098";
+    const control = join(tmp, "stub-mode");
+    writeFileSync(control, "ok");
+    process.env.STUB_CONTROL = control;
+    children.push(spawn("go", ["run", "./tests/e2e/stubreasond"], { cwd: root, env: { ...process.env, PREFLIGHT_REASOND_PORT: stubPort, STUB_CONTROL: control }, detached: true, stdio: "ignore" }));
+    env.PREFLIGHT_REASOND_URL = `http://localhost:${stubPort}`;
     children.push(spawn("go", ["run", "./cmd/assessd"], { cwd: root, env, detached: true, stdio: "ignore" }));
     children.push(spawn("npx", ["vite", "--port", uiPort, "--strictPort"], { cwd: join(root, "canvas"), env: { ...process.env, VITE_ASSESSD_URL: api }, detached: true, stdio: "ignore" }));
   }

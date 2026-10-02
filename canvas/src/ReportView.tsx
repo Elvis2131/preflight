@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { LLM_NOTICE, type WithNarratives } from "./analyze/narratives";
 import {
   listVersions,
   getReport,
@@ -113,6 +114,26 @@ function ReportSummary({ report, onRepriced }: { report: Report; onRepriced?: ()
           </div>
         )}
       </div>
+
+      {(report as WithNarratives<typeof report>).narratives && (
+        <div style={{ ...cardStyle, border: "1px dashed #7c3aed", background: "#faf5ff" }} data-testid="report-narratives">
+          <strong>Narratives</strong> <span style={{ fontSize: 10, fontWeight: 700, color: "#6d28d9" }}>(LLM-written)</span>
+          <p style={{ fontSize: 10, color: "#5b21b6", margin: "4px 0" }}>{(report as WithNarratives<typeof report>).narratives!.notice || LLM_NOTICE}</p>
+          {(report as WithNarratives<typeof report>).narratives!.status === "degraded" && (
+            <p style={{ fontSize: 11, ...notAssessableStyle }}>
+              Narratives are incomplete: {(report as WithNarratives<typeof report>).narratives!.reason}. The findings above are unaffected.
+            </p>
+          )}
+          <ul style={{ listStyle: "none", padding: 0, margin: 0 }}>
+            {(report as WithNarratives<typeof report>).narratives!.annotations.map((a) => (
+              <li key={a.finding_id} style={{ padding: "6px 0", borderTop: "1px solid #e9d5ff" }}>
+                <div style={{ fontSize: 10, fontFamily: "monospace" }}>{a.finding_id}</div>
+                <div style={{ fontSize: 12 }}>{a.narrative}</div>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
 
       {(report.scenarios ?? []).length > 0 && (
         <div style={cardStyle} data-testid="report-scenarios">

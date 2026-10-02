@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { listFullVersions, type AssessResponse } from "./api";
 import { buildTimeline } from "./timeline";
 import { GraphView } from "./GraphView";
+import { NarrativesPanel } from "./NarrativesPanel";
 
 // AnalyzeView (PC-104) is the former standalone viewer (PC-90/91/92) as a workspace mode:
 // per-finding status across every stored version of THIS session, coloured by the
@@ -132,6 +133,7 @@ export function AnalyzeView({ sessionID, latestVersion }: { sessionID: string; l
             </select>
           </label>
           {current && <GraphView version={current} />}
+          {current && <NarrativesPanel sessionID={sessionID} version={current.version_number} />}
         </div>
       )}
     </div>
