@@ -108,9 +108,15 @@ change; (2) for `satisfied` compliance findings the narratives spend most of the
 restating "detectability high, impact/likelihood not assessable", which is faithful but
 low value — a prompt-design issue to improve, not a correctness one.
 
+A second, independent run (`docs/eval/reason-eval-run2.json`, 2026-10-02T00:38:43Z) gave the same
+verdicts: 17/17 accepted, findings unchanged, injection not obeyed, and 0 assertions of a
+likelihood once re-scored with the fixed scorer (it was made with the old scorer, which
+flagged 8 different findings — the same false positive on the word "probability"). Two
+samples agree on every structural and honesty check; that is still a small sample.
+
 Limits: this is an acceptance eval of one model, not a comparison between models; it
 measures structure and honesty, not prose quality, which needs a human reader; output is
-nondeterministic and this is one run.
+nondeterministic, and this is two runs.
 
 ## Revisit trigger
 
