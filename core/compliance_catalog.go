@@ -20,15 +20,12 @@
 //     ComplianceNotAssessable, by construction, never computed and never capable of
 //     silently becoming "satisfied."
 //
-// Licensing, per the Card's own explicit instruction: only requirement IDs and short,
-// independently-paraphrased topic titles are stored — never verbatim standard text.
-// PCI DSS v4.0's 12 top-level requirement NUMBERS and their own short titles are
-// public and widely republished (verified against en.wikipedia.org's own PCI DSS
-// article, 2026-09-26, itself sourced from the standard's own public numbering); SOC
-// 2's nine top-level Common Criteria categories (CC1-CC9) are likewise public and
-// widely republished (verified against a public SOC 2 compliance reference,
-// 2026-09-26). Finer sub-criteria (e.g. CC6.1, CC6.6, PCI DSS 3.5.1) are NOT included
-// in this catalog — see each catalog file's own scope note for why.
+// Licensing, per the Card's own explicit instruction: only requirement/criterion IDs and short,
+// independently-written titles are stored, never the standards' text. The PCI DSS v4.0.1 and AICPA
+// 2017 Trust Services Criteria (revised points of focus, 2022) catalogs were built by reading both
+// standards locally (the source PDFs are git-ignored); compliance_pci_dss.go and compliance_soc2.go each
+// state their own scope, and docs/COMPLIANCE_CATALOG.md summarises it. The shared checks behind the
+// assessable and partially assessable controls are in compliance_catalog_checks.go.
 package core
 
 // ComplianceFramework is one selectable compliance framework — PC-110's future

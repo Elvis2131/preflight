@@ -1,7 +1,7 @@
 {
   "schema_version": "1.4.0",
   "version_number": 1,
-  "version_hash": "sha256:d0371795b0678fedeffb12c71bbaba125b4d9320fa4e165d200396ae9b26c683",
+  "version_hash": "sha256:cf1cd3c06455ede4af2dcb4920dbbb7c9b104177ccaf63db4dbbf20343bf5d52",
   "nodes": [
     {
       "id": "aws_db_instance.payments",
@@ -830,6 +830,7 @@
       "raw_attributes": {
         "capability_level": "CONNECTIVITY",
         "name": "payments-api-waf",
+        "network_role": "web_acl",
         "rule.name": "AWSManagedRulesCommonRuleSet",
         "rule.priority": 1,
         "scope": "REGIONAL",

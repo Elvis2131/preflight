@@ -53,9 +53,9 @@ func TestRenderReportHTML_GoldenBundle_ContainsComplianceNotAssessableCounts(t *
 
 	// Hand-verified against the real golden PCI DSS catalog result (core/
 	// compliance_catalog_test.go's own TestPCIDSS4_GoldenBundle_HandVerified):
-	// PCI DSS shows 10 not-assessable-from-architecture controls.
-	if !strings.Contains(html, "<td>pci_dss_4</td><td>2</td><td>0</td><td class=\"not-assessable\">10</td>") {
-		t.Error("rendered HTML does not show the real golden PCI DSS not-assessable count (10)")
+	// PCI DSS shows 12 not-assessable-from-architecture controls (1 assessable, 6 partial).
+	if !strings.Contains(html, "<td>pci_dss_4</td><td>1</td><td>6</td><td class=\"not-assessable\">12</td>") {
+		t.Error("rendered HTML does not show the real golden PCI DSS counts (1 assessable, 6 partial, 12 not)")
 	}
 	if !strings.Contains(html, report.FailureModes.Findings[0].ID) {
 		t.Error("rendered HTML does not contain a real finding ID from the golden bundle")

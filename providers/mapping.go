@@ -127,7 +127,7 @@ type ResourceMapping struct {
 	IngestOnly bool `yaml:"ingest_only,omitempty"`
 
 	// NetworkRole names a structural role core needs to recognise without knowing a
-	// provider's resource names (PC-151): "subnet", "vpc", "route_table" or "elastic_ip". Ingest stamps it on the node
+	// provider's resource names (PC-151): "subnet", "vpc", "route_table", "elastic_ip" or "web_acl". Ingest stamps it on the node
 	// as RawAttributes["network_role"]. Before this, core could only identify a subnet by
 	// its having an explicit route table association, so a subnet relying on the VPC's
 	// implicit main route table was not recognised as a subnet at all.
@@ -204,8 +204,8 @@ func (m ResourceMapping) validate() error {
 	if ceiling := core.MaxImplementedCapabilityLevel(m.NodeType); !ceiling.AtLeast(m.CapabilityLevel) {
 		return fmt.Errorf("mapping %s: capability_level %q exceeds the real ceiling %q for node_type %q (core.MaxImplementedCapabilityLevel) — no engine in this codebase implements that much behaviour for this structural type yet", m.ResourceType, m.CapabilityLevel, ceiling, m.NodeType)
 	}
-	if m.NetworkRole != "" && m.NetworkRole != "subnet" && m.NetworkRole != "vpc" && m.NetworkRole != "route_table" && m.NetworkRole != "elastic_ip" {
-		return fmt.Errorf("mapping %s: network_role %q must be \"subnet\", \"vpc\", \"route_table\" or \"elastic_ip\"", m.ResourceType, m.NetworkRole)
+	if m.NetworkRole != "" && m.NetworkRole != "subnet" && m.NetworkRole != "vpc" && m.NetworkRole != "route_table" && m.NetworkRole != "elastic_ip" && m.NetworkRole != "web_acl" {
+		return fmt.Errorf("mapping %s: network_role %q must be \"subnet\", \"vpc\", \"route_table\", \"elastic_ip\" or \"web_acl\"", m.ResourceType, m.NetworkRole)
 	}
 	if m.DefaultNACL && m.NodeType != core.NodeTypeNetworkBoundary {
 		return fmt.Errorf("mapping %s: default_nacl is only meaningful on a network_boundary node", m.ResourceType)

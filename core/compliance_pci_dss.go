@@ -1,115 +1,71 @@
-// This file is PC-121's PCI DSS v4.0 catalog. SCOPE, stated explicitly rather than
-// silently partial: this catalogs the standard's own 12 TOP-LEVEL requirement
-// numbers only, not its ~300 individual numbered sub-requirements (e.g. 3.5.1,
-// 1.2.8). Going to sub-requirement granularity would require verifying dozens of
-// individual citations against the full paid standard text this project has no
-// access to republish or verify precisely — the same "uncertain stays unknown, never
-// guessed" discipline PC-18's own storage-encryption check already applied to a CIS
-// control ID it could not source. Two of the twelve are further classified
-// assessable_from_architecture, reusing existing engine logic verbatim (StorageEncryptionCheck,
-// IsPublicSubnet) — zero new evaluation logic invented for this ticket. The rest are
-// not_assessable_from_architecture: PCI DSS is majority process/operational/physical
-// controls (secure coding practices, incident response, vendor management, badge
-// access), which no Terraform diagram can ever evidence, exactly as the Card's own
-// Conversation anticipates.
+// This file is PC-121's PCI DSS catalog, built against PCI DSS v4.0.1 (read locally; the standard
+// is licensed and is NOT stored here: only requirement IDs, short titles written in our own words,
+// and a classification).
+//
+// SCOPE, stated rather than implied. The standard has 12 principal requirements and roughly 250
+// numbered sub-requirements. Each architecture-relevant sub-requirement is its own row, cited by its
+// real v4.0.1 number, and classified:
+//   - 1.4.4  assessable: systems storing cardholder data are not directly reachable from untrusted networks
+//   - 1.3.1, 1.3.2, 3.5.1.2, 4.2.1, 6.4.2, 7.2.2  partially assessable: the architecture supports
+//     them, but the full requirement also needs documentation or process evidence
+//
+// Every principal requirement then also has one "remaining sub-requirements" row,
+// not_assessable_from_architecture, so the denominator stays honest: nobody can read the architectural
+// slice as the whole of a requirement. Requirements 2, 5, 8, 9, 10, 11 and 12 have no architecture-
+// evidenced sub-requirement in this model and are single not-assessable rows.
+//
+// A not_assessable row carries no evaluation logic at all, so it can never report satisfied.
+//
+// CORRECTION recorded: the earlier catalog reported "Requirement 3: storage encryption: satisfied"
+// for encrypted database storage. v4.0.1 3.5.1.2 says disk-level or partition-level encryption renders
+// account data unreadable only on removable media, or on non-removable media when the data is also
+// rendered unreadable another way. Storage encryption is therefore supporting evidence (applicable),
+// never a pass. See checkStoredDataProtection.
 package core
 
-// BuildPCIDSS4Catalog runs every PCI DSS v4.0 control this catalog declares against
-// ir/workload. Requirement titles are short, independently-paraphrased summaries of
-// each requirement's own public numbering (see compliance_catalog.go's own doc
-// comment for the citation) — never the standard's verbatim text.
+const pciFramework = FrameworkPCIDSS4
+
+// BuildPCIDSS4Catalog runs every PCI DSS control this catalog declares against ir.
 func BuildPCIDSS4Catalog(ir *IR, workload Workload) []ComplianceControlResult {
 	prov := NewProvenance(KindDerived, "core/compliance_pci_dss")
-	var results []ComplianceControlResult
+	rest := func(req, what string) ComplianceControlResult {
+		return notAssessableFromArchitectureResult("pci_dss_4:"+req+".rest", pciFramework, req, "Rest of Requirement "+req+": "+what, prov)
+	}
+	whole := func(req, title string) ComplianceControlResult {
+		return notAssessableFromArchitectureResult("pci_dss_4:"+req, pciFramework, req, title, prov)
+	}
+	c := func(req, title string, class ControlClassification) ctl {
+		return ctl{id: "pci_dss_4:" + req, framework: pciFramework, req: req, title: title, class: class}
+	}
 
-	results = append(results, pciReq1NetworkSecurity(ir, prov)...)
-	results = append(results, notAssessableFromArchitectureResult(
-		"pci_dss_4.req_2", FrameworkPCIDSS4, "2", "Apply secure configurations to all system components", prov))
-	results = append(results, pciReq3ProtectStoredData(ir, prov)...)
-	results = append(results, notAssessableFromArchitectureResult(
-		"pci_dss_4.req_4", FrameworkPCIDSS4, "4", "Protect cardholder data with strong cryptography during transmission", prov))
-	results = append(results, notAssessableFromArchitectureResult(
-		"pci_dss_4.req_5", FrameworkPCIDSS4, "5", "Protect all systems and networks from malicious software", prov))
-	results = append(results, notAssessableFromArchitectureResult(
-		"pci_dss_4.req_6", FrameworkPCIDSS4, "6", "Develop and maintain secure systems and software", prov))
-	results = append(results, notAssessableFromArchitectureResult(
-		"pci_dss_4.req_7", FrameworkPCIDSS4, "7", "Restrict access to system components and cardholder data by business need to know", prov))
-	results = append(results, notAssessableFromArchitectureResult(
-		"pci_dss_4.req_8", FrameworkPCIDSS4, "8", "Identify users and authenticate access to system components", prov))
-	results = append(results, notAssessableFromArchitectureResult(
-		"pci_dss_4.req_9", FrameworkPCIDSS4, "9", "Restrict physical access to cardholder data", prov))
-	results = append(results, notAssessableFromArchitectureResult(
-		"pci_dss_4.req_10", FrameworkPCIDSS4, "10", "Log and monitor all access to system components and cardholder data", prov))
-	results = append(results, notAssessableFromArchitectureResult(
-		"pci_dss_4.req_11", FrameworkPCIDSS4, "11", "Test security of systems and networks regularly", prov))
-	results = append(results, notAssessableFromArchitectureResult(
-		"pci_dss_4.req_12", FrameworkPCIDSS4, "12", "Support information security with organizational policies and programs", prov))
-
-	return results
-}
-
-// pciReq1NetworkSecurity is Requirement 1's own architecturally-assessable slice:
-// "Install and maintain network security controls" includes, per its own public
-// scope, restricting inbound/outbound traffic to the cardholder data environment.
-// Reuses core.IsPublicSubnet (core/routing.go) verbatim — a managed_database node
-// sitting in a subnet with a real route to an Internet Gateway is a real, structural
-// network-security-control gap; the requirement's OTHER aspects (firewall rule review
-// cadence, documented data-flow diagrams, personal firewalls on remote-access
-// devices) are process controls this classification does not claim to cover, hence
-// this is classified assessable_from_architecture for the one sub-aspect actually
-// checked, not the whole of Requirement 1.
-func pciReq1NetworkSecurity(ir *IR, prov Provenance) []ComplianceControlResult {
 	var out []ComplianceControlResult
-	var databases []Node
-	for _, n := range ir.Nodes {
-		if n.Type == NodeTypeManagedDatabase {
-			databases = append(databases, n)
-		}
-	}
-	if len(databases) == 0 {
-		return []ComplianceControlResult{notAssessableFromArchitectureResultWithRationale(
-			"pci_dss_4.req_1.no_public_database_route", FrameworkPCIDSS4, "1",
-			"Network security controls: database not directly reachable from the internet",
-			prov, "this IR has no managed_database node to evaluate")}
-	}
-	for _, db := range databases {
-		out = append(out, databaseNotPubliclyRoutableResult(ir, db, "pci_dss_4.req_1.no_public_database_route", FrameworkPCIDSS4, "1",
-			"Network security controls: database not directly reachable from the internet", prov))
-	}
-	return out
-}
-
-// pciReq3ProtectStoredData is Requirement 3's own architecturally-assessable slice:
-// "Protect stored account data" — reuses StorageEncryptionCheck (PC-18/29) verbatim,
-// the same encrypted-at-rest fact already computed for the scorecard's own compliance
-// dimension. Requirement 3's other aspects (data retention/disposal policy, PAN
-// masking on display, key-management procedures) are process controls not covered.
-func pciReq3ProtectStoredData(ir *IR, prov Provenance) []ComplianceControlResult {
-	var out []ComplianceControlResult
-	var databases []Node
-	for _, n := range ir.Nodes {
-		if n.Type == NodeTypeManagedDatabase {
-			databases = append(databases, n)
-		}
-	}
-	if len(databases) == 0 {
-		return []ComplianceControlResult{notAssessableFromArchitectureResultWithRationale(
-			"pci_dss_4.req_3.storage_encryption", FrameworkPCIDSS4, "3",
-			"Protect stored account data: storage encryption at rest", prov, "this IR has no managed_database node to evaluate")}
-	}
-	for _, db := range databases {
-		var encrypted *bool
-		if db.Capability != nil && db.Capability.EncryptionMechanism != nil {
-			v := *db.Capability.EncryptionMechanism == "true"
-			encrypted = &v
-		}
-		status, rationale := StorageEncryptionCheck(encrypted, prov)
-		nodeID := db.ID
-		out = append(out, ComplianceControlResult{
-			ControlID: "pci_dss_4.req_3.storage_encryption", Framework: FrameworkPCIDSS4, RequirementID: "3",
-			Title: "Protect stored account data: storage encryption at rest", Classification: ClassificationAssessable,
-			NodeID: nodeID, Result: status, Rationale: rationale,
-		})
-	}
+	// Requirement 1: network security controls
+	out = append(out, checkDatabaseSGIngress(ir, c("1.3.1", "Inbound traffic to the cardholder environment is limited to what is necessary", ClassificationPartial), prov)...)
+	out = append(out, checkDatabaseSGEgress(ir, c("1.3.2", "Outbound traffic from the cardholder environment is limited to what is necessary", ClassificationPartial), prov)...)
+	out = append(out, checkDatabaseNotPubliclyRoutable(ir, c("1.4.4", "Systems storing cardholder data are not directly reachable from untrusted networks", ClassificationAssessable), prov)...)
+	out = append(out, rest("1", "documentation, rule approval and review, other network controls"))
+	// Requirement 2
+	out = append(out, whole("2", "Secure configurations applied to all system components"))
+	// Requirement 3: protect stored account data
+	out = append(out, checkStoredDataProtection(ir, c("3.5.1.2", "Stored account data is unreadable; disk-level encryption alone is not enough on non-removable media", ClassificationPartial), prov,
+		"PCI DSS 3.5.1.2 accepts disk-level encryption on non-removable media only when the data is also rendered unreadable another way")...)
+	out = append(out, rest("3", "retention, masking, key management, other stored-data controls"))
+	// Requirement 4: cryptography in transit
+	out = append(out, checkTransportNotModelled(c("4.2.1", "Strong cryptography protects account data sent over open public networks", ClassificationPartial), prov)...)
+	out = append(out, rest("4", "certificate inventory, other transmission controls"))
+	// Requirement 5
+	out = append(out, whole("5", "Systems and networks protected from malicious software"))
+	// Requirement 6
+	out = append(out, checkPublicFacingBehindWAF(ir, c("6.4.2", "Public-facing web applications sit behind an automated attack detection and prevention layer", ClassificationPartial), prov)...)
+	out = append(out, rest("6", "secure development, vulnerability handling, change control"))
+	// Requirement 7
+	out = append(out, checkLeastPrivilege(ir, c("7.2.2", "Access is granted by job function using least privilege", ClassificationPartial), prov)...)
+	out = append(out, rest("7", "access model, account reviews, other access controls"))
+	// Requirements with no architecture-evidenced sub-requirement in this model
+	out = append(out, whole("8", "Users identified and authenticated before access"))
+	out = append(out, whole("9", "Physical access to cardholder data restricted"))
+	out = append(out, whole("10", "Access to system components and cardholder data logged and monitored"))
+	out = append(out, whole("11", "Security of systems and networks tested regularly"))
+	out = append(out, whole("12", "Policies and programs support information security"))
 	return out
 }

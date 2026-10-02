@@ -19,14 +19,14 @@
         "NotAssessable": 0
       },
       "pci_dss_4": {
-        "Assessable": 2,
-        "Partial": 0,
-        "NotAssessable": 10
+        "Assessable": 1,
+        "Partial": 6,
+        "NotAssessable": 12
       },
       "soc2": {
         "Assessable": 0,
-        "Partial": 1,
-        "NotAssessable": 8
+        "Partial": 5,
+        "NotAssessable": 33
       }
     },
     "compliance_result_counts": {
@@ -38,18 +38,18 @@
         "NotAssessable": 0
       },
       "pci_dss_4": {
-        "Satisfied": 1,
-        "Applicable": 0,
+        "Satisfied": 0,
+        "Applicable": 4,
         "Partial": 0,
         "Unsatisfied": 0,
-        "NotAssessable": 11
+        "NotAssessable": 17
       },
       "soc2": {
         "Satisfied": 0,
-        "Applicable": 0,
+        "Applicable": 2,
         "Partial": 0,
         "Unsatisfied": 0,
-        "NotAssessable": 9
+        "NotAssessable": 38
       }
     },
     "nfr_evaluated_count": 1,
@@ -276,23 +276,55 @@
     {
       "framework": "pci_dss_4",
       "catalog_counts": {
-        "Assessable": 2,
-        "Partial": 0,
-        "NotAssessable": 10
+        "Assessable": 1,
+        "Partial": 6,
+        "NotAssessable": 12
       },
       "result_counts": {
-        "Satisfied": 1,
-        "Applicable": 0,
+        "Satisfied": 0,
+        "Applicable": 4,
         "Partial": 0,
         "Unsatisfied": 0,
-        "NotAssessable": 11
+        "NotAssessable": 17
       },
       "controls": [
         {
-          "ControlID": "pci_dss_4.req_1.no_public_database_route",
+          "ControlID": "pci_dss_4:1.3.1",
           "Framework": "pci_dss_4",
-          "RequirementID": "1",
-          "Title": "Network security controls: database not directly reachable from the internet",
+          "RequirementID": "1.3.1",
+          "Title": "Inbound traffic to the cardholder environment is limited to what is necessary",
+          "Classification": "partially_assessable",
+          "NodeID": "aws_db_instance.payments",
+          "Result": {
+            "status": "applicable",
+            "provenance": {
+              "kind": "derived",
+              "source": "core/compliance_pci_dss"
+            }
+          },
+          "Rationale": "no attached security group admits traffic from anywhere (aws_security_group.database); the architectural aspect is supported, but the full requirement also needs evidence a diagram cannot show"
+        },
+        {
+          "ControlID": "pci_dss_4:1.3.2",
+          "Framework": "pci_dss_4",
+          "RequirementID": "1.3.2",
+          "Title": "Outbound traffic from the cardholder environment is limited to what is necessary",
+          "Classification": "partially_assessable",
+          "NodeID": "aws_db_instance.payments",
+          "Result": {
+            "status": "applicable",
+            "provenance": {
+              "kind": "derived",
+              "source": "core/compliance_pci_dss"
+            }
+          },
+          "Rationale": "no attached security group permits all protocols to anywhere (aws_security_group.database); the architectural aspect is supported, but the full requirement also needs evidence a diagram cannot show"
+        },
+        {
+          "ControlID": "pci_dss_4:1.4.4",
+          "Framework": "pci_dss_4",
+          "RequirementID": "1.4.4",
+          "Title": "Systems storing cardholder data are not directly reachable from untrusted networks",
           "Classification": "assessable_from_architecture",
           "NodeID": "aws_db_instance.payments",
           "Result": {
@@ -305,10 +337,26 @@
           "Rationale": "this resource's own subnet has no resolvable effective route table"
         },
         {
-          "ControlID": "pci_dss_4.req_2",
+          "ControlID": "pci_dss_4:1.rest",
+          "Framework": "pci_dss_4",
+          "RequirementID": "1",
+          "Title": "Rest of Requirement 1: documentation, rule approval and review, other network controls",
+          "Classification": "not_assessable_from_architecture",
+          "NodeID": "",
+          "Result": {
+            "status": "not_assessable",
+            "provenance": {
+              "kind": "derived",
+              "source": "core/compliance_pci_dss"
+            }
+          },
+          "Rationale": "this control concerns people, process, physical security, or organizational policy — no architecture diagram can evidence it"
+        },
+        {
+          "ControlID": "pci_dss_4:2",
           "Framework": "pci_dss_4",
           "RequirementID": "2",
-          "Title": "Apply secure configurations to all system components",
+          "Title": "Secure configurations applied to all system components",
           "Classification": "not_assessable_from_architecture",
           "NodeID": "",
           "Result": {
@@ -321,26 +369,58 @@
           "Rationale": "this control concerns people, process, physical security, or organizational policy — no architecture diagram can evidence it"
         },
         {
-          "ControlID": "pci_dss_4.req_3.storage_encryption",
+          "ControlID": "pci_dss_4:3.5.1.2",
           "Framework": "pci_dss_4",
-          "RequirementID": "3",
-          "Title": "Protect stored account data: storage encryption at rest",
-          "Classification": "assessable_from_architecture",
+          "RequirementID": "3.5.1.2",
+          "Title": "Stored account data is unreadable; disk-level encryption alone is not enough on non-removable media",
+          "Classification": "partially_assessable",
           "NodeID": "aws_db_instance.payments",
           "Result": {
-            "status": "satisfied",
+            "status": "applicable",
             "provenance": {
               "kind": "derived",
               "source": "core/compliance_pci_dss"
             }
           },
-          "Rationale": "storage encryption is enabled — data at rest, snapshots, and automated backups are protected"
+          "Rationale": "storage encryption is enabled — data at rest, snapshots, and automated backups are protected; PCI DSS 3.5.1.2 accepts disk-level encryption on non-removable media only when the data is also rendered unreadable another way — storage encryption supports this but does not satisfy it alone"
         },
         {
-          "ControlID": "pci_dss_4.req_4",
+          "ControlID": "pci_dss_4:3.rest",
+          "Framework": "pci_dss_4",
+          "RequirementID": "3",
+          "Title": "Rest of Requirement 3: retention, masking, key management, other stored-data controls",
+          "Classification": "not_assessable_from_architecture",
+          "NodeID": "",
+          "Result": {
+            "status": "not_assessable",
+            "provenance": {
+              "kind": "derived",
+              "source": "core/compliance_pci_dss"
+            }
+          },
+          "Rationale": "this control concerns people, process, physical security, or organizational policy — no architecture diagram can evidence it"
+        },
+        {
+          "ControlID": "pci_dss_4:4.2.1",
+          "Framework": "pci_dss_4",
+          "RequirementID": "4.2.1",
+          "Title": "Strong cryptography protects account data sent over open public networks",
+          "Classification": "partially_assessable",
+          "NodeID": "",
+          "Result": {
+            "status": "not_assessable",
+            "provenance": {
+              "kind": "derived",
+              "source": "core/compliance_pci_dss"
+            }
+          },
+          "Rationale": "the TLS and protocol settings of listeners and endpoints are not part of the architecture model, so transmission protection is neither confirmed nor refuted"
+        },
+        {
+          "ControlID": "pci_dss_4:4.rest",
           "Framework": "pci_dss_4",
           "RequirementID": "4",
-          "Title": "Protect cardholder data with strong cryptography during transmission",
+          "Title": "Rest of Requirement 4: certificate inventory, other transmission controls",
           "Classification": "not_assessable_from_architecture",
           "NodeID": "",
           "Result": {
@@ -353,10 +433,10 @@
           "Rationale": "this control concerns people, process, physical security, or organizational policy — no architecture diagram can evidence it"
         },
         {
-          "ControlID": "pci_dss_4.req_5",
+          "ControlID": "pci_dss_4:5",
           "Framework": "pci_dss_4",
           "RequirementID": "5",
-          "Title": "Protect all systems and networks from malicious software",
+          "Title": "Systems and networks protected from malicious software",
           "Classification": "not_assessable_from_architecture",
           "NodeID": "",
           "Result": {
@@ -369,10 +449,26 @@
           "Rationale": "this control concerns people, process, physical security, or organizational policy — no architecture diagram can evidence it"
         },
         {
-          "ControlID": "pci_dss_4.req_6",
+          "ControlID": "pci_dss_4:6.4.2",
+          "Framework": "pci_dss_4",
+          "RequirementID": "6.4.2",
+          "Title": "Public-facing web applications sit behind an automated attack detection and prevention layer",
+          "Classification": "partially_assessable",
+          "NodeID": "aws_lb.payments",
+          "Result": {
+            "status": "applicable",
+            "provenance": {
+              "kind": "derived",
+              "source": "core/compliance_pci_dss"
+            }
+          },
+          "Rationale": "this internet-facing load balancer has a web application firewall attached (aws_wafv2_web_acl.payments); the architectural aspect is supported, but the full requirement also needs evidence a diagram cannot show"
+        },
+        {
+          "ControlID": "pci_dss_4:6.rest",
           "Framework": "pci_dss_4",
           "RequirementID": "6",
-          "Title": "Develop and maintain secure systems and software",
+          "Title": "Rest of Requirement 6: secure development, vulnerability handling, change control",
           "Classification": "not_assessable_from_architecture",
           "NodeID": "",
           "Result": {
@@ -385,10 +481,58 @@
           "Rationale": "this control concerns people, process, physical security, or organizational policy — no architecture diagram can evidence it"
         },
         {
-          "ControlID": "pci_dss_4.req_7",
+          "ControlID": "pci_dss_4:7.2.2",
+          "Framework": "pci_dss_4",
+          "RequirementID": "7.2.2",
+          "Title": "Access is granted by job function using least privilege",
+          "Classification": "partially_assessable",
+          "NodeID": "aws_iam_role.eks_cluster",
+          "Result": {
+            "status": "not_assessable",
+            "provenance": {
+              "kind": "derived",
+              "source": "core/compliance_pci_dss"
+            }
+          },
+          "Rationale": "principal \"aws_iam_role.eks_cluster\" has identity policies that could not be read: arn:aws:iam::aws:policy/AmazonEKSClusterPolicy: an attached policy defined outside this bundle (for example an AWS-managed policy); its permissions are not modelled"
+        },
+        {
+          "ControlID": "pci_dss_4:7.2.2",
+          "Framework": "pci_dss_4",
+          "RequirementID": "7.2.2",
+          "Title": "Access is granted by job function using least privilege",
+          "Classification": "partially_assessable",
+          "NodeID": "aws_iam_role.eks_node",
+          "Result": {
+            "status": "not_assessable",
+            "provenance": {
+              "kind": "derived",
+              "source": "core/compliance_pci_dss"
+            }
+          },
+          "Rationale": "principal \"aws_iam_role.eks_node\" has identity policies that could not be read: arn:aws:iam::aws:policy/AmazonEC2ContainerRegistryReadOnly: an attached policy defined outside this bundle (for example an AWS-managed policy); its permissions are not modelled; arn:aws:iam::aws:policy/AmazonEKSWorkerNodePolicy: an attached policy defined outside this bundle (for example an AWS-managed policy); its permissions are not modelled; arn:aws:iam::aws:policy/AmazonEKS_CNI_Policy: an attached policy defined outside this bundle (for example an AWS-managed policy); its permissions are not modelled"
+        },
+        {
+          "ControlID": "pci_dss_4:7.2.2",
+          "Framework": "pci_dss_4",
+          "RequirementID": "7.2.2",
+          "Title": "Access is granted by job function using least privilege",
+          "Classification": "partially_assessable",
+          "NodeID": "aws_iam_role.payments_app",
+          "Result": {
+            "status": "not_assessable",
+            "provenance": {
+              "kind": "derived",
+              "source": "core/compliance_pci_dss"
+            }
+          },
+          "Rationale": "principal \"aws_iam_role.payments_app\" has identity policies that could not be read: aws_iam_policy.payments_app: the policy document is not a static value (it references a resource or variable, or uses a function other than jsonencode of constants)"
+        },
+        {
+          "ControlID": "pci_dss_4:7.rest",
           "Framework": "pci_dss_4",
           "RequirementID": "7",
-          "Title": "Restrict access to system components and cardholder data by business need to know",
+          "Title": "Rest of Requirement 7: access model, account reviews, other access controls",
           "Classification": "not_assessable_from_architecture",
           "NodeID": "",
           "Result": {
@@ -401,10 +545,10 @@
           "Rationale": "this control concerns people, process, physical security, or organizational policy — no architecture diagram can evidence it"
         },
         {
-          "ControlID": "pci_dss_4.req_8",
+          "ControlID": "pci_dss_4:8",
           "Framework": "pci_dss_4",
           "RequirementID": "8",
-          "Title": "Identify users and authenticate access to system components",
+          "Title": "Users identified and authenticated before access",
           "Classification": "not_assessable_from_architecture",
           "NodeID": "",
           "Result": {
@@ -417,10 +561,10 @@
           "Rationale": "this control concerns people, process, physical security, or organizational policy — no architecture diagram can evidence it"
         },
         {
-          "ControlID": "pci_dss_4.req_9",
+          "ControlID": "pci_dss_4:9",
           "Framework": "pci_dss_4",
           "RequirementID": "9",
-          "Title": "Restrict physical access to cardholder data",
+          "Title": "Physical access to cardholder data restricted",
           "Classification": "not_assessable_from_architecture",
           "NodeID": "",
           "Result": {
@@ -433,10 +577,10 @@
           "Rationale": "this control concerns people, process, physical security, or organizational policy — no architecture diagram can evidence it"
         },
         {
-          "ControlID": "pci_dss_4.req_10",
+          "ControlID": "pci_dss_4:10",
           "Framework": "pci_dss_4",
           "RequirementID": "10",
-          "Title": "Log and monitor all access to system components and cardholder data",
+          "Title": "Access to system components and cardholder data logged and monitored",
           "Classification": "not_assessable_from_architecture",
           "NodeID": "",
           "Result": {
@@ -449,10 +593,10 @@
           "Rationale": "this control concerns people, process, physical security, or organizational policy — no architecture diagram can evidence it"
         },
         {
-          "ControlID": "pci_dss_4.req_11",
+          "ControlID": "pci_dss_4:11",
           "Framework": "pci_dss_4",
           "RequirementID": "11",
-          "Title": "Test security of systems and networks regularly",
+          "Title": "Security of systems and networks tested regularly",
           "Classification": "not_assessable_from_architecture",
           "NodeID": "",
           "Result": {
@@ -465,10 +609,10 @@
           "Rationale": "this control concerns people, process, physical security, or organizational policy — no architecture diagram can evidence it"
         },
         {
-          "ControlID": "pci_dss_4.req_12",
+          "ControlID": "pci_dss_4:12",
           "Framework": "pci_dss_4",
           "RequirementID": "12",
-          "Title": "Support information security with organizational policies and programs",
+          "Title": "Policies and programs support information security",
           "Classification": "not_assessable_from_architecture",
           "NodeID": "",
           "Result": {
@@ -486,22 +630,22 @@
       "framework": "soc2",
       "catalog_counts": {
         "Assessable": 0,
-        "Partial": 1,
-        "NotAssessable": 8
+        "Partial": 5,
+        "NotAssessable": 33
       },
       "result_counts": {
         "Satisfied": 0,
-        "Applicable": 0,
+        "Applicable": 2,
         "Partial": 0,
         "Unsatisfied": 0,
-        "NotAssessable": 9
+        "NotAssessable": 38
       },
       "controls": [
         {
-          "ControlID": "soc2.cc1",
+          "ControlID": "soc2:CC1.1",
           "Framework": "soc2",
-          "RequirementID": "CC1",
-          "Title": "Control environment: organizational integrity and security governance",
+          "RequirementID": "CC1.1",
+          "Title": "Commitment to integrity and ethical values",
           "Classification": "not_assessable_from_architecture",
           "NodeID": "",
           "Result": {
@@ -514,10 +658,10 @@
           "Rationale": "this control concerns people, process, physical security, or organizational policy — no architecture diagram can evidence it"
         },
         {
-          "ControlID": "soc2.cc2",
+          "ControlID": "soc2:CC1.2",
           "Framework": "soc2",
-          "RequirementID": "CC2",
-          "Title": "Communication and information: security policies communicated internally and externally",
+          "RequirementID": "CC1.2",
+          "Title": "Board oversight independent of management",
           "Classification": "not_assessable_from_architecture",
           "NodeID": "",
           "Result": {
@@ -530,10 +674,10 @@
           "Rationale": "this control concerns people, process, physical security, or organizational policy — no architecture diagram can evidence it"
         },
         {
-          "ControlID": "soc2.cc3",
+          "ControlID": "soc2:CC1.3",
           "Framework": "soc2",
-          "RequirementID": "CC3",
-          "Title": "Risk assessment: identifying and analyzing risk to objectives",
+          "RequirementID": "CC1.3",
+          "Title": "Structures, reporting lines and authorities established",
           "Classification": "not_assessable_from_architecture",
           "NodeID": "",
           "Result": {
@@ -546,10 +690,10 @@
           "Rationale": "this control concerns people, process, physical security, or organizational policy — no architecture diagram can evidence it"
         },
         {
-          "ControlID": "soc2.cc4",
+          "ControlID": "soc2:CC1.4",
           "Framework": "soc2",
-          "RequirementID": "CC4",
-          "Title": "Monitoring activities: evaluating control effectiveness over time",
+          "RequirementID": "CC1.4",
+          "Title": "Commitment to attract, develop and retain competent people",
           "Classification": "not_assessable_from_architecture",
           "NodeID": "",
           "Result": {
@@ -562,10 +706,10 @@
           "Rationale": "this control concerns people, process, physical security, or organizational policy — no architecture diagram can evidence it"
         },
         {
-          "ControlID": "soc2.cc5",
+          "ControlID": "soc2:CC1.5",
           "Framework": "soc2",
-          "RequirementID": "CC5",
-          "Title": "Control activities: selecting and developing controls that mitigate risk",
+          "RequirementID": "CC1.5",
+          "Title": "People held accountable for internal control duties",
           "Classification": "not_assessable_from_architecture",
           "NodeID": "",
           "Result": {
@@ -578,10 +722,314 @@
           "Rationale": "this control concerns people, process, physical security, or organizational policy — no architecture diagram can evidence it"
         },
         {
-          "ControlID": "soc2.cc6.no_public_database_route",
+          "ControlID": "soc2:CC2.1",
           "Framework": "soc2",
-          "RequirementID": "CC6",
-          "Title": "Logical access controls: customer data store not directly reachable from the internet",
+          "RequirementID": "CC2.1",
+          "Title": "Relevant, quality information used for internal control",
+          "Classification": "not_assessable_from_architecture",
+          "NodeID": "",
+          "Result": {
+            "status": "not_assessable",
+            "provenance": {
+              "kind": "derived",
+              "source": "core/compliance_soc2"
+            }
+          },
+          "Rationale": "this control concerns people, process, physical security, or organizational policy — no architecture diagram can evidence it"
+        },
+        {
+          "ControlID": "soc2:CC2.2",
+          "Framework": "soc2",
+          "RequirementID": "CC2.2",
+          "Title": "Control information communicated internally",
+          "Classification": "not_assessable_from_architecture",
+          "NodeID": "",
+          "Result": {
+            "status": "not_assessable",
+            "provenance": {
+              "kind": "derived",
+              "source": "core/compliance_soc2"
+            }
+          },
+          "Rationale": "this control concerns people, process, physical security, or organizational policy — no architecture diagram can evidence it"
+        },
+        {
+          "ControlID": "soc2:CC2.3",
+          "Framework": "soc2",
+          "RequirementID": "CC2.3",
+          "Title": "Control matters communicated with external parties",
+          "Classification": "not_assessable_from_architecture",
+          "NodeID": "",
+          "Result": {
+            "status": "not_assessable",
+            "provenance": {
+              "kind": "derived",
+              "source": "core/compliance_soc2"
+            }
+          },
+          "Rationale": "this control concerns people, process, physical security, or organizational policy — no architecture diagram can evidence it"
+        },
+        {
+          "ControlID": "soc2:CC3.1",
+          "Framework": "soc2",
+          "RequirementID": "CC3.1",
+          "Title": "Objectives specified clearly enough to assess risk",
+          "Classification": "not_assessable_from_architecture",
+          "NodeID": "",
+          "Result": {
+            "status": "not_assessable",
+            "provenance": {
+              "kind": "derived",
+              "source": "core/compliance_soc2"
+            }
+          },
+          "Rationale": "this control concerns people, process, physical security, or organizational policy — no architecture diagram can evidence it"
+        },
+        {
+          "ControlID": "soc2:CC3.2",
+          "Framework": "soc2",
+          "RequirementID": "CC3.2",
+          "Title": "Risks identified and analyzed",
+          "Classification": "not_assessable_from_architecture",
+          "NodeID": "",
+          "Result": {
+            "status": "not_assessable",
+            "provenance": {
+              "kind": "derived",
+              "source": "core/compliance_soc2"
+            }
+          },
+          "Rationale": "this control concerns people, process, physical security, or organizational policy — no architecture diagram can evidence it"
+        },
+        {
+          "ControlID": "soc2:CC3.3",
+          "Framework": "soc2",
+          "RequirementID": "CC3.3",
+          "Title": "Fraud potential considered in risk assessment",
+          "Classification": "not_assessable_from_architecture",
+          "NodeID": "",
+          "Result": {
+            "status": "not_assessable",
+            "provenance": {
+              "kind": "derived",
+              "source": "core/compliance_soc2"
+            }
+          },
+          "Rationale": "this control concerns people, process, physical security, or organizational policy — no architecture diagram can evidence it"
+        },
+        {
+          "ControlID": "soc2:CC3.4",
+          "Framework": "soc2",
+          "RequirementID": "CC3.4",
+          "Title": "Significant changes affecting controls assessed",
+          "Classification": "not_assessable_from_architecture",
+          "NodeID": "",
+          "Result": {
+            "status": "not_assessable",
+            "provenance": {
+              "kind": "derived",
+              "source": "core/compliance_soc2"
+            }
+          },
+          "Rationale": "this control concerns people, process, physical security, or organizational policy — no architecture diagram can evidence it"
+        },
+        {
+          "ControlID": "soc2:CC4.1",
+          "Framework": "soc2",
+          "RequirementID": "CC4.1",
+          "Title": "Ongoing and separate evaluations of controls",
+          "Classification": "not_assessable_from_architecture",
+          "NodeID": "",
+          "Result": {
+            "status": "not_assessable",
+            "provenance": {
+              "kind": "derived",
+              "source": "core/compliance_soc2"
+            }
+          },
+          "Rationale": "this control concerns people, process, physical security, or organizational policy — no architecture diagram can evidence it"
+        },
+        {
+          "ControlID": "soc2:CC4.2",
+          "Framework": "soc2",
+          "RequirementID": "CC4.2",
+          "Title": "Control deficiencies communicated for correction",
+          "Classification": "not_assessable_from_architecture",
+          "NodeID": "",
+          "Result": {
+            "status": "not_assessable",
+            "provenance": {
+              "kind": "derived",
+              "source": "core/compliance_soc2"
+            }
+          },
+          "Rationale": "this control concerns people, process, physical security, or organizational policy — no architecture diagram can evidence it"
+        },
+        {
+          "ControlID": "soc2:CC5.1",
+          "Framework": "soc2",
+          "RequirementID": "CC5.1",
+          "Title": "Control activities selected to mitigate risk",
+          "Classification": "not_assessable_from_architecture",
+          "NodeID": "",
+          "Result": {
+            "status": "not_assessable",
+            "provenance": {
+              "kind": "derived",
+              "source": "core/compliance_soc2"
+            }
+          },
+          "Rationale": "this control concerns people, process, physical security, or organizational policy — no architecture diagram can evidence it"
+        },
+        {
+          "ControlID": "soc2:CC5.2",
+          "Framework": "soc2",
+          "RequirementID": "CC5.2",
+          "Title": "General technology controls selected and developed",
+          "Classification": "not_assessable_from_architecture",
+          "NodeID": "",
+          "Result": {
+            "status": "not_assessable",
+            "provenance": {
+              "kind": "derived",
+              "source": "core/compliance_soc2"
+            }
+          },
+          "Rationale": "this control concerns people, process, physical security, or organizational policy — no architecture diagram can evidence it"
+        },
+        {
+          "ControlID": "soc2:CC5.3",
+          "Framework": "soc2",
+          "RequirementID": "CC5.3",
+          "Title": "Controls deployed through policies and procedures",
+          "Classification": "not_assessable_from_architecture",
+          "NodeID": "",
+          "Result": {
+            "status": "not_assessable",
+            "provenance": {
+              "kind": "derived",
+              "source": "core/compliance_soc2"
+            }
+          },
+          "Rationale": "this control concerns people, process, physical security, or organizational policy — no architecture diagram can evidence it"
+        },
+        {
+          "ControlID": "soc2:CC6.1",
+          "Framework": "soc2",
+          "RequirementID": "CC6.1",
+          "Title": "Logical access security architecture protects information assets, including encryption",
+          "Classification": "partially_assessable",
+          "NodeID": "aws_db_instance.payments",
+          "Result": {
+            "status": "applicable",
+            "provenance": {
+              "kind": "derived",
+              "source": "core/compliance_soc2"
+            }
+          },
+          "Rationale": "storage encryption is enabled — data at rest, snapshots, and automated backups are protected; SOC 2 CC6.1 leaves the use of encryption to the entity's own risk strategy — storage encryption supports this but does not satisfy it alone"
+        },
+        {
+          "ControlID": "soc2:CC6.2",
+          "Framework": "soc2",
+          "RequirementID": "CC6.2",
+          "Title": "Users registered and authorized before credentials are issued",
+          "Classification": "not_assessable_from_architecture",
+          "NodeID": "",
+          "Result": {
+            "status": "not_assessable",
+            "provenance": {
+              "kind": "derived",
+              "source": "core/compliance_soc2"
+            }
+          },
+          "Rationale": "this control concerns people, process, physical security, or organizational policy — no architecture diagram can evidence it"
+        },
+        {
+          "ControlID": "soc2:CC6.3",
+          "Framework": "soc2",
+          "RequirementID": "CC6.3",
+          "Title": "Access is role-based and follows least privilege",
+          "Classification": "partially_assessable",
+          "NodeID": "aws_iam_role.eks_cluster",
+          "Result": {
+            "status": "not_assessable",
+            "provenance": {
+              "kind": "derived",
+              "source": "core/compliance_soc2"
+            }
+          },
+          "Rationale": "principal \"aws_iam_role.eks_cluster\" has identity policies that could not be read: arn:aws:iam::aws:policy/AmazonEKSClusterPolicy: an attached policy defined outside this bundle (for example an AWS-managed policy); its permissions are not modelled"
+        },
+        {
+          "ControlID": "soc2:CC6.3",
+          "Framework": "soc2",
+          "RequirementID": "CC6.3",
+          "Title": "Access is role-based and follows least privilege",
+          "Classification": "partially_assessable",
+          "NodeID": "aws_iam_role.eks_node",
+          "Result": {
+            "status": "not_assessable",
+            "provenance": {
+              "kind": "derived",
+              "source": "core/compliance_soc2"
+            }
+          },
+          "Rationale": "principal \"aws_iam_role.eks_node\" has identity policies that could not be read: arn:aws:iam::aws:policy/AmazonEC2ContainerRegistryReadOnly: an attached policy defined outside this bundle (for example an AWS-managed policy); its permissions are not modelled; arn:aws:iam::aws:policy/AmazonEKSWorkerNodePolicy: an attached policy defined outside this bundle (for example an AWS-managed policy); its permissions are not modelled; arn:aws:iam::aws:policy/AmazonEKS_CNI_Policy: an attached policy defined outside this bundle (for example an AWS-managed policy); its permissions are not modelled"
+        },
+        {
+          "ControlID": "soc2:CC6.3",
+          "Framework": "soc2",
+          "RequirementID": "CC6.3",
+          "Title": "Access is role-based and follows least privilege",
+          "Classification": "partially_assessable",
+          "NodeID": "aws_iam_role.payments_app",
+          "Result": {
+            "status": "not_assessable",
+            "provenance": {
+              "kind": "derived",
+              "source": "core/compliance_soc2"
+            }
+          },
+          "Rationale": "principal \"aws_iam_role.payments_app\" has identity policies that could not be read: aws_iam_policy.payments_app: the policy document is not a static value (it references a resource or variable, or uses a function other than jsonencode of constants)"
+        },
+        {
+          "ControlID": "soc2:CC6.4",
+          "Framework": "soc2",
+          "RequirementID": "CC6.4",
+          "Title": "Physical access to facilities and assets restricted",
+          "Classification": "not_assessable_from_architecture",
+          "NodeID": "",
+          "Result": {
+            "status": "not_assessable",
+            "provenance": {
+              "kind": "derived",
+              "source": "core/compliance_soc2"
+            }
+          },
+          "Rationale": "this control concerns people, process, physical security, or organizational policy — no architecture diagram can evidence it"
+        },
+        {
+          "ControlID": "soc2:CC6.5",
+          "Framework": "soc2",
+          "RequirementID": "CC6.5",
+          "Title": "Assets and data securely disposed of",
+          "Classification": "not_assessable_from_architecture",
+          "NodeID": "",
+          "Result": {
+            "status": "not_assessable",
+            "provenance": {
+              "kind": "derived",
+              "source": "core/compliance_soc2"
+            }
+          },
+          "Rationale": "this control concerns people, process, physical security, or organizational policy — no architecture diagram can evidence it"
+        },
+        {
+          "ControlID": "soc2:CC6.6",
+          "Framework": "soc2",
+          "RequirementID": "CC6.6",
+          "Title": "Logical access measures protect against threats from outside the system boundary",
           "Classification": "partially_assessable",
           "NodeID": "aws_db_instance.payments",
           "Result": {
@@ -594,10 +1042,26 @@
           "Rationale": "this resource's own subnet has no resolvable effective route table"
         },
         {
-          "ControlID": "soc2.cc7",
+          "ControlID": "soc2:CC6.7",
           "Framework": "soc2",
-          "RequirementID": "CC7",
-          "Title": "System operations: detecting and responding to security incidents",
+          "RequirementID": "CC6.7",
+          "Title": "Data transmission, movement and removal restricted and protected",
+          "Classification": "partially_assessable",
+          "NodeID": "",
+          "Result": {
+            "status": "not_assessable",
+            "provenance": {
+              "kind": "derived",
+              "source": "core/compliance_soc2"
+            }
+          },
+          "Rationale": "the TLS and protocol settings of listeners and endpoints are not part of the architecture model, so transmission protection is neither confirmed nor refuted"
+        },
+        {
+          "ControlID": "soc2:CC6.8",
+          "Framework": "soc2",
+          "RequirementID": "CC6.8",
+          "Title": "Unauthorized or malicious software prevented or detected",
           "Classification": "not_assessable_from_architecture",
           "NodeID": "",
           "Result": {
@@ -610,10 +1074,10 @@
           "Rationale": "this control concerns people, process, physical security, or organizational policy — no architecture diagram can evidence it"
         },
         {
-          "ControlID": "soc2.cc8",
+          "ControlID": "soc2:CC7.1",
           "Framework": "soc2",
-          "RequirementID": "CC8",
-          "Title": "Change management: authorizing, testing, and approving system changes",
+          "RequirementID": "CC7.1",
+          "Title": "Configuration changes and new vulnerabilities detected",
           "Classification": "not_assessable_from_architecture",
           "NodeID": "",
           "Result": {
@@ -626,10 +1090,186 @@
           "Rationale": "this control concerns people, process, physical security, or organizational policy — no architecture diagram can evidence it"
         },
         {
-          "ControlID": "soc2.cc9",
+          "ControlID": "soc2:CC7.2",
           "Framework": "soc2",
-          "RequirementID": "CC9",
-          "Title": "Risk mitigation: managing risk from vendors and business disruption",
+          "RequirementID": "CC7.2",
+          "Title": "System components monitored for anomalies",
+          "Classification": "not_assessable_from_architecture",
+          "NodeID": "",
+          "Result": {
+            "status": "not_assessable",
+            "provenance": {
+              "kind": "derived",
+              "source": "core/compliance_soc2"
+            }
+          },
+          "Rationale": "this control concerns people, process, physical security, or organizational policy — no architecture diagram can evidence it"
+        },
+        {
+          "ControlID": "soc2:CC7.3",
+          "Framework": "soc2",
+          "RequirementID": "CC7.3",
+          "Title": "Security events evaluated",
+          "Classification": "not_assessable_from_architecture",
+          "NodeID": "",
+          "Result": {
+            "status": "not_assessable",
+            "provenance": {
+              "kind": "derived",
+              "source": "core/compliance_soc2"
+            }
+          },
+          "Rationale": "this control concerns people, process, physical security, or organizational policy — no architecture diagram can evidence it"
+        },
+        {
+          "ControlID": "soc2:CC7.4",
+          "Framework": "soc2",
+          "RequirementID": "CC7.4",
+          "Title": "Security incidents responded to",
+          "Classification": "not_assessable_from_architecture",
+          "NodeID": "",
+          "Result": {
+            "status": "not_assessable",
+            "provenance": {
+              "kind": "derived",
+              "source": "core/compliance_soc2"
+            }
+          },
+          "Rationale": "this control concerns people, process, physical security, or organizational policy — no architecture diagram can evidence it"
+        },
+        {
+          "ControlID": "soc2:CC7.5",
+          "Framework": "soc2",
+          "RequirementID": "CC7.5",
+          "Title": "Recovery from security incidents",
+          "Classification": "not_assessable_from_architecture",
+          "NodeID": "",
+          "Result": {
+            "status": "not_assessable",
+            "provenance": {
+              "kind": "derived",
+              "source": "core/compliance_soc2"
+            }
+          },
+          "Rationale": "this control concerns people, process, physical security, or organizational policy — no architecture diagram can evidence it"
+        },
+        {
+          "ControlID": "soc2:CC8.1",
+          "Framework": "soc2",
+          "RequirementID": "CC8.1",
+          "Title": "Changes authorized, tested, approved and implemented",
+          "Classification": "not_assessable_from_architecture",
+          "NodeID": "",
+          "Result": {
+            "status": "not_assessable",
+            "provenance": {
+              "kind": "derived",
+              "source": "core/compliance_soc2"
+            }
+          },
+          "Rationale": "this control concerns people, process, physical security, or organizational policy — no architecture diagram can evidence it"
+        },
+        {
+          "ControlID": "soc2:CC9.1",
+          "Framework": "soc2",
+          "RequirementID": "CC9.1",
+          "Title": "Risk mitigation for business disruption",
+          "Classification": "not_assessable_from_architecture",
+          "NodeID": "",
+          "Result": {
+            "status": "not_assessable",
+            "provenance": {
+              "kind": "derived",
+              "source": "core/compliance_soc2"
+            }
+          },
+          "Rationale": "this control concerns people, process, physical security, or organizational policy — no architecture diagram can evidence it"
+        },
+        {
+          "ControlID": "soc2:CC9.2",
+          "Framework": "soc2",
+          "RequirementID": "CC9.2",
+          "Title": "Vendor and business-partner risk managed",
+          "Classification": "not_assessable_from_architecture",
+          "NodeID": "",
+          "Result": {
+            "status": "not_assessable",
+            "provenance": {
+              "kind": "derived",
+              "source": "core/compliance_soc2"
+            }
+          },
+          "Rationale": "this control concerns people, process, physical security, or organizational policy — no architecture diagram can evidence it"
+        },
+        {
+          "ControlID": "soc2:A1.1",
+          "Framework": "soc2",
+          "RequirementID": "A1.1",
+          "Title": "Processing capacity monitored and managed",
+          "Classification": "not_assessable_from_architecture",
+          "NodeID": "",
+          "Result": {
+            "status": "not_assessable",
+            "provenance": {
+              "kind": "derived",
+              "source": "core/compliance_soc2"
+            }
+          },
+          "Rationale": "this control concerns people, process, physical security, or organizational policy — no architecture diagram can evidence it"
+        },
+        {
+          "ControlID": "soc2:A1.2",
+          "Framework": "soc2",
+          "RequirementID": "A1.2",
+          "Title": "Environmental protections, backups and recovery infrastructure in place",
+          "Classification": "partially_assessable",
+          "NodeID": "aws_db_instance.payments",
+          "Result": {
+            "status": "applicable",
+            "provenance": {
+              "kind": "derived",
+              "source": "core/compliance_soc2"
+            }
+          },
+          "Rationale": "this database declares a synchronous standby in another availability zone; the architectural aspect is supported, but the full requirement also needs evidence a diagram cannot show"
+        },
+        {
+          "ControlID": "soc2:A1.3",
+          "Framework": "soc2",
+          "RequirementID": "A1.3",
+          "Title": "Recovery plan procedures tested",
+          "Classification": "not_assessable_from_architecture",
+          "NodeID": "",
+          "Result": {
+            "status": "not_assessable",
+            "provenance": {
+              "kind": "derived",
+              "source": "core/compliance_soc2"
+            }
+          },
+          "Rationale": "this control concerns people, process, physical security, or organizational policy — no architecture diagram can evidence it"
+        },
+        {
+          "ControlID": "soc2:C1.1",
+          "Framework": "soc2",
+          "RequirementID": "C1.1",
+          "Title": "Confidential information identified and maintained",
+          "Classification": "not_assessable_from_architecture",
+          "NodeID": "",
+          "Result": {
+            "status": "not_assessable",
+            "provenance": {
+              "kind": "derived",
+              "source": "core/compliance_soc2"
+            }
+          },
+          "Rationale": "this control concerns people, process, physical security, or organizational policy — no architecture diagram can evidence it"
+        },
+        {
+          "ControlID": "soc2:C1.2",
+          "Framework": "soc2",
+          "RequirementID": "C1.2",
+          "Title": "Confidential information disposed of",
           "Classification": "not_assessable_from_architecture",
           "NodeID": "",
           "Result": {

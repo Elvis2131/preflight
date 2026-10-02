@@ -23,3 +23,7 @@ override.tf.json
 
 # AWS icon package zip placed in ui/ (licence: canvas/public/aws-icons/ICONS-LICENSE.md) — only the used subset is committed
 ui/*.zip
+
+# PC-121: licensed source standards, read locally to build the control mappings. Never committed.
+/docs/PCI-DSS-*.pdf
+/docs/Trust-services-criteria*.pdf

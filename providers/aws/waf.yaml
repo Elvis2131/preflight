@@ -5,6 +5,9 @@
 # protects, not as an attribute here.
 resource_type: aws_wafv2_web_acl
 node_type: network_boundary
+# PC-121: core recognises a web application firewall by this role (data), not by the resource's
+# name, so a compliance control can ask "is this internet-facing load balancer behind one".
+network_role: web_acl
 capabilities:
   - field: scope
     source_attribute: scope

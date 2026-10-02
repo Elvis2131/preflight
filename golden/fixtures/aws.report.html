@@ -755,8 +755,8 @@ code{background:#f1f5f9;padding:0 .2rem}
 <h3>Compliance catalog counts</h3>
 <table><tr><th>Framework</th><th>Assessable</th><th>Partial</th><th class="not-assessable">Not assessable from architecture</th></tr>
 <tr><td>cis_aws</td><td>2</td><td>0</td><td class="not-assessable">0</td></tr>
-<tr><td>pci_dss_4</td><td>2</td><td>0</td><td class="not-assessable">10</td></tr>
-<tr><td>soc2</td><td>0</td><td>1</td><td class="not-assessable">8</td></tr>
+<tr><td>pci_dss_4</td><td>1</td><td>6</td><td class="not-assessable">12</td></tr>
+<tr><td>soc2</td><td>0</td><td>5</td><td class="not-assessable">33</td></tr>
 </table>
 
 <h2>NFR conformance</h2>
@@ -777,51 +777,87 @@ code{background:#f1f5f9;padding:0 .2rem}
 <h3>pci_dss_4</h3>
 <table><tr><th>Control</th><th>Requirement</th><th>Title</th><th>Classification</th><th>Status</th><th>Rationale</th></tr>
 <tr>
-<td><code>pci_dss_4.req_1.no_public_database_route</code></td><td>1</td><td>Network security controls: database not directly reachable from the internet</td><td>assessable_from_architecture</td>
+<td><code>pci_dss_4:1.3.1</code></td><td>1.3.1</td><td>Inbound traffic to the cardholder environment is limited to what is necessary</td><td>partially_assessable</td>
+<td>applicable</td>
+<td class="reason">no attached security group admits traffic from anywhere (aws_security_group.database); the architectural aspect is supported, but the full requirement also needs evidence a diagram cannot show</td>
+</tr><tr>
+<td><code>pci_dss_4:1.3.2</code></td><td>1.3.2</td><td>Outbound traffic from the cardholder environment is limited to what is necessary</td><td>partially_assessable</td>
+<td>applicable</td>
+<td class="reason">no attached security group permits all protocols to anywhere (aws_security_group.database); the architectural aspect is supported, but the full requirement also needs evidence a diagram cannot show</td>
+</tr><tr>
+<td><code>pci_dss_4:1.4.4</code></td><td>1.4.4</td><td>Systems storing cardholder data are not directly reachable from untrusted networks</td><td>assessable_from_architecture</td>
 <td class="not-assessable">not_assessable</td>
 <td class="reason">this resource&#39;s own subnet has no resolvable effective route table</td>
 </tr><tr>
-<td><code>pci_dss_4.req_2</code></td><td>2</td><td>Apply secure configurations to all system components</td><td>not_assessable_from_architecture</td>
+<td><code>pci_dss_4:1.rest</code></td><td>1</td><td>Rest of Requirement 1: documentation, rule approval and review, other network controls</td><td>not_assessable_from_architecture</td>
 <td class="not-assessable">not_assessable</td>
 <td class="reason">this control concerns people, process, physical security, or organizational policy — no architecture diagram can evidence it</td>
 </tr><tr>
-<td><code>pci_dss_4.req_3.storage_encryption</code></td><td>3</td><td>Protect stored account data: storage encryption at rest</td><td>assessable_from_architecture</td>
-<td>satisfied</td>
-<td class="reason">storage encryption is enabled — data at rest, snapshots, and automated backups are protected</td>
-</tr><tr>
-<td><code>pci_dss_4.req_4</code></td><td>4</td><td>Protect cardholder data with strong cryptography during transmission</td><td>not_assessable_from_architecture</td>
+<td><code>pci_dss_4:2</code></td><td>2</td><td>Secure configurations applied to all system components</td><td>not_assessable_from_architecture</td>
 <td class="not-assessable">not_assessable</td>
 <td class="reason">this control concerns people, process, physical security, or organizational policy — no architecture diagram can evidence it</td>
 </tr><tr>
-<td><code>pci_dss_4.req_5</code></td><td>5</td><td>Protect all systems and networks from malicious software</td><td>not_assessable_from_architecture</td>
+<td><code>pci_dss_4:3.5.1.2</code></td><td>3.5.1.2</td><td>Stored account data is unreadable; disk-level encryption alone is not enough on non-removable media</td><td>partially_assessable</td>
+<td>applicable</td>
+<td class="reason">storage encryption is enabled — data at rest, snapshots, and automated backups are protected; PCI DSS 3.5.1.2 accepts disk-level encryption on non-removable media only when the data is also rendered unreadable another way — storage encryption supports this but does not satisfy it alone</td>
+</tr><tr>
+<td><code>pci_dss_4:3.rest</code></td><td>3</td><td>Rest of Requirement 3: retention, masking, key management, other stored-data controls</td><td>not_assessable_from_architecture</td>
 <td class="not-assessable">not_assessable</td>
 <td class="reason">this control concerns people, process, physical security, or organizational policy — no architecture diagram can evidence it</td>
 </tr><tr>
-<td><code>pci_dss_4.req_6</code></td><td>6</td><td>Develop and maintain secure systems and software</td><td>not_assessable_from_architecture</td>
+<td><code>pci_dss_4:4.2.1</code></td><td>4.2.1</td><td>Strong cryptography protects account data sent over open public networks</td><td>partially_assessable</td>
+<td class="not-assessable">not_assessable</td>
+<td class="reason">the TLS and protocol settings of listeners and endpoints are not part of the architecture model, so transmission protection is neither confirmed nor refuted</td>
+</tr><tr>
+<td><code>pci_dss_4:4.rest</code></td><td>4</td><td>Rest of Requirement 4: certificate inventory, other transmission controls</td><td>not_assessable_from_architecture</td>
 <td class="not-assessable">not_assessable</td>
 <td class="reason">this control concerns people, process, physical security, or organizational policy — no architecture diagram can evidence it</td>
 </tr><tr>
-<td><code>pci_dss_4.req_7</code></td><td>7</td><td>Restrict access to system components and cardholder data by business need to know</td><td>not_assessable_from_architecture</td>
+<td><code>pci_dss_4:5</code></td><td>5</td><td>Systems and networks protected from malicious software</td><td>not_assessable_from_architecture</td>
 <td class="not-assessable">not_assessable</td>
 <td class="reason">this control concerns people, process, physical security, or organizational policy — no architecture diagram can evidence it</td>
 </tr><tr>
-<td><code>pci_dss_4.req_8</code></td><td>8</td><td>Identify users and authenticate access to system components</td><td>not_assessable_from_architecture</td>
+<td><code>pci_dss_4:6.4.2</code></td><td>6.4.2</td><td>Public-facing web applications sit behind an automated attack detection and prevention layer</td><td>partially_assessable</td>
+<td>applicable</td>
+<td class="reason">this internet-facing load balancer has a web application firewall attached (aws_wafv2_web_acl.payments); the architectural aspect is supported, but the full requirement also needs evidence a diagram cannot show</td>
+</tr><tr>
+<td><code>pci_dss_4:6.rest</code></td><td>6</td><td>Rest of Requirement 6: secure development, vulnerability handling, change control</td><td>not_assessable_from_architecture</td>
 <td class="not-assessable">not_assessable</td>
 <td class="reason">this control concerns people, process, physical security, or organizational policy — no architecture diagram can evidence it</td>
 </tr><tr>
-<td><code>pci_dss_4.req_9</code></td><td>9</td><td>Restrict physical access to cardholder data</td><td>not_assessable_from_architecture</td>
+<td><code>pci_dss_4:7.2.2</code></td><td>7.2.2</td><td>Access is granted by job function using least privilege</td><td>partially_assessable</td>
+<td class="not-assessable">not_assessable</td>
+<td class="reason">principal &#34;aws_iam_role.eks_cluster&#34; has identity policies that could not be read: arn:aws:iam::aws:policy/AmazonEKSClusterPolicy: an attached policy defined outside this bundle (for example an AWS-managed policy); its permissions are not modelled</td>
+</tr><tr>
+<td><code>pci_dss_4:7.2.2</code></td><td>7.2.2</td><td>Access is granted by job function using least privilege</td><td>partially_assessable</td>
+<td class="not-assessable">not_assessable</td>
+<td class="reason">principal &#34;aws_iam_role.eks_node&#34; has identity policies that could not be read: arn:aws:iam::aws:policy/AmazonEC2ContainerRegistryReadOnly: an attached policy defined outside this bundle (for example an AWS-managed policy); its permissions are not modelled; arn:aws:iam::aws:policy/AmazonEKSWorkerNodePolicy: an attached policy defined outside this bundle (for example an AWS-managed policy); its permissions are not modelled; arn:aws:iam::aws:policy/AmazonEKS_CNI_Policy: an attached policy defined outside this bundle (for example an AWS-managed policy); its permissions are not modelled</td>
+</tr><tr>
+<td><code>pci_dss_4:7.2.2</code></td><td>7.2.2</td><td>Access is granted by job function using least privilege</td><td>partially_assessable</td>
+<td class="not-assessable">not_assessable</td>
+<td class="reason">principal &#34;aws_iam_role.payments_app&#34; has identity policies that could not be read: aws_iam_policy.payments_app: the policy document is not a static value (it references a resource or variable, or uses a function other than jsonencode of constants)</td>
+</tr><tr>
+<td><code>pci_dss_4:7.rest</code></td><td>7</td><td>Rest of Requirement 7: access model, account reviews, other access controls</td><td>not_assessable_from_architecture</td>
 <td class="not-assessable">not_assessable</td>
 <td class="reason">this control concerns people, process, physical security, or organizational policy — no architecture diagram can evidence it</td>
 </tr><tr>
-<td><code>pci_dss_4.req_10</code></td><td>10</td><td>Log and monitor all access to system components and cardholder data</td><td>not_assessable_from_architecture</td>
+<td><code>pci_dss_4:8</code></td><td>8</td><td>Users identified and authenticated before access</td><td>not_assessable_from_architecture</td>
 <td class="not-assessable">not_assessable</td>
 <td class="reason">this control concerns people, process, physical security, or organizational policy — no architecture diagram can evidence it</td>
 </tr><tr>
-<td><code>pci_dss_4.req_11</code></td><td>11</td><td>Test security of systems and networks regularly</td><td>not_assessable_from_architecture</td>
+<td><code>pci_dss_4:9</code></td><td>9</td><td>Physical access to cardholder data restricted</td><td>not_assessable_from_architecture</td>
 <td class="not-assessable">not_assessable</td>
 <td class="reason">this control concerns people, process, physical security, or organizational policy — no architecture diagram can evidence it</td>
 </tr><tr>
-<td><code>pci_dss_4.req_12</code></td><td>12</td><td>Support information security with organizational policies and programs</td><td>not_assessable_from_architecture</td>
+<td><code>pci_dss_4:10</code></td><td>10</td><td>Access to system components and cardholder data logged and monitored</td><td>not_assessable_from_architecture</td>
+<td class="not-assessable">not_assessable</td>
+<td class="reason">this control concerns people, process, physical security, or organizational policy — no architecture diagram can evidence it</td>
+</tr><tr>
+<td><code>pci_dss_4:11</code></td><td>11</td><td>Security of systems and networks tested regularly</td><td>not_assessable_from_architecture</td>
+<td class="not-assessable">not_assessable</td>
+<td class="reason">this control concerns people, process, physical security, or organizational policy — no architecture diagram can evidence it</td>
+</tr><tr>
+<td><code>pci_dss_4:12</code></td><td>12</td><td>Policies and programs support information security</td><td>not_assessable_from_architecture</td>
 <td class="not-assessable">not_assessable</td>
 <td class="reason">this control concerns people, process, physical security, or organizational policy — no architecture diagram can evidence it</td>
 </tr></table>
@@ -829,39 +865,163 @@ code{background:#f1f5f9;padding:0 .2rem}
 <h3>soc2</h3>
 <table><tr><th>Control</th><th>Requirement</th><th>Title</th><th>Classification</th><th>Status</th><th>Rationale</th></tr>
 <tr>
-<td><code>soc2.cc1</code></td><td>CC1</td><td>Control environment: organizational integrity and security governance</td><td>not_assessable_from_architecture</td>
+<td><code>soc2:CC1.1</code></td><td>CC1.1</td><td>Commitment to integrity and ethical values</td><td>not_assessable_from_architecture</td>
 <td class="not-assessable">not_assessable</td>
 <td class="reason">this control concerns people, process, physical security, or organizational policy — no architecture diagram can evidence it</td>
 </tr><tr>
-<td><code>soc2.cc2</code></td><td>CC2</td><td>Communication and information: security policies communicated internally and externally</td><td>not_assessable_from_architecture</td>
+<td><code>soc2:CC1.2</code></td><td>CC1.2</td><td>Board oversight independent of management</td><td>not_assessable_from_architecture</td>
 <td class="not-assessable">not_assessable</td>
 <td class="reason">this control concerns people, process, physical security, or organizational policy — no architecture diagram can evidence it</td>
 </tr><tr>
-<td><code>soc2.cc3</code></td><td>CC3</td><td>Risk assessment: identifying and analyzing risk to objectives</td><td>not_assessable_from_architecture</td>
+<td><code>soc2:CC1.3</code></td><td>CC1.3</td><td>Structures, reporting lines and authorities established</td><td>not_assessable_from_architecture</td>
 <td class="not-assessable">not_assessable</td>
 <td class="reason">this control concerns people, process, physical security, or organizational policy — no architecture diagram can evidence it</td>
 </tr><tr>
-<td><code>soc2.cc4</code></td><td>CC4</td><td>Monitoring activities: evaluating control effectiveness over time</td><td>not_assessable_from_architecture</td>
+<td><code>soc2:CC1.4</code></td><td>CC1.4</td><td>Commitment to attract, develop and retain competent people</td><td>not_assessable_from_architecture</td>
 <td class="not-assessable">not_assessable</td>
 <td class="reason">this control concerns people, process, physical security, or organizational policy — no architecture diagram can evidence it</td>
 </tr><tr>
-<td><code>soc2.cc5</code></td><td>CC5</td><td>Control activities: selecting and developing controls that mitigate risk</td><td>not_assessable_from_architecture</td>
+<td><code>soc2:CC1.5</code></td><td>CC1.5</td><td>People held accountable for internal control duties</td><td>not_assessable_from_architecture</td>
 <td class="not-assessable">not_assessable</td>
 <td class="reason">this control concerns people, process, physical security, or organizational policy — no architecture diagram can evidence it</td>
 </tr><tr>
-<td><code>soc2.cc6.no_public_database_route</code></td><td>CC6</td><td>Logical access controls: customer data store not directly reachable from the internet</td><td>partially_assessable</td>
+<td><code>soc2:CC2.1</code></td><td>CC2.1</td><td>Relevant, quality information used for internal control</td><td>not_assessable_from_architecture</td>
+<td class="not-assessable">not_assessable</td>
+<td class="reason">this control concerns people, process, physical security, or organizational policy — no architecture diagram can evidence it</td>
+</tr><tr>
+<td><code>soc2:CC2.2</code></td><td>CC2.2</td><td>Control information communicated internally</td><td>not_assessable_from_architecture</td>
+<td class="not-assessable">not_assessable</td>
+<td class="reason">this control concerns people, process, physical security, or organizational policy — no architecture diagram can evidence it</td>
+</tr><tr>
+<td><code>soc2:CC2.3</code></td><td>CC2.3</td><td>Control matters communicated with external parties</td><td>not_assessable_from_architecture</td>
+<td class="not-assessable">not_assessable</td>
+<td class="reason">this control concerns people, process, physical security, or organizational policy — no architecture diagram can evidence it</td>
+</tr><tr>
+<td><code>soc2:CC3.1</code></td><td>CC3.1</td><td>Objectives specified clearly enough to assess risk</td><td>not_assessable_from_architecture</td>
+<td class="not-assessable">not_assessable</td>
+<td class="reason">this control concerns people, process, physical security, or organizational policy — no architecture diagram can evidence it</td>
+</tr><tr>
+<td><code>soc2:CC3.2</code></td><td>CC3.2</td><td>Risks identified and analyzed</td><td>not_assessable_from_architecture</td>
+<td class="not-assessable">not_assessable</td>
+<td class="reason">this control concerns people, process, physical security, or organizational policy — no architecture diagram can evidence it</td>
+</tr><tr>
+<td><code>soc2:CC3.3</code></td><td>CC3.3</td><td>Fraud potential considered in risk assessment</td><td>not_assessable_from_architecture</td>
+<td class="not-assessable">not_assessable</td>
+<td class="reason">this control concerns people, process, physical security, or organizational policy — no architecture diagram can evidence it</td>
+</tr><tr>
+<td><code>soc2:CC3.4</code></td><td>CC3.4</td><td>Significant changes affecting controls assessed</td><td>not_assessable_from_architecture</td>
+<td class="not-assessable">not_assessable</td>
+<td class="reason">this control concerns people, process, physical security, or organizational policy — no architecture diagram can evidence it</td>
+</tr><tr>
+<td><code>soc2:CC4.1</code></td><td>CC4.1</td><td>Ongoing and separate evaluations of controls</td><td>not_assessable_from_architecture</td>
+<td class="not-assessable">not_assessable</td>
+<td class="reason">this control concerns people, process, physical security, or organizational policy — no architecture diagram can evidence it</td>
+</tr><tr>
+<td><code>soc2:CC4.2</code></td><td>CC4.2</td><td>Control deficiencies communicated for correction</td><td>not_assessable_from_architecture</td>
+<td class="not-assessable">not_assessable</td>
+<td class="reason">this control concerns people, process, physical security, or organizational policy — no architecture diagram can evidence it</td>
+</tr><tr>
+<td><code>soc2:CC5.1</code></td><td>CC5.1</td><td>Control activities selected to mitigate risk</td><td>not_assessable_from_architecture</td>
+<td class="not-assessable">not_assessable</td>
+<td class="reason">this control concerns people, process, physical security, or organizational policy — no architecture diagram can evidence it</td>
+</tr><tr>
+<td><code>soc2:CC5.2</code></td><td>CC5.2</td><td>General technology controls selected and developed</td><td>not_assessable_from_architecture</td>
+<td class="not-assessable">not_assessable</td>
+<td class="reason">this control concerns people, process, physical security, or organizational policy — no architecture diagram can evidence it</td>
+</tr><tr>
+<td><code>soc2:CC5.3</code></td><td>CC5.3</td><td>Controls deployed through policies and procedures</td><td>not_assessable_from_architecture</td>
+<td class="not-assessable">not_assessable</td>
+<td class="reason">this control concerns people, process, physical security, or organizational policy — no architecture diagram can evidence it</td>
+</tr><tr>
+<td><code>soc2:CC6.1</code></td><td>CC6.1</td><td>Logical access security architecture protects information assets, including encryption</td><td>partially_assessable</td>
+<td>applicable</td>
+<td class="reason">storage encryption is enabled — data at rest, snapshots, and automated backups are protected; SOC 2 CC6.1 leaves the use of encryption to the entity&#39;s own risk strategy — storage encryption supports this but does not satisfy it alone</td>
+</tr><tr>
+<td><code>soc2:CC6.2</code></td><td>CC6.2</td><td>Users registered and authorized before credentials are issued</td><td>not_assessable_from_architecture</td>
+<td class="not-assessable">not_assessable</td>
+<td class="reason">this control concerns people, process, physical security, or organizational policy — no architecture diagram can evidence it</td>
+</tr><tr>
+<td><code>soc2:CC6.3</code></td><td>CC6.3</td><td>Access is role-based and follows least privilege</td><td>partially_assessable</td>
+<td class="not-assessable">not_assessable</td>
+<td class="reason">principal &#34;aws_iam_role.eks_cluster&#34; has identity policies that could not be read: arn:aws:iam::aws:policy/AmazonEKSClusterPolicy: an attached policy defined outside this bundle (for example an AWS-managed policy); its permissions are not modelled</td>
+</tr><tr>
+<td><code>soc2:CC6.3</code></td><td>CC6.3</td><td>Access is role-based and follows least privilege</td><td>partially_assessable</td>
+<td class="not-assessable">not_assessable</td>
+<td class="reason">principal &#34;aws_iam_role.eks_node&#34; has identity policies that could not be read: arn:aws:iam::aws:policy/AmazonEC2ContainerRegistryReadOnly: an attached policy defined outside this bundle (for example an AWS-managed policy); its permissions are not modelled; arn:aws:iam::aws:policy/AmazonEKSWorkerNodePolicy: an attached policy defined outside this bundle (for example an AWS-managed policy); its permissions are not modelled; arn:aws:iam::aws:policy/AmazonEKS_CNI_Policy: an attached policy defined outside this bundle (for example an AWS-managed policy); its permissions are not modelled</td>
+</tr><tr>
+<td><code>soc2:CC6.3</code></td><td>CC6.3</td><td>Access is role-based and follows least privilege</td><td>partially_assessable</td>
+<td class="not-assessable">not_assessable</td>
+<td class="reason">principal &#34;aws_iam_role.payments_app&#34; has identity policies that could not be read: aws_iam_policy.payments_app: the policy document is not a static value (it references a resource or variable, or uses a function other than jsonencode of constants)</td>
+</tr><tr>
+<td><code>soc2:CC6.4</code></td><td>CC6.4</td><td>Physical access to facilities and assets restricted</td><td>not_assessable_from_architecture</td>
+<td class="not-assessable">not_assessable</td>
+<td class="reason">this control concerns people, process, physical security, or organizational policy — no architecture diagram can evidence it</td>
+</tr><tr>
+<td><code>soc2:CC6.5</code></td><td>CC6.5</td><td>Assets and data securely disposed of</td><td>not_assessable_from_architecture</td>
+<td class="not-assessable">not_assessable</td>
+<td class="reason">this control concerns people, process, physical security, or organizational policy — no architecture diagram can evidence it</td>
+</tr><tr>
+<td><code>soc2:CC6.6</code></td><td>CC6.6</td><td>Logical access measures protect against threats from outside the system boundary</td><td>partially_assessable</td>
 <td class="not-assessable">not_assessable</td>
 <td class="reason">this resource&#39;s own subnet has no resolvable effective route table</td>
 </tr><tr>
-<td><code>soc2.cc7</code></td><td>CC7</td><td>System operations: detecting and responding to security incidents</td><td>not_assessable_from_architecture</td>
+<td><code>soc2:CC6.7</code></td><td>CC6.7</td><td>Data transmission, movement and removal restricted and protected</td><td>partially_assessable</td>
+<td class="not-assessable">not_assessable</td>
+<td class="reason">the TLS and protocol settings of listeners and endpoints are not part of the architecture model, so transmission protection is neither confirmed nor refuted</td>
+</tr><tr>
+<td><code>soc2:CC6.8</code></td><td>CC6.8</td><td>Unauthorized or malicious software prevented or detected</td><td>not_assessable_from_architecture</td>
 <td class="not-assessable">not_assessable</td>
 <td class="reason">this control concerns people, process, physical security, or organizational policy — no architecture diagram can evidence it</td>
 </tr><tr>
-<td><code>soc2.cc8</code></td><td>CC8</td><td>Change management: authorizing, testing, and approving system changes</td><td>not_assessable_from_architecture</td>
+<td><code>soc2:CC7.1</code></td><td>CC7.1</td><td>Configuration changes and new vulnerabilities detected</td><td>not_assessable_from_architecture</td>
 <td class="not-assessable">not_assessable</td>
 <td class="reason">this control concerns people, process, physical security, or organizational policy — no architecture diagram can evidence it</td>
 </tr><tr>
-<td><code>soc2.cc9</code></td><td>CC9</td><td>Risk mitigation: managing risk from vendors and business disruption</td><td>not_assessable_from_architecture</td>
+<td><code>soc2:CC7.2</code></td><td>CC7.2</td><td>System components monitored for anomalies</td><td>not_assessable_from_architecture</td>
+<td class="not-assessable">not_assessable</td>
+<td class="reason">this control concerns people, process, physical security, or organizational policy — no architecture diagram can evidence it</td>
+</tr><tr>
+<td><code>soc2:CC7.3</code></td><td>CC7.3</td><td>Security events evaluated</td><td>not_assessable_from_architecture</td>
+<td class="not-assessable">not_assessable</td>
+<td class="reason">this control concerns people, process, physical security, or organizational policy — no architecture diagram can evidence it</td>
+</tr><tr>
+<td><code>soc2:CC7.4</code></td><td>CC7.4</td><td>Security incidents responded to</td><td>not_assessable_from_architecture</td>
+<td class="not-assessable">not_assessable</td>
+<td class="reason">this control concerns people, process, physical security, or organizational policy — no architecture diagram can evidence it</td>
+</tr><tr>
+<td><code>soc2:CC7.5</code></td><td>CC7.5</td><td>Recovery from security incidents</td><td>not_assessable_from_architecture</td>
+<td class="not-assessable">not_assessable</td>
+<td class="reason">this control concerns people, process, physical security, or organizational policy — no architecture diagram can evidence it</td>
+</tr><tr>
+<td><code>soc2:CC8.1</code></td><td>CC8.1</td><td>Changes authorized, tested, approved and implemented</td><td>not_assessable_from_architecture</td>
+<td class="not-assessable">not_assessable</td>
+<td class="reason">this control concerns people, process, physical security, or organizational policy — no architecture diagram can evidence it</td>
+</tr><tr>
+<td><code>soc2:CC9.1</code></td><td>CC9.1</td><td>Risk mitigation for business disruption</td><td>not_assessable_from_architecture</td>
+<td class="not-assessable">not_assessable</td>
+<td class="reason">this control concerns people, process, physical security, or organizational policy — no architecture diagram can evidence it</td>
+</tr><tr>
+<td><code>soc2:CC9.2</code></td><td>CC9.2</td><td>Vendor and business-partner risk managed</td><td>not_assessable_from_architecture</td>
+<td class="not-assessable">not_assessable</td>
+<td class="reason">this control concerns people, process, physical security, or organizational policy — no architecture diagram can evidence it</td>
+</tr><tr>
+<td><code>soc2:A1.1</code></td><td>A1.1</td><td>Processing capacity monitored and managed</td><td>not_assessable_from_architecture</td>
+<td class="not-assessable">not_assessable</td>
+<td class="reason">this control concerns people, process, physical security, or organizational policy — no architecture diagram can evidence it</td>
+</tr><tr>
+<td><code>soc2:A1.2</code></td><td>A1.2</td><td>Environmental protections, backups and recovery infrastructure in place</td><td>partially_assessable</td>
+<td>applicable</td>
+<td class="reason">this database declares a synchronous standby in another availability zone; the architectural aspect is supported, but the full requirement also needs evidence a diagram cannot show</td>
+</tr><tr>
+<td><code>soc2:A1.3</code></td><td>A1.3</td><td>Recovery plan procedures tested</td><td>not_assessable_from_architecture</td>
+<td class="not-assessable">not_assessable</td>
+<td class="reason">this control concerns people, process, physical security, or organizational policy — no architecture diagram can evidence it</td>
+</tr><tr>
+<td><code>soc2:C1.1</code></td><td>C1.1</td><td>Confidential information identified and maintained</td><td>not_assessable_from_architecture</td>
+<td class="not-assessable">not_assessable</td>
+<td class="reason">this control concerns people, process, physical security, or organizational policy — no architecture diagram can evidence it</td>
+</tr><tr>
+<td><code>soc2:C1.2</code></td><td>C1.2</td><td>Confidential information disposed of</td><td>not_assessable_from_architecture</td>
 <td class="not-assessable">not_assessable</td>
 <td class="reason">this control concerns people, process, physical security, or organizational policy — no architecture diagram can evidence it</td>
 </tr></table>

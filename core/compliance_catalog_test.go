@@ -10,56 +10,116 @@ package core_test
 //   - "Control count recorded against the ~100 OPA revisit trigger"
 
 import (
+	"path/filepath"
+	"strconv"
+	"strings"
 	"testing"
 
 	"preflight/core"
+	"preflight/ingest"
+	awsprovider "preflight/providers/aws"
 )
 
-func TestPCIDSS4Catalog_AllTwelveRequirementsClassified(t *testing.T) {
-	ir := &core.IR{}
-	results := core.BuildPCIDSS4Catalog(ir, core.Workload{})
-	counts := core.SummarizeComplianceCatalogCounts(results)
+func distinct(results []core.ComplianceControlResult) map[string]core.ComplianceControlResult {
+	out := map[string]core.ComplianceControlResult{}
+	for _, r := range results {
+		if _, ok := out[r.ControlID]; !ok {
+			out[r.ControlID] = r
+		}
+	}
+	return out
+}
 
-	if got := counts.Assessable + counts.Partial + counts.NotAssessable; got != 12 {
-		t.Fatalf("got %d distinct controls, want 12 (PCI DSS v4.0's own 12 top-level requirements)", got)
+// PCI DSS v4.0.1: one row per architecture-relevant sub-requirement (real v4.0.1 numbers, read from the
+// standard) plus a "rest of Requirement N" row per principal requirement that has one, and a single row
+// for each requirement with no architecture-evidenced sub-requirement. 19 rows: 1 assessable, 6 partial, 12 not.
+func TestPCIDSS4Catalog_ClassifiedAtSubRequirementGranularity(t *testing.T) {
+	results := core.BuildPCIDSS4Catalog(&core.IR{}, core.Workload{})
+	counts := core.SummarizeComplianceCatalogCounts(results)
+	if got := counts.Assessable + counts.Partial + counts.NotAssessable; got != 19 {
+		t.Fatalf("got %d distinct controls, want 19", got)
 	}
-	if counts.Assessable != 2 {
-		t.Errorf("Assessable = %d, want 2 (Requirement 1 network security, Requirement 3 stored data protection)", counts.Assessable)
+	if counts.Assessable != 1 || counts.Partial != 6 || counts.NotAssessable != 12 {
+		t.Errorf("classes = %+v, want 1 assessable (1.4.4), 6 partial (1.3.1, 1.3.2, 3.5.1.2, 4.2.1, 6.4.2, 7.2.2), 12 not", counts)
 	}
-	if counts.NotAssessable != 10 {
-		t.Errorf("NotAssessable = %d, want 10", counts.NotAssessable)
+	byID := distinct(results)
+	for id, class := range map[string]core.ControlClassification{
+		"pci_dss_4:1.4.4":   core.ClassificationAssessable,
+		"pci_dss_4:1.3.1":   core.ClassificationPartial,
+		"pci_dss_4:1.3.2":   core.ClassificationPartial,
+		"pci_dss_4:3.5.1.2": core.ClassificationPartial,
+		"pci_dss_4:4.2.1":   core.ClassificationPartial,
+		"pci_dss_4:6.4.2":   core.ClassificationPartial,
+		"pci_dss_4:7.2.2":   core.ClassificationPartial,
+		"pci_dss_4:1.rest":  core.ClassificationNotAssessable,
+		"pci_dss_4:8":       core.ClassificationNotAssessable,
+		"pci_dss_4:12":      core.ClassificationNotAssessable,
+	} {
+		if got, ok := byID[id]; !ok || got.Classification != class {
+			t.Errorf("%s: %+v, want classification %s", id, got, class)
+		}
+	}
+	// Every principal requirement 1..12 is represented, so the denominator stays honest.
+	reqs := map[string]bool{}
+	for _, r := range results {
+		reqs[strings.SplitN(r.RequirementID, ".", 2)[0]] = true
+	}
+	for i := 1; i <= 12; i++ {
+		if !reqs[strconv.Itoa(i)] {
+			t.Errorf("principal requirement %d has no row", i)
+		}
 	}
 }
 
-func TestSOC2Catalog_AllNineCategoriesClassified(t *testing.T) {
-	ir := &core.IR{}
-	results := core.BuildSOC2Catalog(ir, core.Workload{})
+// SOC 2: Security (CC1.1 to CC9.2, 33 criteria), Availability (A1.1 to A1.3) and Confidentiality (C1.1,
+// C1.2) from the 2017 Trust Services Criteria. 38 rows: none assessable, 5 partial, 33 not.
+func TestSOC2Catalog_ClassifiedPerCriterion(t *testing.T) {
+	results := core.BuildSOC2Catalog(&core.IR{}, core.Workload{})
 	counts := core.SummarizeComplianceCatalogCounts(results)
-
-	if got := counts.Assessable + counts.Partial + counts.NotAssessable; got != 9 {
-		t.Fatalf("got %d distinct controls, want 9 (SOC 2's own nine Common Criteria categories)", got)
+	if got := counts.Assessable + counts.Partial + counts.NotAssessable; got != 38 {
+		t.Fatalf("got %d distinct controls, want 38", got)
 	}
-	if counts.Partial != 1 {
-		t.Errorf("Partial = %d, want 1 (CC6, logical access controls)", counts.Partial)
+	if counts.Assessable != 0 || counts.Partial != 5 || counts.NotAssessable != 33 {
+		t.Errorf("classes = %+v, want 0 assessable, 5 partial (CC6.1, CC6.3, CC6.6, CC6.7, A1.2), 33 not", counts)
 	}
-	if counts.NotAssessable != 8 {
-		t.Errorf("NotAssessable = %d, want 8", counts.NotAssessable)
+	byID := distinct(results)
+	want := []string{}
+	for cat, n := range map[string]int{"CC1": 5, "CC2": 3, "CC3": 4, "CC4": 2, "CC5": 3, "CC6": 8, "CC7": 5, "CC8": 1, "CC9": 2, "A1": 3, "C1": 2} {
+		for i := 1; i <= n; i++ {
+			want = append(want, "soc2:"+cat+"."+strconv.Itoa(i))
+		}
+	}
+	for _, id := range want {
+		if _, ok := byID[id]; !ok {
+			t.Errorf("criterion %s has no row", id)
+		}
+	}
+	for _, id := range []string{"soc2:CC6.1", "soc2:CC6.3", "soc2:CC6.6", "soc2:CC6.7", "soc2:A1.2"} {
+		if byID[id].Classification != core.ClassificationPartial {
+			t.Errorf("%s classification = %s, want partially_assessable", id, byID[id].Classification)
+		}
 	}
 }
 
-func TestComplianceCatalogs_TotalControlCount_WellUnderOPARevisitTrigger(t *testing.T) {
-	// Design §4.6's own revisit trigger: "if the catalog approaches ~100 controls,
-	// reassess Go registry vs OPA/Rego." Recorded here so a future ticket adding
-	// controls trips this test long before the catalog silently grows past the
-	// trigger unnoticed.
+// Design §4.6's revisit trigger: "if the catalog approaches ~100 controls, reassess Go registry vs
+// OPA/Rego." Recorded here so a future ticket trips this test before the catalog silently grows past it.
+// Count at PC-121: 19 PCI DSS + 38 SOC 2 + 2 CIS AWS = 59 controls, of which only 13 carry evaluation logic
+// (the rest are not_assessable rows with none), so the registry's cost is the logic, not the row count.
+func TestComplianceCatalogs_TotalControlCount_UnderOPARevisitTrigger(t *testing.T) {
 	ir := &core.IR{}
-	total := len(core.BuildPCIDSS4Catalog(ir, core.Workload{})) +
-		len(core.BuildSOC2Catalog(ir, core.Workload{})) +
-		len(core.BuildCISAWSCatalog(ir, core.Workload{}))
-	if total > 40 {
-		t.Errorf("total control result count = %d — approaching Design §4.6's ~100 OPA/Rego revisit trigger sooner than expected; re-read that section before adding more", total)
+	all := append(core.BuildPCIDSS4Catalog(ir, core.Workload{}), core.BuildSOC2Catalog(ir, core.Workload{})...)
+	all = append(all, core.BuildCISAWSCatalog(ir, core.Workload{})...)
+	total := len(distinct(all))
+	logic := 0
+	for _, r := range distinct(all) {
+		if r.Classification != core.ClassificationNotAssessable {
+			logic++
+		}
 	}
-	t.Logf("current combined control result count: %d (well under the ~100 OPA/Rego revisit trigger)", total)
+	if total >= 100 {
+		t.Errorf("total controls = %d: at Design §4.6's ~100 OPA/Rego revisit trigger; re-read that section before adding more", total)
+	}
+	t.Logf("controls: %d total, %d with evaluation logic (revisit trigger ~100)", total, logic)
 }
 
 // TestComplianceCatalog_NoVerbatimControlText is a structural proxy for the Card's
@@ -104,59 +164,144 @@ func TestSummarizeComplianceResults_NotAssessableNeverCountedSatisfied(t *testin
 	}
 }
 
-func TestPCIDSS4_GoldenBundle_HandVerified(t *testing.T) {
-	ir := realGoldenIR(t)
-	results := core.BuildPCIDSS4Catalog(ir, core.Workload{})
+// goldenBrokenIR ingests golden/aws-broken (the deliberately defective sibling bundle).
+func goldenBrokenIR(t *testing.T) *core.IR {
+	t.Helper()
+	reg, err := awsprovider.Load()
+	if err != nil {
+		t.Fatal(err)
+	}
+	res, err := ingest.Ingest(filepath.Join("..", "golden", "aws-broken"), reg, 1)
+	if err != nil || res.IR == nil {
+		t.Fatalf("Ingest golden/aws-broken: %v", err)
+	}
+	return res.IR
+}
 
-	var storageEncryption, networkSecurity []core.ComplianceControlResult
+type expectedResult struct {
+	control, node string
+	status        core.ComplianceStatus
+}
+
+func assertResults(t *testing.T, results []core.ComplianceControlResult, want []expectedResult) {
+	t.Helper()
+	got := map[string]core.ComplianceStatus{}
 	for _, r := range results {
-		switch r.ControlID {
-		case "pci_dss_4.req_3.storage_encryption":
-			storageEncryption = append(storageEncryption, r)
-		case "pci_dss_4.req_1.no_public_database_route":
-			networkSecurity = append(networkSecurity, r)
+		got[r.ControlID+"|"+r.NodeID] = r.Result.Status
+	}
+	for _, w := range want {
+		g, ok := got[w.control+"|"+w.node]
+		if !ok {
+			t.Errorf("no result for %s on %q", w.control, w.node)
+			continue
 		}
+		if g != w.status {
+			t.Errorf("%s on %q = %s, want %s", w.control, w.node, g, w.status)
+		}
+		delete(got, w.control+"|"+w.node)
 	}
-
-	// golden/aws has exactly one real managed_database node (aws_db_instance.payments).
-	if len(storageEncryption) != 1 {
-		t.Fatalf("got %d storage-encryption results, want 1 (aws_db_instance.payments)", len(storageEncryption))
-	}
-	if storageEncryption[0].Result.Status != core.ComplianceSatisfied {
-		t.Errorf("storage encryption Status = %q, want satisfied — golden/aws/rds.tf declares storage_encrypted = true", storageEncryption[0].Result.Status)
-	}
-
-	if len(networkSecurity) != 1 {
-		t.Fatalf("got %d network-security results, want 1", len(networkSecurity))
-	}
-	// golden/aws's own RDS subnet ("data" tier) has no aws_route_table_association at
-	// all (PC-125's own documented gap) — so this is honestly not_assessable, not a
-	// fabricated satisfied/unsatisfied verdict.
-	if networkSecurity[0].Result.Status != core.ComplianceNotAssessable {
-		t.Errorf("network security Status = %q, want not_assessable — golden/aws's data subnets have no route table association (a real, documented, pre-existing gap)", networkSecurity[0].Result.Status)
+	// Anything not listed must be a control with no per-resource result of interest: a not_assessable row.
+	for k, st := range got {
+		for _, r := range results {
+			if r.ControlID+"|"+r.NodeID == k && r.Classification != core.ClassificationNotAssessable {
+				t.Errorf("unexpected, unlisted %s = %s: add it to the hand-verified table", k, st)
+			}
+		}
 	}
 }
 
-func TestSOC2_GoldenBundle_HandVerified(t *testing.T) {
+// Hand-verified against golden/aws (decisions in the comments).
+//   - 1.3.1 / 1.3.2: security.tf's database SG admits only the workload SG on 5432 and declares no egress, so
+//     nothing is open to the world: supports the control (applicable, never satisfied: it needs documentation).
+//   - 1.4.4 / CC6.6: golden's data-tier subnets have no route table association (the documented PC-125 gap), so
+//     routing to the internet cannot be ruled out: not_assessable.
+//   - 3.5.1.2 / CC6.1: rds.tf has storage_encrypted = true: supports, but disk-level encryption alone does not
+//     satisfy PCI 3.5.1.2, so applicable.
+//   - 6.4.2: alb.tf's load balancer is internet-facing and waf.tf associates a web ACL: applicable.
+//   - 7.2.2 / CC6.3: every role's policy is unreadable to the engine (two attach AWS-managed policies, the
+//     third's policy references resource ARNs): not_assessable, where it used to read a vacuous "satisfied" (PC-157).
+//   - 4.2.1 / CC6.7: TLS settings are not modelled: not_assessable.
+//   - A1.2: rds.tf has multi_az = true (a synchronous standby): applicable.
+func TestPCIDSSAndSOC2_GoldenBundle_HandVerified(t *testing.T) {
 	ir := realGoldenIR(t)
-	results := core.BuildSOC2Catalog(ir, core.Workload{})
+	db, lb := "aws_db_instance.payments", "aws_lb.payments"
+	roles := []string{"aws_iam_role.eks_cluster", "aws_iam_role.eks_node", "aws_iam_role.payments_app"}
 
-	var cc6 []core.ComplianceControlResult
-	for _, r := range results {
-		if r.ControlID == "soc2.cc6.no_public_database_route" {
-			cc6 = append(cc6, r)
+	pci := []expectedResult{
+		{"pci_dss_4:1.3.1", db, core.ComplianceApplicable},
+		{"pci_dss_4:1.3.2", db, core.ComplianceApplicable},
+		{"pci_dss_4:1.4.4", db, core.ComplianceNotAssessable},
+		{"pci_dss_4:3.5.1.2", db, core.ComplianceApplicable},
+		{"pci_dss_4:4.2.1", "", core.ComplianceNotAssessable},
+		{"pci_dss_4:6.4.2", lb, core.ComplianceApplicable},
+	}
+	soc2 := []expectedResult{
+		{"soc2:CC6.1", db, core.ComplianceApplicable},
+		{"soc2:CC6.6", db, core.ComplianceNotAssessable},
+		{"soc2:CC6.7", "", core.ComplianceNotAssessable},
+		{"soc2:A1.2", db, core.ComplianceApplicable},
+	}
+	for _, r := range roles {
+		pci = append(pci, expectedResult{"pci_dss_4:7.2.2", r, core.ComplianceNotAssessable})
+		soc2 = append(soc2, expectedResult{"soc2:CC6.3", r, core.ComplianceNotAssessable})
+	}
+	assertResults(t, core.BuildPCIDSS4Catalog(ir, core.Workload{}), pci)
+	assertResults(t, core.BuildSOC2Catalog(ir, core.Workload{}), soc2)
+}
+
+// Hand-verified against golden/aws-broken, which is deliberately defective:
+//   - 3.5.1.2 / CC6.1: storage_encrypted = false. Not a failure of these controls (account data can still be
+//     protected inside the data, which the model cannot see) but not evidence either: not_assessable. The CIS
+//     catalog judges the same fact on its own terms and reports it unsatisfied.
+//   - 6.4.2: no web ACL attached: not_assessable (a firewall in front of the load balancer is not modelled).
+//   - A1.2: multi_az = false: no standby declared: not_assessable, not a failure.
+//   - 7.2.2 / CC6.3: payments_app's policy is Action * on Resource *, so unsatisfied (seeded defect 7, PC-157);
+//     the two roles with AWS-managed attachments are not_assessable.
+func TestPCIDSSAndSOC2_BrokenBundle_HandVerified(t *testing.T) {
+	ir := goldenBrokenIR(t)
+	db, lb := "aws_db_instance.payments", "aws_lb.payments"
+	pci := []expectedResult{
+		{"pci_dss_4:1.3.1", db, core.ComplianceApplicable},
+		{"pci_dss_4:1.3.2", db, core.ComplianceApplicable},
+		{"pci_dss_4:1.4.4", db, core.ComplianceNotAssessable},
+		{"pci_dss_4:3.5.1.2", db, core.ComplianceNotAssessable},
+		{"pci_dss_4:4.2.1", "", core.ComplianceNotAssessable},
+		{"pci_dss_4:6.4.2", lb, core.ComplianceNotAssessable},
+		{"pci_dss_4:7.2.2", "aws_iam_role.eks_cluster", core.ComplianceNotAssessable},
+		{"pci_dss_4:7.2.2", "aws_iam_role.eks_node", core.ComplianceNotAssessable},
+		{"pci_dss_4:7.2.2", "aws_iam_role.payments_app", core.ComplianceUnsatisfied},
+	}
+	soc2 := []expectedResult{
+		{"soc2:CC6.1", db, core.ComplianceNotAssessable},
+		{"soc2:CC6.3", "aws_iam_role.eks_cluster", core.ComplianceNotAssessable},
+		{"soc2:CC6.3", "aws_iam_role.eks_node", core.ComplianceNotAssessable},
+		{"soc2:CC6.3", "aws_iam_role.payments_app", core.ComplianceUnsatisfied},
+		{"soc2:CC6.6", db, core.ComplianceNotAssessable},
+		{"soc2:CC6.7", "", core.ComplianceNotAssessable},
+		{"soc2:A1.2", db, core.ComplianceNotAssessable},
+	}
+	assertResults(t, core.BuildPCIDSS4Catalog(ir, core.Workload{}), pci)
+	assertResults(t, core.BuildSOC2Catalog(ir, core.Workload{}), soc2)
+}
+
+// The Card's rule, on real bundles and not just an empty IR: a not-assessable-from-architecture control is
+// never satisfied, and a partially assessable control never reports "satisfied" either: the most it can
+// say is applicable (the architecture supports it), because the rest needs evidence a diagram cannot show.
+func TestCatalogs_NeverReportSatisfiedBeyondWhatADiagramCanShow(t *testing.T) {
+	for name, ir := range map[string]*core.IR{"aws": realGoldenIR(t), "aws-broken": goldenBrokenIR(t)} {
+		all := append(core.BuildPCIDSS4Catalog(ir, core.Workload{}), core.BuildSOC2Catalog(ir, core.Workload{})...)
+		for _, r := range all {
+			switch r.Classification {
+			case core.ClassificationNotAssessable:
+				if r.Result.Status != core.ComplianceNotAssessable {
+					t.Errorf("%s: %s is not_assessable_from_architecture but reports %s", name, r.ControlID, r.Result.Status)
+				}
+			case core.ClassificationPartial:
+				if r.Result.Status == core.ComplianceSatisfied {
+					t.Errorf("%s: %s is partially assessable but reports satisfied", name, r.ControlID)
+				}
+			}
 		}
-	}
-	if len(cc6) != 1 {
-		t.Fatalf("got %d CC6 results, want 1", len(cc6))
-	}
-	if cc6[0].Classification != core.ClassificationPartial {
-		t.Errorf("Classification = %q, want partially_assessable", cc6[0].Classification)
-	}
-	// Same real gap as the PCI DSS test above — not_assessable, never a fabricated
-	// applicable/satisfied verdict.
-	if cc6[0].Result.Status != core.ComplianceNotAssessable {
-		t.Errorf("CC6 Status = %q, want not_assessable — golden/aws's data subnets have no route table association", cc6[0].Result.Status)
 	}
 }
 
