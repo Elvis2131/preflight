@@ -421,3 +421,31 @@ func TestGolden_ConfigurationBlastSurface_Checkout_HandVerified(t *testing.T) {
 		t.Errorf("finding outcome = %+v", f.Outcome)
 	}
 }
+
+// PC-130's criterion, literally: "Removing the one SG rule that allows ECS -> RDS breaks the
+// checkout journey, and the trace names that rule — tested on a golden fixture." With each
+// hop's real port declared (PC-152) the golden checkout journey itself flows end to end, so
+// this is the actual journey, not a leg of it.
+func TestGolden_RemovingTheWorkloadToRDSRule_BreaksTheCheckoutJourney(t *testing.T) {
+	ir := realGoldenIR(t)
+	workload := loadGoldenWorkload(t)
+	flowOf := func(faults []core.Fault) core.JourneyFlowResult {
+		resp := core.Simulate(ir, workload, faults, syntheticProv())
+		for _, f := range resp.FlowDetail {
+			if f.JourneyID == "checkout" {
+				return f
+			}
+		}
+		t.Fatal("no checkout journey in the simulation result")
+		return core.JourneyFlowResult{}
+	}
+	if before := flowOf(nil); !before.Flows {
+		t.Fatalf("the golden checkout journey must flow at baseline: %+v", before)
+	}
+	after := flowOf([]core.Fault{{Type: "sg_rule_change", Target: "aws_security_group.database", SGRuleRemove: &core.SGRule{
+		Direction: "ingress", Protocol: "tcp", FromPort: 5432, ToPort: 5432, SourceSG: "aws_security_group.workload",
+	}}})
+	if after.Flows || after.BlockedAt != "aws_db_instance.payments" || !strings.Contains(after.BlockedReason, "sg_dest_ingress") {
+		t.Fatalf("after removing the rule the checkout journey must break at the database's SG step: %+v", after)
+	}
+}
