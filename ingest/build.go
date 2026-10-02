@@ -251,7 +251,7 @@ func buildNode(r ParsedResource, mapping providers.ResourceMapping) core.Node {
 		Capability:     buildCapability(r, mapping),
 		Sizing:         buildSizing(r.Attributes),
 		IAMTrustPolicy: buildTrustPolicy(r, prov),
-		RawAttributes:  withCapabilityLevel(r.Attributes, mapping.CapabilityLevel),
+		RawAttributes:  withNetworkRole(withCapabilityLevel(r.Attributes, mapping.CapabilityLevel), mapping.NetworkRole),
 		Provenance:     prov,
 	}
 }
@@ -287,6 +287,15 @@ func withCapabilityLevel(attrs map[string]any, level core.CapabilityLevel) map[s
 	}
 	out["capability_level"] = string(level)
 	return out
+}
+
+// withNetworkRole stamps the mapping's structural role (PC-151), when it has one.
+func withNetworkRole(attrs map[string]any, role string) map[string]any {
+	if role == "" {
+		return attrs
+	}
+	attrs["network_role"] = role
+	return attrs
 }
 
 func unresolvedConstructReason(r ParsedResource) string {

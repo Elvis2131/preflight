@@ -126,6 +126,13 @@ type ResourceMapping struct {
 	// service whose semantics the canvas would silently drop.
 	IngestOnly bool `yaml:"ingest_only,omitempty"`
 
+	// NetworkRole names a structural role core needs to recognise without knowing a
+	// provider's resource names (PC-151): "subnet", "vpc" or "route_table". Ingest stamps it on the node
+	// as RawAttributes["network_role"]. Before this, core could only identify a subnet by
+	// its having an explicit route table association, so a subnet relying on the VPC's
+	// implicit main route table was not recognised as a subnet at all.
+	NetworkRole string `yaml:"network_role,omitempty"`
+
 	// CapabilityLevel is PC-107's own registry entry: how much of this specific AWS
 	// service Preflight can actually simulate, on core.CapabilityLevel's 9-rung
 	// ladder. Required for every node mapping (validated against
@@ -176,6 +183,9 @@ func (m ResourceMapping) validate() error {
 	}
 	if ceiling := core.MaxImplementedCapabilityLevel(m.NodeType); !ceiling.AtLeast(m.CapabilityLevel) {
 		return fmt.Errorf("mapping %s: capability_level %q exceeds the real ceiling %q for node_type %q (core.MaxImplementedCapabilityLevel) — no engine in this codebase implements that much behaviour for this structural type yet", m.ResourceType, m.CapabilityLevel, ceiling, m.NodeType)
+	}
+	if m.NetworkRole != "" && m.NetworkRole != "subnet" && m.NetworkRole != "vpc" && m.NetworkRole != "route_table" {
+		return fmt.Errorf("mapping %s: network_role %q must be \"subnet\", \"vpc\" or \"route_table\"", m.ResourceType, m.NetworkRole)
 	}
 	if m.ReferenceEdgeType != "" {
 		switch m.ReferenceEdgeType {

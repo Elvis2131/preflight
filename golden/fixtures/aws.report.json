@@ -285,7 +285,7 @@
               "source": "core/compliance_pci_dss"
             }
           },
-          "Rationale": "this resource has no resolvable subnet placement"
+          "Rationale": "this resource's own subnet has no resolvable effective route table"
         },
         {
           "ControlID": "pci_dss_4.req_2",
@@ -574,7 +574,7 @@
               "source": "core/compliance_soc2"
             }
           },
-          "Rationale": "this resource has no resolvable subnet placement"
+          "Rationale": "this resource's own subnet has no resolvable effective route table"
         },
         {
           "ControlID": "soc2.cc7",

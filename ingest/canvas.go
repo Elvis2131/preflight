@@ -246,6 +246,9 @@ func resolveCanvasCapabilityLevel(raw map[string]any, registry providers.Registr
 		raw = make(map[string]any, 1)
 	}
 	raw["capability_level"] = string(mapping.CapabilityLevel)
+	if mapping.NetworkRole != "" {
+		raw["network_role"] = mapping.NetworkRole
+	}
 	return raw
 }
 

@@ -5,18 +5,19 @@ package core_test
 // "Removing the one SG rule that allows ECS -> RDS breaks the checkout journey, and
 // the trace names that rule — tested on a golden fixture."
 //
-// GOLDEN-FIXTURE NOTE (revised under PC-149): golden/aws declares no NACLs, so each
-// subnet is on its VPC's default NACL — AWS's documented allow-all, assumed unmodified
-// — and full BuildTrace calls into golden/aws now reach their SG decisions. The two real
-// golden hops that can be traced end to end are internet -> ALB (tcp/443) and
-// ALB -> workload (tcp/8080); the golden checkout JOURNEY still cannot flow as a whole
-// (it declares one port, tcp/443, for every hop) and EKS -> RDS stops earlier at route
-// selection (golden's data subnets have no explicit route-table association, and the
-// implicit main route table is not modelled — a separate gap). The older tests below
-// that exercise SecurityGroupProfile/EvaluateConnection directly stay valid: that is
-// the exact engine BuildTrace's sg_dest_ingress step calls.
+// GOLDEN-FIXTURE NOTE (revised under PC-149 and PC-151): golden/aws declares no NACLs and
+// its data subnets have no explicit route table association, so each subnet is on its
+// VPC's default NACL (AWS's documented allow-all) and, where unassociated, uses the VPC's
+// main route table (whose local route covers the VPC) — both assumed unmodified and
+// tagged so. Full BuildTrace calls into golden/aws therefore reach their SG decisions on
+// internet -> ALB (tcp/443), ALB -> workload (tcp/8080) and workload -> RDS (tcp/5432).
+// The golden checkout JOURNEY as a whole still cannot flow because it declares one port,
+// tcp/443, for every hop (PC-152). The older tests below that exercise
+// SecurityGroupProfile/EvaluateConnection directly stay valid: that is the exact engine
+// BuildTrace's sg_dest_ingress step calls.
 
 import (
+	"strings"
 	"testing"
 
 	"preflight/core"
@@ -295,6 +296,10 @@ func TestGolden_FullTrace_RemovingTheRealSGRuleBreaksTheHop(t *testing.T) {
 			core.SGRule{Direction: "ingress", Protocol: "tcp", FromPort: 443, ToPort: 443, CIDRs: []string{"0.0.0.0/0"}}},
 		{"ALB -> workload", "aws_lb.payments", "aws_eks_cluster.payments", "aws_security_group.workload", 8080,
 			core.SGRule{Direction: "ingress", Protocol: "tcp", FromPort: 8080, ToPort: 8080, SourceSG: "aws_security_group.alb"}},
+		// PC-130's literal criterion: the one SG rule that allows the workload -> RDS hop.
+		// Reachable end to end since PC-151 (implicit main route table).
+		{"workload -> RDS", "aws_eks_cluster.payments", "aws_db_instance.payments", "aws_security_group.database", 5432,
+			core.SGRule{Direction: "ingress", Protocol: "tcp", FromPort: 5432, ToPort: 5432, SourceSG: "aws_security_group.workload"}},
 	}
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {
@@ -314,6 +319,30 @@ func TestGolden_FullTrace_RemovingTheRealSGRuleBreaksTheHop(t *testing.T) {
 				t.Error("original IR was mutated")
 			}
 		})
+	}
+}
+
+// PC-130's criterion as written: removing the one SG rule that allows workload -> RDS
+// breaks the checkout journey's database leg, and the trace names the SG step that
+// decided. (The full 4-hop checkout journey still cannot flow end to end because it
+// declares one port for every hop — PC-152 — so its database leg is the journey here.)
+func TestGolden_Simulate_RemovingTheWorkloadToRDSRule_BreaksTheDatabaseLeg(t *testing.T) {
+	ir := realGoldenIR(t)
+	workload := core.Workload{Journeys: []core.DeclaredJourney{
+		{ID: "checkout-data", Name: "checkout: workload -> RDS", Path: []string{"aws_eks_cluster.payments", "aws_db_instance.payments"}, Protocol: "tcp", Port: 5432, Criticality: "tier1"},
+	}}
+	before := core.Simulate(ir, workload, nil, syntheticProv())
+	if len(before.FlowDetail) != 1 || !before.FlowDetail[0].Flows {
+		t.Fatalf("the database leg must flow at baseline on golden/aws: %+v", before.FlowDetail)
+	}
+	after := core.Simulate(ir, workload, []core.Fault{{Type: "sg_rule_change", Target: "aws_security_group.database", SGRuleRemove: &core.SGRule{
+		Direction: "ingress", Protocol: "tcp", FromPort: 5432, ToPort: 5432, SourceSG: "aws_security_group.workload",
+	}}}, syntheticProv())
+	if len(after.FlowDetail) != 1 || after.FlowDetail[0].Flows {
+		t.Fatalf("after removing the only rule that admits workload -> RDS the journey must stop flowing: %+v", after.FlowDetail)
+	}
+	if got := after.FlowDetail[0].BlockedReason; !strings.Contains(got, "sg_dest_ingress") || !strings.Contains(got, "aws_db_instance.payments") {
+		t.Errorf("BlockedReason = %q, want it to name the sg_dest_ingress step at aws_db_instance.payments", got)
 	}
 }
 

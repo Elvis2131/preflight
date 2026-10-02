@@ -1,7 +1,7 @@
 {
   "schema_version": "1.4.0",
   "version_number": 1,
-  "version_hash": "sha256:209a7dfeda7c45ed538b2ab95a21dfd7f809342243a2a748dc74ba54f523700c",
+  "version_hash": "sha256:cccd542636046f1e51e01722728e3c4acd5650535fe8a7f192279b8114c1b616",
   "nodes": [
     {
       "id": "aws_db_instance.payments",
@@ -343,6 +343,7 @@
       "resolution": "known",
       "raw_attributes": {
         "capability_level": "NETWORK_BEHAVIOR",
+        "network_role": "route_table",
         "route.cidr_block": "0.0.0.0/0",
         "tags": {
           "Name": "payments-rt-private-a"
@@ -359,6 +360,7 @@
       "resolution": "known",
       "raw_attributes": {
         "capability_level": "NETWORK_BEHAVIOR",
+        "network_role": "route_table",
         "route.cidr_block": "0.0.0.0/0",
         "tags": {
           "Name": "payments-rt-private-b"
@@ -375,6 +377,7 @@
       "resolution": "known",
       "raw_attributes": {
         "capability_level": "NETWORK_BEHAVIOR",
+        "network_role": "route_table",
         "route.cidr_block": "0.0.0.0/0",
         "tags": {
           "Name": "payments-rt-private-c"
@@ -391,6 +394,7 @@
       "resolution": "known",
       "raw_attributes": {
         "capability_level": "NETWORK_BEHAVIOR",
+        "network_role": "route_table",
         "route.cidr_block": "0.0.0.0/0",
         "tags": {
           "Name": "payments-rt-public"
@@ -592,6 +596,7 @@
       "raw_attributes": {
         "capability_level": "NETWORK_BEHAVIOR",
         "cidr_block": "10.0.20.0/24",
+        "network_role": "subnet",
         "tags": {
           "Name": "payments-data-a",
           "Tier": "data"
@@ -609,6 +614,7 @@
       "raw_attributes": {
         "capability_level": "NETWORK_BEHAVIOR",
         "cidr_block": "10.0.21.0/24",
+        "network_role": "subnet",
         "tags": {
           "Name": "payments-data-b",
           "Tier": "data"
@@ -626,6 +632,7 @@
       "raw_attributes": {
         "capability_level": "NETWORK_BEHAVIOR",
         "cidr_block": "10.0.22.0/24",
+        "network_role": "subnet",
         "tags": {
           "Name": "payments-data-c",
           "Tier": "data"
@@ -643,6 +650,7 @@
       "raw_attributes": {
         "capability_level": "NETWORK_BEHAVIOR",
         "cidr_block": "10.0.10.0/24",
+        "network_role": "subnet",
         "tags": {
           "Name": "payments-private-a",
           "Tier": "private"
@@ -660,6 +668,7 @@
       "raw_attributes": {
         "capability_level": "NETWORK_BEHAVIOR",
         "cidr_block": "10.0.11.0/24",
+        "network_role": "subnet",
         "tags": {
           "Name": "payments-private-b",
           "Tier": "private"
@@ -677,6 +686,7 @@
       "raw_attributes": {
         "capability_level": "NETWORK_BEHAVIOR",
         "cidr_block": "10.0.12.0/24",
+        "network_role": "subnet",
         "tags": {
           "Name": "payments-private-c",
           "Tier": "private"
@@ -695,6 +705,7 @@
         "capability_level": "NETWORK_BEHAVIOR",
         "cidr_block": "10.0.0.0/24",
         "map_public_ip_on_launch": false,
+        "network_role": "subnet",
         "tags": {
           "Name": "payments-public-a",
           "Tier": "public"
@@ -713,6 +724,7 @@
         "capability_level": "NETWORK_BEHAVIOR",
         "cidr_block": "10.0.1.0/24",
         "map_public_ip_on_launch": false,
+        "network_role": "subnet",
         "tags": {
           "Name": "payments-public-b",
           "Tier": "public"
@@ -731,6 +743,7 @@
         "capability_level": "NETWORK_BEHAVIOR",
         "cidr_block": "10.0.2.0/24",
         "map_public_ip_on_launch": false,
+        "network_role": "subnet",
         "tags": {
           "Name": "payments-public-c",
           "Tier": "public"
@@ -749,6 +762,7 @@
         "capability_level": "NETWORK_BEHAVIOR",
         "enable_dns_hostnames": true,
         "enable_dns_support": true,
+        "network_role": "vpc",
         "tags": {
           "Compliance": "PCI",
           "Name": "payments-vpc",

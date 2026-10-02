@@ -14,6 +14,7 @@
 # noted, not worked around with a misleading field substitution.
 resource_type: aws_subnet
 node_type: network_boundary
+network_role: subnet
 reference_edge_type: contained_in
 
 capability_level: NETWORK_BEHAVIOR

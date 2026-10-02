@@ -87,6 +87,12 @@ func resolveSubnetID(ir *IR, resourceID string) (string, bool) {
 			if _, ok := EffectiveRouteTableID(ir.Edges, id); ok {
 				return id, true
 			}
+			// PC-151: a subnet that relies on the VPC's implicit main route table has no
+			// association edge at all, so it is recognised by the role its provider
+			// mapping gave it (data), not by an association it does not have.
+			if n, found := findNode(ir, id); found && n.RawAttributes["network_role"] == "subnet" && !hasExplicitRouteTableAssociation(ir, id) {
+				return id, true
+			}
 		}
 		for _, e := range ir.Edges {
 			if e.Type == EdgeTypeContainedIn && e.From == id {
@@ -200,7 +206,28 @@ func BuildTrace(ir *IR, sourceID, destID, sourceCIDR, protocol string, port int)
 			return finalize(trace)
 		}
 		if sourceSubnetID != destSubnetID {
-			step("route_selection", sourceSubnetID, "select a route from source to destination subnet", TraceAllow, "source and destination are in different subnets; routing applies (NACLs evaluated next)", "")
+			_, srcExplicit := EffectiveRouteTableID(ir.Edges, sourceSubnetID)
+			_, dstExplicit := EffectiveRouteTableID(ir.Edges, destSubnetID)
+			if srcExplicit && dstExplicit {
+				step("route_selection", sourceSubnetID, "select a route from source to destination subnet", TraceAllow, "source and destination are in different subnets; routing applies (NACLs evaluated next)", "")
+			} else {
+				// PC-151: a subnet with no explicit association is implicitly associated
+				// with the VPC's main route table (VPC User Guide, "Subnet route tables"),
+				// and every route table has a local route for the whole VPC. That is the
+				// ONLY routing fact AWS guarantees here, so only intra-VPC reachability is
+				// decided; anything needing another route stays out of this step.
+				srcVPC, srcOK := containingVPC(ir, sourceSubnetID)
+				dstVPC, dstOK := containingVPC(ir, destSubnetID)
+				if !srcOK || !dstOK || srcVPC != dstVPC {
+					step("route_selection", sourceSubnetID, "select a route from source to destination subnet", TraceNotAssessable,
+						"at least one subnet relies on its VPC's implicit main route table and the two subnets cannot be shown to be in the same VPC, so the local route does not establish a path", "")
+					return finalize(trace)
+				}
+				stepProv = NewProvenance(KindAssumed, "core/trace:"+sourceSubnetID+"->"+destSubnetID+":main-route-table").WithReason(ImplicitMainRouteTableReason)
+				step("route_selection", sourceSubnetID, "select a route from source to destination subnet", TraceAllow,
+					"both subnets are in "+srcVPC+" and at least one has no explicit route table association, so it uses the VPC's main route table, whose local route covers the whole VPC; "+ImplicitMainRouteTableReason, "")
+				stepProv = prov
+			}
 		} else {
 			step("route_selection", sourceSubnetID, "select a route from source to destination subnet", TraceAllow, "source and destination are in the same subnet — traffic does not cross a route table or NACL", "")
 		}

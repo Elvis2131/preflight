@@ -1,7 +1,7 @@
 {
   "schema_version": "1.4.0",
   "version_number": 1,
-  "version_hash": "sha256:ea4896df9696422d2f8faec2db6b1d97498e662e337d98b825e2ec5e48f69438",
+  "version_hash": "sha256:3ba2de56e2871c4e8300534a8bae9307a62dde4eb1df23e2891e202e684adefd",
   "nodes": [
     {
       "id": "aws_vpc.main",
@@ -9,7 +9,8 @@
       "resolution": "known",
       "raw_attributes": {
         "capability_level": "NETWORK_BEHAVIOR",
-        "cidr_block": "10.0.0.0/16"
+        "cidr_block": "10.0.0.0/16",
+        "network_role": "vpc"
       },
       "provenance": {
         "kind": "stated",
@@ -23,7 +24,8 @@
       "raw_attributes": {
         "availability_zone": "eu-west-1a",
         "capability_level": "NETWORK_BEHAVIOR",
-        "cidr_block": "10.0.0.0/24"
+        "cidr_block": "10.0.0.0/24",
+        "network_role": "subnet"
       },
       "provenance": {
         "kind": "stated",
@@ -37,7 +39,8 @@
       "raw_attributes": {
         "availability_zone": "eu-west-1b",
         "capability_level": "NETWORK_BEHAVIOR",
-        "cidr_block": "10.0.1.0/24"
+        "cidr_block": "10.0.1.0/24",
+        "network_role": "subnet"
       },
       "provenance": {
         "kind": "stated",
@@ -51,7 +54,8 @@
       "raw_attributes": {
         "availability_zone": "eu-west-1a",
         "capability_level": "NETWORK_BEHAVIOR",
-        "cidr_block": "10.0.10.0/24"
+        "cidr_block": "10.0.10.0/24",
+        "network_role": "subnet"
       },
       "provenance": {
         "kind": "stated",
@@ -65,7 +69,8 @@
       "raw_attributes": {
         "availability_zone": "eu-west-1b",
         "capability_level": "NETWORK_BEHAVIOR",
-        "cidr_block": "10.0.11.0/24"
+        "cidr_block": "10.0.11.0/24",
+        "network_role": "subnet"
       },
       "provenance": {
         "kind": "stated",
@@ -79,7 +84,8 @@
       "raw_attributes": {
         "availability_zone": "eu-west-1a",
         "capability_level": "NETWORK_BEHAVIOR",
-        "cidr_block": "10.0.20.0/24"
+        "cidr_block": "10.0.20.0/24",
+        "network_role": "subnet"
       },
       "provenance": {
         "kind": "stated",
@@ -93,7 +99,8 @@
       "raw_attributes": {
         "availability_zone": "eu-west-1b",
         "capability_level": "NETWORK_BEHAVIOR",
-        "cidr_block": "10.0.21.0/24"
+        "cidr_block": "10.0.21.0/24",
+        "network_role": "subnet"
       },
       "provenance": {
         "kind": "stated",
@@ -234,7 +241,8 @@
       "type": "network_boundary",
       "resolution": "known",
       "raw_attributes": {
-        "capability_level": "NETWORK_BEHAVIOR"
+        "capability_level": "NETWORK_BEHAVIOR",
+        "network_role": "route_table"
       },
       "provenance": {
         "kind": "stated",
@@ -246,7 +254,8 @@
       "type": "network_boundary",
       "resolution": "known",
       "raw_attributes": {
-        "capability_level": "NETWORK_BEHAVIOR"
+        "capability_level": "NETWORK_BEHAVIOR",
+        "network_role": "route_table"
       },
       "provenance": {
         "kind": "stated",

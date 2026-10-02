@@ -151,3 +151,38 @@ func IsPublicSubnet(edges []Edge, subnetID string) (isPublic bool, hasRouteTable
 	routesByTableID, igwTargetIDs := routesByTable(edges)
 	return analyse.IsPublicSubnetByRoutes(routesByTableID[tableID], igwTargetIDs), true
 }
+
+// ImplicitMainRouteTableReason states the one real assumption behind treating a subnet
+// that has no explicit route table association as reaching its whole VPC (PC-151).
+const ImplicitMainRouteTableReason = "AWS associates a subnet that has no explicit route table with the VPC's main route table, and every route table has a local route covering the VPC (VPC User Guide, \"Subnet route tables\"); ASSUMED unmodified — the local route's target can be replaced outside the design, and only the intra-VPC path is decided from it"
+
+// containingVPC returns the node a subnet is contained_in and that carries the "vpc"
+// network role, if exactly such a containment is known.
+func containingVPC(ir *IR, subnetID string) (string, bool) {
+	for _, e := range ir.Edges {
+		if e.Type != EdgeTypeContainedIn || e.From != subnetID || e.Resolution != ResolutionKnown {
+			continue
+		}
+		if n, ok := findNode(ir, e.To); ok && n.RawAttributes["network_role"] == "vpc" {
+			return e.To, true
+		}
+	}
+	return "", false
+}
+
+// hasExplicitRouteTableAssociation reports whether the subnet has ANY association that
+// could be an explicit route table one: a depends_on edge to a node with the route_table
+// role (even one with no routes yet), or one that is unresolved/dangling — an explicit
+// association cannot be ruled out, so the implicit-main-table rule must not fire (I4).
+func hasExplicitRouteTableAssociation(ir *IR, subnetID string) bool {
+	for _, e := range ir.Edges {
+		if e.Type != EdgeTypeDependsOn || e.From != subnetID {
+			continue
+		}
+		n, ok := findNode(ir, e.To)
+		if !ok || e.Resolution != ResolutionKnown || n.RawAttributes["network_role"] == "route_table" {
+			return true
+		}
+	}
+	return false
+}
