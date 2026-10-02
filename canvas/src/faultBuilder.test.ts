@@ -1,7 +1,7 @@
 import { describe, it, expect } from "vitest";
-import type { Node } from "@xyflow/react";
-import type { CanvasNodeData } from "./types";
-import { targetsFor, buildFault, sgRuleToFault, killedTargets, describeFault, FAULT_KINDS } from "./faultBuilder";
+import type { Edge, Node } from "@xyflow/react";
+import type { CanvasEdgeData, CanvasNodeData } from "./types";
+import { targetsFor, registeredTargets, buildFault, sgRuleToFault, killedTargets, describeFault, FAULT_KINDS } from "./faultBuilder";
 
 function n(id: string, nodeType: CanvasNodeData["nodeType"], extra: Partial<CanvasNodeData> = {}): Node<CanvasNodeData> {
   return { id, type: "golden", position: { x: 0, y: 0 }, data: { nodeType, label: id.toUpperCase(), capability: {}, ...extra } };
@@ -58,5 +58,27 @@ describe("faultBuilder (PC-131): names faults, never decides what they break", (
   it("describes a fault in words", () => {
     expect(describeFault({ type: "node_loss", target: "db" })).toBe("lose db");
     expect(describeFault({ type: "mystery", target: "x" })).toBe("mystery x");
+  });
+});
+
+describe("target deregistration (PC-130)", () => {
+  const lbNodes = [n("lb", "load_balancer"), n("lb2", "load_balancer"), n("app", "container_workload"), n("db", "managed_database")];
+  const e = (id: string, source: string, target: string, edgeType: CanvasEdgeData["edgeType"]): Edge<CanvasEdgeData> => ({ id, source, target, data: { edgeType } as CanvasEdgeData });
+  const edges = [e("1", "lb", "app", "routes_to"), e("2", "app", "db", "reads/writes")];
+
+  it("offers only a load balancer that has drawn targets", () => {
+    expect(targetsFor("target_deregistration", lbNodes, [], edges).map((t) => t.value)).toEqual(["lb"]);
+    expect(targetsFor("target_deregistration", lbNodes, [], [])).toEqual([]);
+  });
+
+  it("lists a load balancer's own routes_to targets, nothing else", () => {
+    expect(registeredTargets("lb", lbNodes, edges).map((t) => t.value)).toEqual(["app"]);
+    expect(registeredTargets("lb2", lbNodes, edges)).toEqual([]);
+  });
+
+  it("builds the declared fault, refusing to guess the target", () => {
+    expect(buildFault("target_deregistration", "lb", undefined, "app")).toEqual({ type: "target_deregistration", target: "lb", deregister_target: "app" });
+    expect(() => buildFault("target_deregistration", "lb")).toThrow();
+    expect(describeFault({ type: "target_deregistration", target: "lb", deregister_target: "app" })).toBe("deregister app from lb");
   });
 });

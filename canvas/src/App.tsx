@@ -996,6 +996,7 @@ function CanvasInner() {
           <FailureLab
             sessionID={sessionIDRef.current}
             nodes={nodes}
+            edges={edges}
             regions={buildWorkload(workloadForm).regions ?? []}
             busy={simBusy}
             onRun={(f) => void runFaults(f)}

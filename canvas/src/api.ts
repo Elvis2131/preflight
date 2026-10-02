@@ -484,6 +484,8 @@ export interface Fault {
   type: string;
   target: string;
   sg_rule_remove?: FaultSGRule;
+  // target_deregistration: Target is the load balancer, this the registered target dropped.
+  deregister_target?: string;
 }
 
 export interface SavedScenario {

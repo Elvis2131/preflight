@@ -1,6 +1,6 @@
 import { useEffect, useState, useCallback } from "react";
-import type { Node } from "@xyflow/react";
-import type { CanvasNodeData } from "./types";
+import type { Edge, Node } from "@xyflow/react";
+import type { CanvasEdgeData, CanvasNodeData } from "./types";
 import {
   listScenarios,
   saveScenario,
@@ -9,7 +9,7 @@ import {
   type SavedScenario,
   type ScenarioResult,
 } from "./api";
-import { FAULT_KINDS, targetsFor, buildFault, describeFault, ruleLabel, type FaultKind } from "./faultBuilder";
+import { FAULT_KINDS, targetsFor, registeredTargets, buildFault, describeFault, ruleLabel, type FaultKind } from "./faultBuilder";
 
 // FailureLab (PC-131) is the Failure Lab mode's scenario panel: pick faults from the
 // architecture, build a scenario of one or more, run it, save it by name, and re-run
@@ -24,6 +24,7 @@ const small: React.CSSProperties = { fontSize: 11, color: "#64748b" };
 export function FailureLab({
   sessionID,
   nodes,
+  edges = [],
   regions,
   busy,
   onRun,
@@ -33,6 +34,7 @@ export function FailureLab({
 }: {
   sessionID: string;
   nodes: Node<CanvasNodeData>[];
+  edges?: Edge<CanvasEdgeData>[];
   regions: string[];
   busy: boolean;
   onRun: (faults: Fault[]) => void;
@@ -43,12 +45,14 @@ export function FailureLab({
   const [kind, setKind] = useState<FaultKind>("node_loss");
   const [target, setTarget] = useState("");
   const [ruleIndex, setRuleIndex] = useState(0);
+  const [deregister, setDeregister] = useState("");
   const [faults, setFaults] = useState<Fault[]>([]);
   const [name, setName] = useState("");
   const [saved, setSaved] = useState<SavedScenario[]>([]);
   const [error, setError] = useState<string | null>(null);
 
-  const targets = targetsFor(kind, nodes, regions);
+  const targets = targetsFor(kind, nodes, regions, edges);
+  const lbTargets = kind === "target_deregistration" ? registeredTargets(target, nodes, edges) : [];
   const targetNode = nodes.find((n) => n.id === target);
   const rules = targetNode?.data.securityGroupRules ?? [];
 
@@ -63,13 +67,18 @@ export function FailureLab({
   useEffect(() => {
     if (!targets.some((t) => t.value === target)) setTarget(targets[0]?.value ?? "");
     setRuleIndex(0);
-  }, [kind, nodes.length, regions.join("|")]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [kind, nodes.length, edges.length, regions.join("|")]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Keep the picked registered target valid for the chosen load balancer.
+  useEffect(() => {
+    if (!lbTargets.some((t) => t.value === deregister)) setDeregister(lbTargets[0]?.value ?? "");
+  }, [kind, target, nodes.length, edges.length]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const addFault = () => {
     setError(null);
     if (!target) return;
     try {
-      setFaults((fs) => [...fs, buildFault(kind, target, kind === "sg_rule_removal" ? rules[ruleIndex] : undefined)]);
+      setFaults((fs) => [...fs, buildFault(kind, target, kind === "sg_rule_removal" ? rules[ruleIndex] : undefined, kind === "target_deregistration" ? deregister : undefined)]);
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
     }
@@ -119,7 +128,16 @@ export function FailureLab({
             ))}
           </select>
         )}
-        <button onClick={addFault} disabled={!target} data-testid="add-fault">
+        {kind === "target_deregistration" && lbTargets.length > 0 && (
+          <select value={deregister} onChange={(e) => setDeregister(e.target.value)} data-testid="fault-deregister-target" style={{ width: "100%", marginBottom: 6 }}>
+            {lbTargets.map((t) => (
+              <option key={t.value} value={t.value}>
+                {t.label}
+              </option>
+            ))}
+          </select>
+        )}
+        <button onClick={addFault} disabled={!target || (kind === "target_deregistration" && !deregister)} data-testid="add-fault">
           + add fault
         </button>
       </div>
