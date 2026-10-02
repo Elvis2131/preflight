@@ -179,3 +179,69 @@ func TestAnnotate_PromptCarriesNotAssessableAndNoKey(t *testing.T) {
 		t.Error("the API key must never be part of a prompt")
 	}
 }
+
+// AnnotateStream delivers each finding as it completes, in order, and tags rejections with WHY
+// (call failure vs an invalid narrative) so the caller can tell a degraded run from a bad answer.
+func TestAnnotateStream_EmitsPerFinding_WithRejectionKinds(t *testing.T) {
+	fs := goldenFindings(t)[:3]
+	calls := 0
+	c := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
+		calls++
+		var req wireRequest
+		json.NewDecoder(r.Body).Decode(&req)
+		var pf promptFinding
+		json.Unmarshal([]byte(strings.TrimPrefix(req.Messages[len(req.Messages)-1].Content, "FINDING:\n")), &pf)
+		switch calls {
+		case 1:
+			json.NewEncoder(w).Encode(map[string]any{"choices": []any{map[string]any{"message": map[string]any{"content": goodReply("", pf.AffectedComponents[0])}}}})
+		case 2:
+			w.WriteHeader(http.StatusTooManyRequests)
+			w.Write([]byte("rate limited"))
+		default:
+			json.NewEncoder(w).Encode(map[string]any{"choices": []any{map[string]any{"message": map[string]any{"content": `{"narrative":"x","cited_evidence":["made.up"]}`}}}})
+		}
+	})
+	var got []reasonEventKind
+	err := AnnotateStream(context.Background(), c, fs, func(e Event) {
+		switch {
+		case e.Annotation != nil:
+			got = append(got, reasonEventKind{"annotation", e.Annotation.FindingID, ""})
+		case e.Rejection != nil:
+			got = append(got, reasonEventKind{"rejection", e.Rejection.FindingID, e.Rejection.Kind})
+		}
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	want := []reasonEventKind{
+		{"annotation", fs[0].ID, ""},
+		{"rejection", fs[1].ID, core.LLMRejectionCallFailed},
+		{"rejection", fs[2].ID, core.LLMRejectionInvalid},
+	}
+	if len(got) != 3 || got[0] != want[0] || got[1] != want[1] || got[2] != want[2] {
+		t.Errorf("events = %+v, want %+v", got, want)
+	}
+}
+
+type reasonEventKind struct{ kind, id, rejectionKind string }
+
+// PC-17: detection "unknown" must reach the model with its exact meaning, so it cannot be
+// rendered as "no monitoring exists".
+func TestPrompt_CarriesTheExactDetectionMeaning(t *testing.T) {
+	if m := DetectionMeaning(core.DetectionUnknown); !strings.Contains(m, "KNOWN OR DECLARED") && !strings.Contains(m, "known or declared") || !strings.Contains(m, "does NOT mean none exists") {
+		t.Errorf("unknown must be explained as not-known, never as none-exists: %q", m)
+	}
+	for _, s := range []core.DetectionState{core.DetectionModeled, core.DetectionDeclared, core.DetectionObserved, core.DetectionUnknown} {
+		if !strings.HasPrefix(DetectionMeaning(s), string(s)+":") {
+			t.Errorf("meaning for %q must start with the state itself: %q", s, DetectionMeaning(s))
+		}
+	}
+	f := goldenFindings(t)[0]
+	pf, _, err := project(f)
+	if err != nil || pf.DetectionMeaning != DetectionMeaning(f.Dimensions.Detection) {
+		t.Errorf("projection must carry the meaning: %+v err=%v", pf, err)
+	}
+	if !strings.Contains(systemPrompt, "never means none exists") {
+		t.Error("the system prompt must state the detection rule")
+	}
+}

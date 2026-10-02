@@ -47,6 +47,12 @@ func main() {
 	defer pricingStore.Close()
 	store.AttachPricingStore(pricingStore) // PC-117: /assess reads this via a local SQLite lookup, never a network call
 
+	// PC-154: the reason worker (P2) is reached by URL only. P1 holds no API key and never reads
+	// one; with no URL the annotations endpoint simply reports `degraded` (not configured).
+	if u := os.Getenv("PREFLIGHT_REASOND_URL"); u != "" {
+		store.AttachReasonWorker(u)
+	}
+
 	mux := http.NewServeMux()
 	mux.HandleFunc("/healthz", func(w http.ResponseWriter, r *http.Request) {
 		fmt.Fprintln(w, "assessd (P1): ok — no credentials held, no external calls made")
@@ -57,6 +63,7 @@ func main() {
 	mux.HandleFunc("GET /sessions/{id}/versions", server.ListVersionsHandler(store))
 	mux.HandleFunc("GET /sessions/{id}/versions/{n}", server.GetVersionHandler(store))
 	mux.HandleFunc("GET /sessions/{id}/versions/{n}/report", server.GetReportHandler(store))
+	mux.HandleFunc("GET /sessions/{id}/versions/{n}/annotations", server.GetAnnotationsHandler(store))
 	mux.HandleFunc("GET /sessions/{id}/scenarios", server.ListScenariosHandler(store))
 	mux.HandleFunc("PUT /sessions/{id}/scenarios/{name}", server.SaveScenarioHandler(store))
 	mux.HandleFunc("DELETE /sessions/{id}/scenarios/{name}", server.DeleteScenarioHandler(store))

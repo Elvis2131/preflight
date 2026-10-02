@@ -76,7 +76,7 @@ func GetStoredVersion(store *Store, sessionID string, versionNumber int) (Assess
 		AssuranceDelta: delta,
 		Graph:          &graph,
 		Degraded:       true,
-		DegradedReason: "read back from a previously-stored version — reason/ was never re-run for a GET (ADR-005/PC-77's own gap, unchanged by this read-back)",
+		DegradedReason: "read back from a previously-stored version; LLM narratives are not part of this response — stored ones are served by GET /sessions/{id}/versions/{n}/annotations",
 		// ComputeDurationMS measures the actual store read (real, if tiny — a SQLite
 		// row fetch, not an ingest/analyse pipeline), never a fabricated 0 standing
 		// in for "not applicable": this genuinely IS the time this call took.

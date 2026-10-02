@@ -62,9 +62,11 @@ type AssessResponse struct {
 	// request failed."
 	Graph *string `json:"graph"`
 
-	// Degraded is true whenever the LLM narrative layer (reason/) did not or could
-	// not contribute — see reason.go's own doc comment for why this is unconditionally
-	// true today (reason/ has no client at all yet, ADR-005/PC-77).
+	// Degraded is true because LLM narratives are NOT part of this response: they are
+	// produced by the reason worker (P2) after it and arrive separately on
+	// GET /sessions/{id}/versions/{n}/annotations (PC-154). It is deliberately constant, so
+	// this payload is byte-identical whether the reason worker is running, down or absent
+	// (NFR-5): /assess never depends on P2.
 	Degraded       bool   `json:"degraded"`
 	DegradedReason string `json:"degraded_reason,omitempty"`
 
@@ -245,7 +247,7 @@ func assessFromResult(store *Store, sessionID string, versionNumber int, hadPrev
 		AssuranceDelta:      delta,
 		Graph:               &graph,
 		Degraded:            true,
-		DegradedReason:      "reason/ has no LLM client wired up yet (ADR-005/PC-77) — every response is narrative-degraded until it does",
+		DegradedReason:      "LLM narratives are not part of this response: they arrive separately on the annotations stream (GET /sessions/{id}/versions/{n}/annotations) when a reason worker is configured, and never delay or change these findings",
 		ComputeDurationMS:   time.Since(start).Milliseconds(),
 		Cost:                cost,
 		CostDelta:           costDelta,

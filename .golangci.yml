@@ -29,6 +29,18 @@ linters:
   settings:
     depguard:
       rules:
+        # PC-154 / ADR-003: P1 (the assessment engine) has no path to the LLM layer. The narrative
+        # worker (P2) is reached over HTTP by URL; the types they share live in core. (A test,
+        # server/boundary_test.go, proves the same over the real dependency graph.)
+        p1-no-llm:
+          files:
+            - "**/server/*.go"
+            - "**/cmd/assessd/*.go"
+            - "**/ingest/*.go"
+            - "**/providers/*.go"
+          deny:
+            - pkg: "preflight/reason"
+              desc: "ADR-003: P1 must not import reason/ — the LLM layer is P2 (reasond), reached over HTTP only"
         core-purity:
           # I1: core/ (and everything under core/internal/) must not import the impure
           # process packages, or reach for network/OS I/O directly.

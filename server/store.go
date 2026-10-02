@@ -37,6 +37,10 @@ type Store struct {
 	// itself has zero network capability (pricing/boundary_test.go), so holding a
 	// reference to it here adds no network capability to assessd (P1).
 	pricingStore *pricing.Store
+
+	// reasonWorker is PC-154's handle on the reason worker (P2): nil unless AttachReasonWorker
+	// is called. It holds a URL only — never a key (P1 holds no credentials).
+	reasonWorker *ReasonWorker
 }
 
 // AttachPricingStore wires PC-117's cost computation into this Store — /assess reads
@@ -107,7 +111,7 @@ CREATE TABLE IF NOT EXISTS scenarios (
 	// computed for this version" (no pricing store was attached at assess time),
 	// distinct from a real, marshaled core.CostReport.
 	s.db.Exec(`ALTER TABLE versions ADD COLUMN cost_json TEXT NOT NULL DEFAULT ''`)
-	return nil
+	return s.migrateAnnotations()
 }
 
 // EnsureSession creates sessionID if it does not already exist. Idempotent — a caller
