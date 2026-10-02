@@ -8,6 +8,7 @@ import (
 	"net/http/httptest"
 	"strings"
 	"testing"
+	"time"
 )
 
 type sseEvent struct{ Event, Data string }
@@ -102,5 +103,81 @@ func TestHandler_RejectsGETAndBadBody(t *testing.T) {
 	h.ServeHTTP(rec, httptest.NewRequest(http.MethodPost, "/v1/annotate", strings.NewReader("{not json")))
 	if rec.Code != http.StatusBadRequest {
 		t.Errorf("bad body = %d, want 400", rec.Code)
+	}
+}
+
+// PC-160: annotation runs are serialised per process (free-tier rate limit), so a second request
+// does not even get its `started` event until the first run is finished. This pins that behaviour
+// as the measured cause of PC-154's 180-200 s first-annotation times when a previous run was still
+// going — P1 deliberately lets a run finish after its client disconnects so the set can be stored.
+func TestHandler_SecondRunWaitsForTheFirst(t *testing.T) {
+	release := make(chan struct{})
+	inModel := make(chan struct{}, 4)
+	model := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
+		inModel <- struct{}{}
+		<-release
+		var req wireRequest
+		json.NewDecoder(r.Body).Decode(&req)
+		user := req.Messages[len(req.Messages)-1].Content
+		var pf promptFinding
+		json.Unmarshal([]byte(strings.TrimPrefix(user, "FINDING:\n")), &pf)
+		json.NewEncoder(w).Encode(map[string]any{
+			"choices": []any{map[string]any{"message": map[string]any{"role": "assistant", "content": goodReply(pf.ID, pf.AffectedComponents[0])}, "finish_reason": "stop"}},
+			"usage":   map[string]any{"total_tokens": 15},
+		})
+	})
+	srv := httptest.NewServer(NewAnnotateHandler(model))
+	defer srv.Close()
+	fs := goldenFindings(t)[:1]
+	body, _ := json.Marshal(map[string]any{"findings": fs})
+
+	// Each client keeps its connection open until the test ends, like P1 does: a client that hangs
+	// up cancels its run (and frees the worker), which is not the case being pinned here.
+	hangUp := make(chan struct{})
+	defer close(hangUp)
+	firstEvent := func() chan string {
+		out := make(chan string, 1)
+		go func() {
+			resp, err := http.Post(srv.URL, "application/json", bytes.NewReader(body))
+			if err != nil {
+				out <- "error: " + err.Error()
+				return
+			}
+			defer resp.Body.Close()
+			sc := bufio.NewScanner(resp.Body)
+			sent := false
+			for sc.Scan() {
+				if !sent && strings.HasPrefix(sc.Text(), "event: ") {
+					out <- strings.TrimPrefix(sc.Text(), "event: ")
+					sent = true
+				}
+			}
+			if !sent {
+				out <- "closed"
+			}
+			<-hangUp
+		}()
+		return out
+	}
+
+	a := firstEvent()
+	if ev := <-a; ev != "started" {
+		t.Fatalf("first run's first event = %q, want started", ev)
+	}
+	<-inModel // run A is inside the (blocked) model call and holds the worker
+	b := firstEvent()
+	select {
+	case ev := <-b:
+		t.Fatalf("second run produced %q while the first still held the worker; runs are meant to be serialised", ev)
+	case <-time.After(300 * time.Millisecond):
+	}
+	close(release) // let A finish; B must then proceed
+	select {
+	case ev := <-b:
+		if ev != "started" {
+			t.Fatalf("second run's first event = %q, want started", ev)
+		}
+	case <-time.After(5 * time.Second):
+		t.Fatal("second run never started after the first finished")
 	}
 }

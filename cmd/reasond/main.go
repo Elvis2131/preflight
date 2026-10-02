@@ -38,7 +38,7 @@ func main() {
 
 	var client *reason.Client
 	if key := os.Getenv("NVIDIA_API_KEY"); key != "" {
-		c, err := reason.NewClient(reason.Config{APIKey: key, Model: model})
+		c, err := reason.NewClient(reason.Config{APIKey: key, Model: model, Reasoning: os.Getenv("PREFLIGHT_REASON_REASONING")})
 		if err != nil {
 			log.Fatalf("reasond: %v", err)
 		}

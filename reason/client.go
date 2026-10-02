@@ -23,7 +23,20 @@ type Config struct {
 	APIKey     string
 	Model      string
 	HTTPClient *http.Client
+	// Reasoning selects how much the model thinks before answering (PC-160). "" leaves the
+	// provider default untouched (the request is byte-identical to before this field existed);
+	// ReasoningOff and ReasoningLowEffort map to NVIDIA's documented chat_template_kwargs
+	// (model card: enable_thinking / low_effort). Whether the hosted endpoint honours them is
+	// measured, not assumed — see docs/eval/nfr9-first-annotation-latency.md.
+	Reasoning string
 }
+
+// Reasoning modes accepted in Config.Reasoning.
+const (
+	ReasoningDefault   = ""
+	ReasoningOff       = "off"
+	ReasoningLowEffort = "low_effort"
+)
 
 // Client is a minimal chat-completions client over net/http. No SDK (ADR-005).
 type Client struct {
@@ -38,6 +51,11 @@ func NewClient(cfg Config) (*Client, error) {
 	}
 	if cfg.Model == "" {
 		return nil, errors.New("reason: no model configured")
+	}
+	switch cfg.Reasoning {
+	case ReasoningDefault, ReasoningOff, ReasoningLowEffort:
+	default:
+		return nil, fmt.Errorf("reason: unknown reasoning mode %q (want \"\", %q or %q)", cfg.Reasoning, ReasoningOff, ReasoningLowEffort)
 	}
 	if cfg.BaseURL == "" {
 		cfg.BaseURL = DefaultBaseURL
@@ -94,6 +112,18 @@ type wireRequest struct {
 	TopP        float64   `json:"top_p"`
 	MaxTokens   int       `json:"max_tokens"`
 	Stream      bool      `json:"stream"`
+	// ChatTemplateKwargs is omitted entirely unless a reasoning mode was chosen.
+	ChatTemplateKwargs map[string]bool `json:"chat_template_kwargs,omitempty"`
+}
+
+func reasoningKwargs(mode string) map[string]bool {
+	switch mode {
+	case ReasoningOff:
+		return map[string]bool{"enable_thinking": false}
+	case ReasoningLowEffort:
+		return map[string]bool{"enable_thinking": true, "low_effort": true}
+	}
+	return nil
 }
 
 type wireChunk struct {
@@ -113,7 +143,7 @@ type wireChunk struct {
 func (c *Client) do(ctx context.Context, req Request, stream bool) (*http.Response, error) {
 	body, err := json.Marshal(wireRequest{
 		Model: c.cfg.Model, Messages: req.Messages, Temperature: req.Temperature, TopP: req.TopP,
-		MaxTokens: req.MaxTokens, Stream: stream,
+		MaxTokens: req.MaxTokens, Stream: stream, ChatTemplateKwargs: reasoningKwargs(c.cfg.Reasoning),
 	})
 	if err != nil {
 		return nil, err

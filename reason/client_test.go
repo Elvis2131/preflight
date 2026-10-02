@@ -149,3 +149,43 @@ func TestNewClient_RequiresKeyAndModel(t *testing.T) {
 		t.Error("missing model must be refused at construction")
 	}
 }
+
+// PC-160: a reasoning mode only adds chat_template_kwargs when chosen; the default request must
+// stay exactly what it was, so nothing about existing behaviour changes unless a mode is opted in.
+func TestReasoningMode_WireFormat(t *testing.T) {
+	cases := []struct {
+		mode string
+		want string // the chat_template_kwargs JSON, or "" when the key must be absent
+	}{
+		{ReasoningDefault, ""},
+		{ReasoningOff, `{"enable_thinking":false}`},
+		{ReasoningLowEffort, `{"enable_thinking":true,"low_effort":true}`},
+	}
+	for _, tc := range cases {
+		var got map[string]json.RawMessage
+		srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			b, _ := io.ReadAll(r.Body)
+			_ = json.Unmarshal(b, &got)
+			w.Header().Set("Content-Type", "application/json")
+			_, _ = w.Write([]byte(`{"choices":[{"message":{"content":"ok"},"finish_reason":"stop"}],"usage":{"total_tokens":1}}`))
+		}))
+		c, err := NewClient(Config{BaseURL: srv.URL, APIKey: testKey, Model: "m", Reasoning: tc.mode})
+		if err != nil {
+			t.Fatal(err)
+		}
+		if _, err := c.Chat(context.Background(), Request{Messages: []Message{{Role: "user", Content: "x"}}, MaxTokens: 8}); err != nil {
+			t.Fatal(err)
+		}
+		srv.Close()
+		raw, present := got["chat_template_kwargs"]
+		if tc.want == "" && present {
+			t.Errorf("mode %q: chat_template_kwargs must be absent, got %s", tc.mode, raw)
+		}
+		if tc.want != "" && string(raw) != tc.want {
+			t.Errorf("mode %q: chat_template_kwargs = %s, want %s", tc.mode, raw, tc.want)
+		}
+	}
+	if _, err := NewClient(Config{APIKey: testKey, Model: "m", Reasoning: "max"}); err == nil {
+		t.Error("an unknown reasoning mode must be a configuration error")
+	}
+}
