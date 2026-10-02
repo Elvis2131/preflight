@@ -17,13 +17,13 @@ import (
 
 // LatencySeedNote is stamped on every estimate: the model is closed-form, so there is
 // no random seed (I1 allows an injected seed; this model simply never needs one).
-const LatencySeedNote = "none: closed-form M/M/1 formulas, no randomness anywhere in this model"
+const LatencySeedNote = "none: closed-form M/M/1 (M/G/1 where a service-time SCV is declared) formulas, no randomness anywhere in this model"
 
 // latencyAssumptions are the modelling assumptions every estimate depends on. They
 // are not declared by the architect and are not facts about the design — they are the
 // price of using a closed form, so they are tagged assumed and shown with the result.
 var latencyAssumptions = []string{
-	"each component is one aggregate M/M/1 station: Poisson arrivals, exponential service, service rate = the component's declared capacity (Workload.Capacity)",
+	"each component is one aggregate station: Poisson arrivals, service rate = the component's declared capacity (Workload.Capacity), and — unless Workload.ServiceTimeSCV declares otherwise for that component type — exponential service (M/M/1). A Rung 1 comparison on a real Postgres (docs/PREDICTED_VS_OBSERVED.md) found M/M/1 overestimates the mean latency of a near-deterministic service by 30-40% at high utilisation and is far too optimistic for a service with long stalls; declare the service-time SCV when it is known",
 	"stations are independent in tandem (Jackson network), so a journey's mean latency is the sum of its components' mean sojourn times",
 	"where a path position has more than one reached member, the worst (highest mean) member is used",
 	"concurrency limits and request-size-dependent service time are not modelled",
@@ -48,7 +48,15 @@ type ComponentLatency struct {
 	Utilization float64  `json:"utilization"`
 	Saturated   bool     `json:"saturated"`
 	MeanMS      *float64 `json:"mean_ms,omitempty"`
-	P95MS       *float64 `json:"p95_ms,omitempty"`
+	// P95MS is nil when saturated, and also whenever the component's service-time SCV is
+	// DECLARED: the p95 = mean*ln(20) closed form only exists for exponential sojourn times,
+	// and no honest closed form exists for a general service distribution.
+	P95MS *float64 `json:"p95_ms,omitempty"`
+	// ServiceTimeSCV is the squared coefficient of variation the mean was computed with;
+	// SCVDeclared says whether the architect stated it (true) or the model assumed
+	// exponential service (false, SCV = 1).
+	ServiceTimeSCV float64 `json:"service_time_scv"`
+	SCVDeclared    bool    `json:"scv_declared"`
 }
 
 // JourneyLatencyEstimate is the value of an assessed JourneyLatency.Result.
@@ -130,7 +138,12 @@ func journeyLatency(ir *IR, workload Workload, j DeclaredJourney, killed map[str
 				seenInput[l.CapacityKey] = true
 				est.Inputs = append(est.Inputs, LatencyInput{Name: "Workload.Capacity[" + l.CapacityKey + "]", Value: *l.Capacity, Source: "stated"})
 			}
-			c := componentLatency(l)
+			scv, scvDeclared := workload.ServiceTimeSCV[l.CapacityKey]
+			if scvDeclared && !seenInput["scv:"+l.CapacityKey] {
+				seenInput["scv:"+l.CapacityKey] = true
+				est.Inputs = append(est.Inputs, LatencyInput{Name: "Workload.ServiceTimeSCV[" + l.CapacityKey + "]", Value: scv, Source: "stated"})
+			}
+			c := componentLatency(l, scv, scvDeclared)
 			if worst == nil || moreLatent(c, *worst) {
 				cc := c
 				worst = &cc
@@ -175,18 +188,32 @@ func moreLatent(a, b ComponentLatency) bool {
 	return a.NodeID < b.NodeID
 }
 
-// componentLatency is the M/M/1 closed form. With service rate mu (declared capacity,
-// rps) and arrival rate lambda < mu, the sojourn time is exponentially distributed
-// with rate (mu - lambda): mean = 1/(mu-lambda), p95 = ln(20)/(mu-lambda).
-func componentLatency(l ComponentLoad) ComponentLatency {
+// componentLatency is the queueing closed form. With service rate mu (declared capacity,
+// rps) and arrival rate lambda < mu:
+//
+//   - no declared SCV (assumed exponential service, M/M/1): the sojourn time is exponential
+//     with rate (mu - lambda), so mean = 1/(mu-lambda) and p95 = ln(20)/(mu-lambda);
+//   - declared SCV (M/G/1): the Pollaczek-Khinchine mean, 1/mu + lambda*E[S^2]/(2*(1-rho))
+//     with E[S^2] = (1+SCV)/mu^2. SCV = 1 reproduces M/M/1 exactly; SCV = 0 is M/D/1. No
+//     p95 is given: its closed form needs exponential sojourn times.
+func componentLatency(l ComponentLoad, scv float64, scvDeclared bool) ComponentLatency {
 	mu, lambda := *l.Capacity, l.OfferedRPS
-	c := ComponentLatency{NodeID: l.NodeID, OfferedRPS: lambda, CapacityRPS: mu, Utilization: lambda / mu}
+	c := ComponentLatency{NodeID: l.NodeID, OfferedRPS: lambda, CapacityRPS: mu, Utilization: lambda / mu, ServiceTimeSCV: 1, SCVDeclared: scvDeclared}
+	if scvDeclared {
+		c.ServiceTimeSCV = scv
+	}
 	if mu <= 0 || lambda >= mu {
 		c.Saturated = true
 		return c
 	}
-	mean := 1000 / (mu - lambda)
-	p95 := mean * math.Log(20)
-	c.MeanMS, c.P95MS = &mean, &p95
+	if !scvDeclared {
+		mean := 1000 / (mu - lambda)
+		p95 := mean * math.Log(20)
+		c.MeanMS, c.P95MS = &mean, &p95
+		return c
+	}
+	rho := lambda / mu
+	mean := 1000 * (1/mu + lambda*(1+scv)/(mu*mu)/(2*(1-rho)))
+	c.MeanMS = &mean
 	return c
 }

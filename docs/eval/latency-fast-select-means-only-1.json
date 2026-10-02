@@ -1,0 +1,71 @@
+{
+  "calibrated_mu_tps": 13097.541876,
+  "calibrated_service_ms": 0.076,
+  "docker_vm_cpus": "10",
+  "ran_at": "2026-10-02T01:00:28Z",
+  "repeats_per_level": 3,
+  "rows": [
+    {
+      "rho": 0.3,
+      "lambda_rps": 3929.2625627999996,
+      "predicted_mean_ms_mm1": 0.10907172064012635,
+      "observed_mean_ms_runs": [
+        1.589,
+        1.523,
+        0.91
+      ],
+      "observed_mean_ms_median_of_runs": 1.523,
+      "ratio_observed_to_predicted": 13.963289394003601
+    },
+    {
+      "rho": 0.5,
+      "lambda_rps": 6548.770938,
+      "predicted_mean_ms_mm1": 0.15270040889617692,
+      "observed_mean_ms_runs": [
+        0.981,
+        0.712,
+        1.82
+      ],
+      "observed_mean_ms_median_of_runs": 0.981,
+      "ratio_observed_to_predicted": 6.4243442901779995
+    },
+    {
+      "rho": 0.7,
+      "lambda_rps": 9168.279313199999,
+      "predicted_mean_ms_mm1": 0.25450068149362814,
+      "observed_mean_ms_runs": [
+        1.779,
+        1.413,
+        2.031
+      ],
+      "observed_mean_ms_median_of_runs": 1.779,
+      "ratio_observed_to_predicted": 6.9901580992212
+    },
+    {
+      "rho": 0.8,
+      "lambda_rps": 10478.0335008,
+      "predicted_mean_ms_mm1": 0.3817510222404424,
+      "observed_mean_ms_runs": [
+        26.45,
+        0.912,
+        15.678
+      ],
+      "observed_mean_ms_median_of_runs": 15.678,
+      "ratio_observed_to_predicted": 41.06865230638559
+    },
+    {
+      "rho": 0.9,
+      "lambda_rps": 11787.7876884,
+      "predicted_mean_ms_mm1": 0.7635020444808848,
+      "observed_mean_ms_runs": [
+        36.905,
+        13.7,
+        18.158
+      ],
+      "observed_mean_ms_median_of_runs": 18.158,
+      "ratio_observed_to_predicted": 23.782516538440795
+    }
+  ],
+  "system_under_test": "postgres:16-alpine, pgbench select-only (-S), 1 client (-c 1 -j 1), open-loop Poisson arrivals (-R)",
+  "validation_rung": "Rung 1 (local replica). Says nothing about cloud-native semantics or real capacity."
+}

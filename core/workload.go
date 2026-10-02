@@ -152,6 +152,15 @@ type Workload struct {
 	// capacity_unknown for that node type — see the type doc comment above.
 	Capacity map[string]float64 `json:"capacity,omitempty" yaml:"capacity,omitempty"`
 
+	// ServiceTimeSCV is PC-128's own addition (driven by the Rung 1 comparison recorded in
+	// docs/PREDICTED_VS_OBSERVED.md): the squared coefficient of variation of a component's
+	// service time, keyed by the SAME capacity key as Capacity. 1 is exponential service, 0 is
+	// perfectly regular. Optional — absence means the latency model assumes exponential service
+	// (SCV = 1, stated as an assumption), exactly as before. It is never guessed from the
+	// component type: only a declared value changes the model, and then the mean uses the
+	// Pollaczek-Khinchine M/G/1 formula. Measure it from the service's own latency spread.
+	ServiceTimeSCV map[string]float64 `json:"service_time_scv,omitempty" yaml:"service_time_scv,omitempty" validate:"omitempty,dive,min=0" jsonschema:"description=Optional squared coefficient of variation of each component type's service time, keyed like capacity. 1 = exponential (the default assumption); 0 = perfectly regular. Declared values switch that component's mean latency to the Pollaczek-Khinchine M/G/1 formula and withhold its p95."`
+
 	// Journeys is PC-124's own addition — see DeclaredJourney's own doc comment.
 	Journeys []DeclaredJourney `json:"journeys,omitempty" yaml:"journeys,omitempty" validate:"dive"`
 

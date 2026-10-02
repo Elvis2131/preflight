@@ -33,12 +33,15 @@ export interface DeclaredJourney {
   peak_rps?: number;
   steady_rps?: number;
   // PC-152: optional per-hop port overrides keyed by the hop's destination (the exact path
-  // element); a hop with no entry uses `port`. Not yet authorable in the form.
+  // element); a hop with no entry uses `port`. Preserved and editable in the form.
   hop_ports?: Record<string, number>;
 }
 
 export interface Workload {
   schema_version: string;
+  // PC-128: optional squared coefficient of variation of each component type's service time,
+  // keyed like capacity (1 = exponential, 0 = regular). Not yet authorable in the form.
+  service_time_scv?: Record<string, number>;
   name: string;
   criticality: string;
   data_classification: string;

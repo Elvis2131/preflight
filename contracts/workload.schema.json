@@ -177,6 +177,13 @@
       },
       "type": "object"
     },
+    "service_time_scv": {
+      "additionalProperties": {
+        "type": "number"
+      },
+      "type": "object",
+      "description": "Optional squared coefficient of variation of each component type's service time"
+    },
     "journeys": {
       "items": {
         "$ref": "#/$defs/DeclaredJourney"
@@ -202,5 +209,5 @@
     "requirements"
   ],
   "x-changelog": "contracts/CHANGELOG.md",
-  "x-schema-version": "1.5.0"
+  "x-schema-version": "1.6.0"
 }

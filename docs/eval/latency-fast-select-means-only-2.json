@@ -1,0 +1,101 @@
+{
+  "calibrated_mu_tps": 14176.411341,
+  "calibrated_service_ms": 0.071,
+  "docker_vm_cpus": "10",
+  "ran_at": "2026-10-02T01:06:09Z",
+  "repeats_per_level": 3,
+  "rows": [
+    {
+      "rho": 0.3,
+      "lambda_rps": 4252.9234023,
+      "predicted_mean_ms_mm1": 0.1007710198447626,
+      "predicted_mean_ms_mg1_with_measured_service_variance": 0.0863135620507102,
+      "observed_mean_ms_runs": [
+        1.819,
+        0.866,
+        4.034
+      ],
+      "observed_latency_stddev_ms_runs": [
+        8.941,
+        1.554,
+        16.075
+      ],
+      "observed_mean_ms_median_of_runs": 1.819,
+      "ratio_observed_to_predicted": 18.0508245604953
+    },
+    {
+      "rho": 0.5,
+      "lambda_rps": 7088.2056705,
+      "predicted_mean_ms_mm1": 0.14107942778266763,
+      "predicted_mean_ms_mg1_with_measured_service_variance": 0.10673164478499048,
+      "observed_mean_ms_runs": [
+        1.432,
+        1.161,
+        0.814
+      ],
+      "observed_latency_stddev_ms_runs": [
+        6.325,
+        4.186,
+        1.554
+      ],
+      "observed_mean_ms_median_of_runs": 1.161,
+      "ratio_observed_to_predicted": 8.2294067834505
+    },
+    {
+      "rho": 0.7,
+      "lambda_rps": 9923.4879387,
+      "predicted_mean_ms_mm1": 0.23513237963777936,
+      "predicted_mean_ms_mg1_with_measured_service_variance": 0.15437383783164446,
+      "observed_mean_ms_runs": [
+        2.721,
+        1.11,
+        2.995
+      ],
+      "observed_latency_stddev_ms_runs": [
+        9.819,
+        3.114,
+        12.269
+      ],
+      "observed_mean_ms_median_of_runs": 2.721,
+      "ratio_observed_to_predicted": 11.572204577658303
+    },
+    {
+      "rho": 0.8,
+      "lambda_rps": 11341.129072800002,
+      "predicted_mean_ms_mm1": 0.3526985694566693,
+      "predicted_mean_ms_mg1_with_measured_service_variance": 0.213926579139962,
+      "observed_mean_ms_runs": [
+        4.936,
+        3.573,
+        0.9
+      ],
+      "observed_latency_stddev_ms_runs": [
+        16.628,
+        14.076,
+        1.615
+      ],
+      "observed_mean_ms_median_of_runs": 3.573,
+      "ratio_observed_to_predicted": 10.130463544278594
+    },
+    {
+      "rho": 0.9,
+      "lambda_rps": 12758.7702069,
+      "predicted_mean_ms_mm1": 0.7053971389133381,
+      "predicted_mean_ms_mg1_with_measured_service_variance": 0.3925848030649145,
+      "observed_mean_ms_runs": [
+        1.354,
+        126.999,
+        15.633
+      ],
+      "observed_latency_stddev_ms_runs": [
+        2.279,
+        201.388,
+        32.13
+      ],
+      "observed_mean_ms_median_of_runs": 15.633,
+      "ratio_observed_to_predicted": 22.1619838493853
+    }
+  ],
+  "system_under_test": "postgres:16-alpine, pgbench select-only (-S), 1 client (-c 1 -j 1), open-loop Poisson arrivals (-R)",
+  "validation_rung": "Rung 1 (local replica). Says nothing about cloud-native semantics or real capacity."
+}

@@ -10,6 +10,16 @@ Each generated `contracts/*.schema.json` carries its own version in `x-schema-ve
 stamped by `cmd/gen-contracts` — check that field against this file, not the other way
 around, since a schema file is regenerated output, not hand-edited.
 
+## workload.schema.json 1.6.0 — 2026-10-02 (PC-128: Workload.service_time_scv added)
+
+**Additive change to `workload.schema.json` only.** `Workload` gains optional
+`service_time_scv`: a map, keyed like `capacity`, from a component type to the squared
+coefficient of variation of its service time (1 = exponential, 0 = perfectly regular; must be
+>= 0). Declared, the latency model uses the Pollaczek-Khinchine M/G/1 mean for that component
+type and withholds its p95. Absent, behaviour is exactly as before (M/M/1, stated as an
+assumption). Never defaulted from the component type. Driven by the Rung 1 comparison recorded
+in `docs/PREDICTED_VS_OBSERVED.md`. A document written against 1.5.0 validates unchanged.
+
 ## workload.schema.json 1.5.0 — 2026-10-02 (PC-152: DeclaredJourney.hop_ports added)
 
 **Additive change to `workload.schema.json` only.** A declared journey gains optional

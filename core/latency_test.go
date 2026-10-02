@@ -5,7 +5,9 @@ package core_test
 // copied from a first run.
 
 import (
+	"encoding/json"
 	"math"
+	"os"
 	"reflect"
 	"strings"
 	"testing"
@@ -172,5 +174,131 @@ func TestEvaluateJourneyLoadReadiness_ParallelPathMembersEachNeedCapacity(t *tes
 	got := core.EvaluateJourneyLoadReadiness(ir, w, w.Journeys[0], syntheticProv())
 	if got.State != core.AssessmentStateNotAssessable || !strings.Contains(got.Reason, "managed_database_rps") {
 		t.Fatalf("missing member capacity must be named, got %q / %q", got.State, got.Reason)
+	}
+}
+
+// ---- Declared service-time variability (SCV) — added after the Rung 1 comparison ----
+
+func dbOf(t *testing.T, est core.JourneyLatencyEstimate) core.ComponentLatency {
+	t.Helper()
+	for _, c := range est.Components {
+		if c.NodeID == "db" {
+			return c
+		}
+	}
+	t.Fatalf("no db component in %+v", est.Components)
+	return core.ComponentLatency{}
+}
+
+// SCV = 1 is exponential service, so the Pollaczek-Khinchine mean must reproduce M/M/1
+// exactly: db lambda=100, mu=150 -> 1000/(150-100) = 20 ms either way.
+func TestServiceTimeSCV_One_ReproducesMM1(t *testing.T) {
+	w := latencyWorkload("db", 150)
+	w.ServiceTimeSCV = map[string]float64{"managed_database_rps": 1}
+	db := dbOf(t, estimateOf(t, core.ComputeDegradedLatency(buildFlowTestIR(true, true), w, nil, syntheticProv())))
+	if db.MeanMS == nil || !near(*db.MeanMS, 20) {
+		t.Fatalf("SCV=1 mean = %v, want exactly the M/M/1 20 ms", db.MeanMS)
+	}
+}
+
+// SCV = 0 is perfectly regular service (M/D/1). Hand-computed: rho = 100/150 = 2/3 and
+// E[S^2] = 1/mu^2, so the waiting time is Wq = lambda*E[S^2]/(2*(1-rho)) = 100/(22500*2*(1/3))
+// = 100/15000 s = 6.6667 ms; adding the 6.6667 ms service time gives T = 13.3333 ms
+// (against 20 ms under M/M/1).
+func TestServiceTimeSCV_Zero_IsMD1_AndWithholdsP95(t *testing.T) {
+	w := latencyWorkload("db", 150)
+	w.ServiceTimeSCV = map[string]float64{"managed_database_rps": 0}
+	est := estimateOf(t, core.ComputeDegradedLatency(buildFlowTestIR(true, true), w, nil, syntheticProv()))
+	db := dbOf(t, est)
+	if db.MeanMS == nil || math.Abs(*db.MeanMS-40.0/3) > 1e-9 {
+		t.Fatalf("SCV=0 mean = %v, want 13.3333 ms (M/D/1)", db.MeanMS)
+	}
+	if db.P95MS != nil || !db.SCVDeclared || db.ServiceTimeSCV != 0 {
+		t.Errorf("a declared SCV must withhold p95 (no closed form) and be reported: %+v", db)
+	}
+	// The undeclared tier keeps the M/M/1 numbers: app lambda=100, mu=200 -> 10 ms, with p95.
+	var app core.ComponentLatency
+	for _, c := range est.Components {
+		if c.NodeID == "app" {
+			app = c
+		}
+	}
+	if app.MeanMS == nil || !near(*app.MeanMS, 10) || app.P95MS == nil || app.SCVDeclared || app.ServiceTimeSCV != 1 {
+		t.Errorf("an undeclared component must stay M/M/1 with its p95: %+v", app)
+	}
+	if est.MeanMS == nil || math.Abs(*est.MeanMS-(10+40.0/3)) > 1e-9 {
+		t.Errorf("journey mean = %v, want 10 + 13.3333", est.MeanMS)
+	}
+	found := false
+	for _, in := range est.Inputs {
+		if in.Name == "Workload.ServiceTimeSCV[managed_database_rps]" && in.Value == 0 && in.Source == "stated" {
+			found = true
+		}
+	}
+	if !found {
+		t.Errorf("the declared SCV must be listed next to the result: %+v", est.Inputs)
+	}
+}
+
+// No SCV declared anywhere: output is exactly what it was before this input existed.
+func TestServiceTimeSCV_Absent_ChangesNothing(t *testing.T) {
+	est := estimateOf(t, core.ComputeDegradedLatency(buildFlowTestIR(true, true), latencyWorkload("db", 150), nil, syntheticProv()))
+	for _, c := range est.Components {
+		if c.SCVDeclared || c.ServiceTimeSCV != 1 || c.P95MS == nil {
+			t.Errorf("%s: undeclared SCV must be the M/M/1 assumption with a p95: %+v", c.NodeID, c)
+		}
+	}
+	if est.MeanMS == nil || !near(*est.MeanMS, 30) {
+		t.Errorf("baseline mean = %v, want the hand-verified 30 ms", est.MeanMS)
+	}
+}
+
+func TestServiceTimeSCV_NegativeIsRejected(t *testing.T) {
+	w := core.Workload{SchemaVersion: "1.0.0", Name: "w", Criticality: "tier1", DataClassification: "internal", Regions: []string{"eu-west-1"},
+		ServiceTimeSCV: map[string]float64{"managed_database_rps": -0.1}}
+	if err := w.Validate(); err == nil {
+		t.Fatal("a negative squared coefficient of variation is meaningless and must be rejected")
+	}
+}
+
+// Ties the engine to the recorded evidence: for every utilisation in the Rung 1 run on a real
+// Postgres with a 10 ms service time (docs/eval/latency-predicted-vs-observed-10ms-service.json),
+// the engine — given the MEASURED service rate and SCV as declared inputs — must reproduce the
+// Pollaczek-Khinchine prediction recorded there, within 1% (the harness used the nominal rho
+// where the engine uses the achieved one).
+func TestServiceTimeSCV_MatchesTheRecordedRung1Evidence(t *testing.T) {
+	raw, err := os.ReadFile("../docs/eval/latency-predicted-vs-observed-10ms-service.json")
+	if err != nil {
+		t.Skipf("recorded evidence not present: %v", err)
+	}
+	var ev struct {
+		ServiceTime struct {
+			MeanMS float64 `json:"mean_ms"`
+		} `json:"calibrated_service_time"`
+		SCV  float64 `json:"calibrated_service_scv"`
+		Rows []struct {
+			LambdaRPS float64 `json:"lambda_rps"`
+			MG1MeanMS float64 `json:"predicted_mg1_mean_ms_measured_service_variance"`
+		} `json:"rows"`
+	}
+	if err := json.Unmarshal(raw, &ev); err != nil {
+		t.Fatal(err)
+	}
+	if len(ev.Rows) == 0 || ev.ServiceTime.MeanMS == 0 {
+		t.Fatalf("evidence file has no usable rows: %+v", ev)
+	}
+	mu := 1000 / ev.ServiceTime.MeanMS // declared capacity = 1 / mean service time
+	for _, row := range ev.Rows {
+		lambda := row.LambdaRPS
+		w := core.Workload{
+			Capacity:       map[string]float64{"compute_rps": 1e12, "managed_database_rps": mu},
+			ServiceTimeSCV: map[string]float64{"managed_database_rps": ev.SCV},
+			Journeys: []core.DeclaredJourney{{ID: "j", Name: "j", Path: []string{"app", "db"}, Protocol: "tcp", Port: 5432,
+				Criticality: "tier1", PeakRPS: &lambda, SteadyRPS: &lambda}},
+		}
+		db := dbOf(t, estimateOf(t, core.ComputeDegradedLatency(buildFlowTestIR(true, true), w, nil, syntheticProv())))
+		if db.MeanMS == nil || math.Abs(*db.MeanMS-row.MG1MeanMS)/row.MG1MeanMS > 0.01 {
+			t.Errorf("lambda=%.2f: engine %.3f ms, recorded P-K %.3f ms", lambda, *db.MeanMS, row.MG1MeanMS)
+		}
 	}
 }

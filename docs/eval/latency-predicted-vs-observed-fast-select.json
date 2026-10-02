@@ -1,0 +1,254 @@
+{
+  "calibrated_mu_tps": 13398.195937,
+  "calibrated_service_scv": 6.385205155060175,
+  "calibrated_service_time": {
+    "transactions": 268011,
+    "mean_ms": 0.07266565924537947,
+    "p50_ms": 0.07,
+    "p95_ms": 0.101,
+    "p99_ms": 0.149,
+    "max_ms": 83.9
+  },
+  "docker_vm_cpus": "10",
+  "ran_at": "2026-10-02T01:25:56Z",
+  "repeats_per_level": 3,
+  "rows": [
+    {
+      "rho": 0.3,
+      "lambda_rps": 4019.4587811,
+      "predicted_mm1": {
+        "transactions": 0,
+        "mean_ms": 0.10662416308051852,
+        "p50_ms": 0.07390623801882522,
+        "p95_ms": 0.31941744648099324,
+        "p99_ms": 0.49102241692433607,
+        "max_ms": 0
+      },
+      "predicted_mg1_mean_ms_measured_service_variance": 0.18462505445845073,
+      "observed_runs": [
+        {
+          "transactions": 60281,
+          "mean_ms": 1.0427035550173394,
+          "p50_ms": 0.73,
+          "p95_ms": 2.537,
+          "p99_ms": 7.061,
+          "max_ms": 26.798
+        },
+        {
+          "transactions": 59843,
+          "mean_ms": 1.1224051434587234,
+          "p50_ms": 0.688,
+          "p95_ms": 1.589,
+          "p99_ms": 19.242,
+          "max_ms": 46.484
+        },
+        {
+          "transactions": 59931,
+          "mean_ms": 3.009357043933863,
+          "p50_ms": 0.704,
+          "p95_ms": 2.147,
+          "p99_ms": 102.038,
+          "max_ms": 135.912
+        }
+      ],
+      "observed_median_of_runs": {
+        "transactions": 60281,
+        "mean_ms": 1.1224051434587234,
+        "p50_ms": 0.704,
+        "p95_ms": 2.147,
+        "p99_ms": 19.242,
+        "max_ms": 46.484
+      }
+    },
+    {
+      "rho": 0.5,
+      "lambda_rps": 6699.0979685,
+      "predicted_mm1": {
+        "transactions": 0,
+        "mean_ms": 0.14927382831272593,
+        "p50_ms": 0.10346873322635532,
+        "p95_ms": 0.4471844250733905,
+        "p99_ms": 0.6874313836940705,
+        "max_ms": 0
+      },
+      "predicted_mg1_mean_ms_measured_service_variance": 0.33390424807587904,
+      "observed_runs": [
+        {
+          "transactions": 101005,
+          "mean_ms": 2.061132300381169,
+          "p50_ms": 0.624,
+          "p95_ms": 1.492,
+          "p99_ms": 64.985,
+          "max_ms": 128.892
+        },
+        {
+          "transactions": 100880,
+          "mean_ms": 1.0143900674068256,
+          "p50_ms": 0.614,
+          "p95_ms": 1.401,
+          "p99_ms": 12.984,
+          "max_ms": 51.846
+        },
+        {
+          "transactions": 100557,
+          "mean_ms": 0.8688600296349338,
+          "p50_ms": 0.612,
+          "p95_ms": 1.365,
+          "p99_ms": 2.138,
+          "max_ms": 49.056
+        }
+      ],
+      "observed_median_of_runs": {
+        "transactions": 101005,
+        "mean_ms": 1.0143900674068256,
+        "p50_ms": 0.614,
+        "p95_ms": 1.401,
+        "p99_ms": 12.984,
+        "max_ms": 51.846
+      }
+    },
+    {
+      "rho": 0.7,
+      "lambda_rps": 9378.7371559,
+      "predicted_mm1": {
+        "transactions": 0,
+        "mean_ms": 0.24878971385454318,
+        "p50_ms": 0.17244788871059216,
+        "p95_ms": 0.7453073751223175,
+        "p99_ms": 1.1457189728234507,
+        "max_ms": 0
+      },
+      "predicted_mg1_mean_ms_measured_service_variance": 0.6822223665165452,
+      "observed_runs": [
+        {
+          "transactions": 140658,
+          "mean_ms": 0.9895780830098623,
+          "p50_ms": 0.594,
+          "p95_ms": 1.37,
+          "p99_ms": 11.583,
+          "max_ms": 40.696
+        },
+        {
+          "transactions": 140662,
+          "mean_ms": 71.93426620551405,
+          "p50_ms": 0.765,
+          "p95_ms": 541.867,
+          "p99_ms": 651.678,
+          "max_ms": 660.96
+        },
+        {
+          "transactions": 138674,
+          "mean_ms": 47.69134567402677,
+          "p50_ms": 0.7,
+          "p95_ms": 427.988,
+          "p99_ms": 625.565,
+          "max_ms": 642.207
+        }
+      ],
+      "observed_median_of_runs": {
+        "transactions": 140658,
+        "mean_ms": 47.69134567402677,
+        "p50_ms": 0.7,
+        "p95_ms": 427.988,
+        "p99_ms": 625.565,
+        "max_ms": 642.207
+      }
+    },
+    {
+      "rho": 0.8,
+      "lambda_rps": 10718.5567496,
+      "predicted_mm1": {
+        "transactions": 0,
+        "mean_ms": 0.3731845707818148,
+        "p50_ms": 0.25867183306588826,
+        "p95_ms": 1.1179610626834762,
+        "p99_ms": 1.718578459235176,
+        "max_ms": 0
+      },
+      "predicted_mg1_mean_ms_measured_service_variance": 1.117620014567378,
+      "observed_runs": [
+        {
+          "transactions": 160441,
+          "mean_ms": 7.848822296046528,
+          "p50_ms": 0.756,
+          "p95_ms": 47.322,
+          "p99_ms": 141.091,
+          "max_ms": 151.661
+        },
+        {
+          "transactions": 160751,
+          "mean_ms": 1.1533081598248336,
+          "p50_ms": 0.642,
+          "p95_ms": 1.514,
+          "p99_ms": 22.277,
+          "max_ms": 43.883
+        },
+        {
+          "transactions": 161386,
+          "mean_ms": 5.381245287695334,
+          "p50_ms": 0.657,
+          "p95_ms": 10.763,
+          "p99_ms": 144.819,
+          "max_ms": 174.423
+        }
+      ],
+      "observed_median_of_runs": {
+        "transactions": 160441,
+        "mean_ms": 5.381245287695334,
+        "p50_ms": 0.657,
+        "p95_ms": 10.763,
+        "p99_ms": 141.091,
+        "max_ms": 151.661
+      }
+    },
+    {
+      "rho": 0.9,
+      "lambda_rps": 12058.3763433,
+      "predicted_mm1": {
+        "transactions": 0,
+        "mean_ms": 0.7463691415636295,
+        "p50_ms": 0.5173436661317765,
+        "p95_ms": 2.2359221253669523,
+        "p99_ms": 3.437156918470352,
+        "max_ms": 0
+      },
+      "predicted_mg1_mean_ms_measured_service_variance": 2.4238129587198767,
+      "observed_runs": [
+        {
+          "transactions": 181077,
+          "mean_ms": 1.3414095495286478,
+          "p50_ms": 0.804,
+          "p95_ms": 2.967,
+          "p99_ms": 18.451,
+          "max_ms": 26.222
+        },
+        {
+          "transactions": 180939,
+          "mean_ms": 3.5097044141948497,
+          "p50_ms": 0.853,
+          "p95_ms": 21.587,
+          "p99_ms": 50.557,
+          "max_ms": 56.93
+        },
+        {
+          "transactions": 174670,
+          "mean_ms": 41.92483603366317,
+          "p50_ms": 0.859,
+          "p95_ms": 501.843,
+          "p99_ms": 556.663,
+          "max_ms": 566.353
+        }
+      ],
+      "observed_median_of_runs": {
+        "transactions": 181077,
+        "mean_ms": 3.5097044141948497,
+        "p50_ms": 0.853,
+        "p95_ms": 21.587,
+        "p99_ms": 50.557,
+        "max_ms": 56.93
+      }
+    }
+  ],
+  "system_under_test": "postgres:16-alpine, pgbench select-only (-S), 1 client (-c 1 -j 1), open-loop Poisson arrivals (-R), per-transaction log (-l)",
+  "validation_rung": "Rung 1 (local replica). Says nothing about cloud-native semantics or real capacity."
+}
