@@ -30,4 +30,4 @@ const failed = (result.match(/failed journeys:[^\n]*/) ?? ["(none)"])[0];
 check("the server reports the LB -> app journey (api) as failed", /\bapi\b/.test(failed), failed);
 check("the journeys that do not cross that hop are not reported failed", !/\b(web|data)\b/.test(failed), failed);
 await close();
-done("07-target-deregistration");
+done("08-target-deregistration");
