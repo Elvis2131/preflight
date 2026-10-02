@@ -62,6 +62,7 @@ export const SERVICE_LABELS: Readonly<Record<string, string>> = {
   aws_internet_gateway: "Internet gateway",
   aws_nat_gateway: "NAT gateway",
   aws_network_acl: "Network ACL",
+  aws_default_network_acl: "Default network ACL",
   aws_route_table: "Route table",
   aws_security_group: "Security group",
   aws_subnet: "Subnet",

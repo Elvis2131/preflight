@@ -29,6 +29,13 @@ describe("innermostContainer (PC-105 geometry only)", () => {
     expect(innermostContainer(lb, [vpc, subnet, otherSubnet, lb])).toBeNull();
   });
 
+  it("a default network ACL inside a VPC (even over a subnet) is contained by the VPC, never the subnet (PC-153)", () => {
+    const dflt = node("dnacl", 60, 100, "aws_default_network_acl");
+    expect(innermostContainer(dflt, [vpc, subnet, dflt])).toBe("vpc");
+    const outside = node("dnacl2", 900, 900, "aws_default_network_acl");
+    expect(innermostContainer(outside, [vpc, subnet, outside])).toBeNull();
+  });
+
   it("a resource outside every container is contained by none", () => {
     const lb = node("lb", 900, 900);
     expect(innermostContainer(lb, [vpc, subnet, lb])).toBeNull();

@@ -247,6 +247,24 @@ function RoutesEditor({
 // evaluated lowest number first by the server (AWS: "Rules are evaluated starting with
 // the lowest numbered rule. As soon as a rule matches traffic, it's applied"); nothing
 // is evaluated here. No rule at all means not authored — never an implied allow or deny.
+// DefaultNACLNotice (PC-153) says what "default network ACL" means. Display-side explanation only:
+// which subnets use it, and what the engine does, are decided server-side. Wording follows the VPC
+// User Guide, "Default network ACL for a VPC".
+function DefaultNACLNotice({ authored }: { authored: boolean }) {
+  return (
+    <div data-testid="default-nacl-notice" style={{ fontSize: 11, color: "#475569", background: "#f1f5f9", borderRadius: 6, padding: 8, margin: "0 0 8px" }}>
+      <strong>Default network ACL.</strong> A VPC comes with one. Every subnet in this VPC that you have <em>not</em> associated
+      with another network ACL uses it. Draw a <code>contained_in</code> edge from this node to its VPC (or drop it inside the
+      VPC) so the engine knows which VPC it belongs to; a VPC has one default.
+      {authored ? (
+        <> The rules below <strong>replace</strong> AWS's default rules for those subnets.</>
+      ) : (
+        <> No rules authored: the engine assumes AWS's default (rule 100 allows all traffic in and out), and says so wherever it relies on it.</>
+      )}
+    </div>
+  );
+}
+
 // The authorable NACL rule numbers (EC2 CreateNetworkAclEntry: 1-32766; 32767-65535 is
 // reserved, and the catch-all deny lives there, engine-owned). Display-side guidance only —
 // the server's NETCTL-NACL-RANGE check decides.
@@ -458,7 +476,8 @@ export function Inspector({
         <RoutesEditor routes={node.data.routes ?? []} targets={routeTargets} onChange={(r) => onRoutesChange(node.id, r)} />
       )}
 
-      {node.data.serviceID === "aws_network_acl" && (
+      {node.data.serviceID === "aws_default_network_acl" && <DefaultNACLNotice authored={(node.data.naclRules ?? []).length > 0} />}
+      {(node.data.serviceID === "aws_network_acl" || node.data.serviceID === "aws_default_network_acl") && (
         <NACLRulesEditor rules={node.data.naclRules ?? []} onChange={(r) => onNACLRulesChange(node.id, r)} />
       )}
 

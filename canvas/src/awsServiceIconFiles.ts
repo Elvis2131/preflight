@@ -21,6 +21,7 @@ export const AWS_SERVICE_ICON_FILES: Readonly<Record<string, string>> = {
   "aws_cognito_user_pool": "Arch_Amazon-Cognito_48.svg",
   "aws_db_instance": "Arch_Amazon-RDS_48.svg",
   "aws_db_subnet_group": "Arch_Amazon-RDS_48.svg",
+  "aws_default_network_acl": "Res_Amazon-VPC_Network-Access-Control-List_48.svg",
   "aws_deadline_farm": "Arch_AWS-Deadline-Cloud_48.svg",
   "aws_directory_service_directory": "Arch_AWS-Directory-Service_48.svg",
   "aws_docdb_cluster": "Arch_Amazon-DocumentDB_48.svg",

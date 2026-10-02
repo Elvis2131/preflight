@@ -13,6 +13,7 @@ import type { CanvasNodeData, CanvasEdgeData } from "./types";
 
 const RANK: Record<string, number> = { aws_vpc: 1, aws_subnet: 2 };
 const LEAF_RANK = 3;
+const DEFAULT_NACL = "aws_default_network_acl";
 
 // Default drawn size of a container, applied when a node becomes a VPC/subnet.
 export const CONTAINER_SIZE: Record<string, { width: number; height: number }> = {
@@ -58,7 +59,10 @@ export function innermostContainer(node: Node<CanvasNodeData>, all: Node<CanvasN
   for (const c of all) {
     const rank = containerRank(c.data.serviceID);
     if (c.id === node.id || rank === 0 || rank >= myRank) continue;
-    if (myRank === LEAF_RANK && rank !== RANK.aws_subnet) continue;
+    // An ordinary resource is auto-contained by a subnet only; a default network ACL belongs to a
+    // VPC (PC-153), so it is the one leaf a VPC may auto-contain.
+    const allowedRank = node.data.serviceID === DEFAULT_NACL ? RANK.aws_vpc : RANK.aws_subnet;
+    if (myRank === LEAF_RANK && rank !== allowedRank) continue;
     const cs = size(c);
     const inside =
       cx > c.position.x && cx < c.position.x + cs.w && cy > c.position.y && cy < c.position.y + cs.h;
