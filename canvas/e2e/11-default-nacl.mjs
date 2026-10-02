@@ -17,6 +17,12 @@ check("the icon loads as an SVG from the app", iconOk);
 await page.getByRole("textbox", { name: "Search AWS services" }).fill("");
 
 await loadTemplate(page, "three-tier-vpc");
+// Newer workspaces hide infrastructure (VPC, subnets) behind a toggle; older ones have none.
+const infra = page.getByTestId("infrastructure-toggle");
+if ((await infra.count()) && (await infra.getAttribute("aria-pressed")) === "false") {
+  await infra.click();
+  await page.waitForTimeout(400);
+}
 const vpc = await page.locator('.react-flow__node[data-id="aws_vpc.main"]').boundingBox();
 await page.locator(".canvas-stage").evaluate((stage, at) => {
   const dataTransfer = new DataTransfer();
