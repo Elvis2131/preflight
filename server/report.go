@@ -74,7 +74,15 @@ func GetReport(store *Store, sessionID string, versionNumber int) (core.Report, 
 	if err != nil {
 		return core.Report{}, err
 	}
-	return report.WithScenarios(stored.IR, stored.Workload, saved), nil
+	report = report.WithScenarios(stored.IR, stored.Workload, saved)
+
+	// PC-154: LLM narratives, when generated and stored, as their own labelled section.
+	if narratives, have, err := store.GetAnnotations(sessionID, versionNumber); err != nil {
+		return core.Report{}, err
+	} else if have {
+		report = report.WithNarratives(narratives)
+	}
+	return report, nil
 }
 
 // GetReportHandler serves GET /sessions/{id}/versions/{n}/report, registered with Go

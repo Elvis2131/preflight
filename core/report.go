@@ -159,7 +159,14 @@ type Report struct {
 	// result). Empty (never null) when none are saved. Filled by the caller that can
 	// read saved definitions (server.GetReport) via Report.WithScenarios — BuildReport
 	// itself stays a pure function of the stored version.
-	Scenarios   []ScenarioResult   `json:"scenarios"`
+	Scenarios []ScenarioResult `json:"scenarios"`
+	// Narratives is PC-154's own addition: the LLM-written explanations of this version's
+	// findings, when any were generated and stored. It is a SEPARATE section, never merged into
+	// FailureModes/Compliance (I3: the findings are the engine's; these are prose beside them),
+	// and carries its own "written by a language model" notice. Absent (omitted) when none are
+	// stored. Filled by the caller that can read storage (server.GetReport) via WithNarratives;
+	// BuildReport stays a pure function of the stored version.
+	Narratives  *LLMAnnotationSet  `json:"narratives,omitempty"`
 	Assumptions []ReportAssumption `json:"assumptions"`
 	Provenance  Provenance         `json:"provenance" validate:"required" jsonschema:"required"`
 }
@@ -174,6 +181,16 @@ func (r Report) Validate() error {
 func (r Report) WithScenarios(ir *IR, workload Workload, saved []SavedScenario) Report {
 	prov := NewProvenance(KindDerived, "core/report:scenarios")
 	r.Scenarios = EvaluateScenarios(ir, workload, saved, prov)
+	return r
+}
+
+// WithNarratives returns r with the version's stored LLM annotations attached as their own
+// section. The findings in r are untouched.
+func (r Report) WithNarratives(set LLMAnnotationSet) Report {
+	if set.Notice == "" {
+		set.Notice = LLMAnnotationNotice
+	}
+	r.Narratives = &set
 	return r
 }
 

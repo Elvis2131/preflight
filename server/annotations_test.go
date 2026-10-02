@@ -309,3 +309,57 @@ func TestAnnotationsHandler_404sAndJSONReadBack(t *testing.T) {
 		t.Error("after a run, ?format=json must return the stored set")
 	}
 }
+
+// The report shows stored narratives as their OWN labelled section — never mixed into the
+// findings — and the model's text is escaped (it is untrusted output).
+func TestReport_NarrativesAreASeparateLabelledEscapedSection(t *testing.T) {
+	var calls int32
+	store := openWithWorker(t, stubWorker(t, "ok", &calls).URL)
+	assessGolden(t, store, "rep")
+
+	plain, err := server.GetReport(store, "rep", 1)
+	if err != nil || plain.Narratives != nil {
+		t.Fatalf("before any run the report has no narratives section: %+v err=%v", plain.Narratives, err)
+	}
+	streamAnnotations(t, store, "rep") // generate and store
+	with, err := server.GetReport(store, "rep", 1)
+	if err != nil || with.Narratives == nil || len(with.Narratives.Annotations) == 0 || with.Narratives.Notice == "" {
+		t.Fatalf("after a run the report carries the narratives with their notice: %+v err=%v", with.Narratives, err)
+	}
+	// Separate from the findings: attaching narratives changes nothing else in the report.
+	a, b := with, plain
+	a.Narratives, b.Narratives = nil, nil
+	ja, _ := json.Marshal(a)
+	jb, _ := json.Marshal(b)
+	if string(ja) != string(jb) {
+		t.Error("attaching narratives changed other parts of the report")
+	}
+
+	html := renderHTML(t, with)
+	if !strings.Contains(html, "written by a language model") || !strings.Contains(html, "LLM-written") {
+		t.Error("the HTML must label the section as LLM-written")
+	}
+
+	// Untrusted text is escaped.
+	with.Narratives.Annotations[0].Narrative = `<script>alert("x")</script>`
+	if h := renderHTML(t, with); strings.Contains(h, `<script>alert`) {
+		t.Error("a narrative containing markup must be HTML-escaped")
+	}
+	// And a degraded set says so without hiding the findings.
+	with.Narratives.Status, with.Narratives.Reason = core.LLMStatusDegraded, "3 of 16 findings could not be annotated"
+	if h := renderHTML(t, with); !strings.Contains(h, "Narratives are incomplete") || !strings.Contains(h, "3 of 16 findings could not be annotated") {
+		t.Error("a degraded set must say it is incomplete and why")
+	}
+	if h := renderHTML(t, plain); strings.Contains(h, "written by a language model") {
+		t.Error("with no narratives stored there must be no narratives section at all")
+	}
+}
+
+func renderHTML(t *testing.T, r core.Report) string {
+	t.Helper()
+	h, err := core.RenderReportHTML(r)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return h
+}

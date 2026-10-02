@@ -10,6 +10,15 @@ Each generated `contracts/*.schema.json` carries its own version in `x-schema-ve
 stamped by `cmd/gen-contracts` — check that field against this file, not the other way
 around, since a schema file is regenerated output, not hand-edited.
 
+## report.schema.json 1.8.0 — 2026-10-02 (PC-154: Report.narratives added)
+
+**Additive change to `report.schema.json` only.** `Report` gains optional `narratives`: the
+LLM-written explanations of the version's findings (`status` complete/degraded, `reason`,
+`model`, `annotations[]` each with `finding_id`, `narrative`, `cited_evidence[]` and
+`llm_reasoned` provenance, `rejected[]`, and a `notice` saying it was written by a language
+model). It is a separate section, never merged into the findings (I3), and omitted when no
+narratives are stored. A report written against 1.7.0 validates unchanged.
+
 ## workload.schema.json 1.6.0 — 2026-10-02 (PC-128: Workload.service_time_scv added)
 
 **Additive change to `workload.schema.json` only.** `Workload` gains optional

@@ -552,6 +552,89 @@
         "GroupIndex"
       ]
     },
+    "LLMAnnotation": {
+      "properties": {
+        "finding_id": {
+          "type": "string"
+        },
+        "narrative": {
+          "type": "string"
+        },
+        "cited_evidence": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "provenance": {
+          "$ref": "#/$defs/Provenance"
+        }
+      },
+      "additionalProperties": false,
+      "type": "object",
+      "required": [
+        "finding_id",
+        "narrative",
+        "cited_evidence",
+        "provenance"
+      ]
+    },
+    "LLMAnnotationSet": {
+      "properties": {
+        "status": {
+          "type": "string"
+        },
+        "reason": {
+          "type": "string"
+        },
+        "model": {
+          "type": "string"
+        },
+        "annotations": {
+          "items": {
+            "$ref": "#/$defs/LLMAnnotation"
+          },
+          "type": "array"
+        },
+        "rejected": {
+          "items": {
+            "$ref": "#/$defs/LLMRejection"
+          },
+          "type": "array"
+        },
+        "notice": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": false,
+      "type": "object",
+      "required": [
+        "status",
+        "annotations",
+        "rejected",
+        "notice"
+      ]
+    },
+    "LLMRejection": {
+      "properties": {
+        "finding_id": {
+          "type": "string"
+        },
+        "reason": {
+          "type": "string"
+        },
+        "kind": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": false,
+      "type": "object",
+      "required": [
+        "finding_id",
+        "reason",
+        "kind"
+      ]
+    },
     "NACLRule": {
       "properties": {
         "Number": {
@@ -1103,6 +1186,9 @@
       },
       "type": "array"
     },
+    "narratives": {
+      "$ref": "#/$defs/LLMAnnotationSet"
+    },
     "assumptions": {
       "items": {
         "$ref": "#/$defs/ReportAssumption"
@@ -1132,5 +1218,5 @@
     "provenance"
   ],
   "x-changelog": "contracts/CHANGELOG.md",
-  "x-schema-version": "1.7.0"
+  "x-schema-version": "1.8.0"
 }
