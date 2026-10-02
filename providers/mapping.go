@@ -99,6 +99,27 @@ type EdgeMapping struct {
 	Type          core.EdgeType `yaml:"type"`
 	FromAttribute string        `yaml:"from_attribute"`
 	ToAttribute   string        `yaml:"to_attribute"`
+
+	// Affects names what an association's unreadable endpoint puts in doubt (core.Affects*), when it is
+	// one of the questions the engine answers from associations (PC-158). An association that fails to
+	// produce its edge (an endpoint is a variable, a function, or a resource outside the bundle) is
+	// recorded on every node it could concern, so nothing silently reads as "not associated".
+	Affects string `yaml:"affects,omitempty"`
+}
+
+// UnresolvedMatter names one attribute of a node mapping that the engine reads, and what it affects
+// (PC-158). If a resource declares the attribute but ingest cannot read it, ingest records that on the
+// node (core.UnresolvedInputsAttr) and the engine makes the dependent result not_assessable.
+type UnresolvedMatter struct {
+	// Attribute is the Terraform attribute name; a nested one is written "block.attr".
+	Attribute string `yaml:"attribute"`
+	// Affects is one of core.Affects*.
+	Affects string `yaml:"affects"`
+	// Value marks an attribute whose literal value is itself the data the engine reads (a tag): only an
+	// unreadable expression is then unresolved. Unset, the attribute is a relationship (a subnet, a
+	// security group): it must be a reference to a resource in the bundle, and a literal or an expression
+	// names something the engine cannot see.
+	Value bool `yaml:"value,omitempty"`
 }
 
 // ResourceMapping is one YAML file's full content: either a node mapping (NodeType +
@@ -138,6 +159,9 @@ type ResourceMapping struct {
 	// RawAttributes["default_nacl"] = true on such a node, the same attribute HCL ingest sets for
 	// aws_default_network_acl, so core resolves both producers identically.
 	DefaultNACL bool `yaml:"default_nacl,omitempty"`
+
+	// UnresolvedMatters lists the attributes of this resource type the engine reads (PC-158).
+	UnresolvedMatters []UnresolvedMatter `yaml:"unresolved_matters,omitempty"`
 
 	// PublicAddressModel says HOW a resource of this type comes to hold a public IPv4 address,
 	// so core can answer "can it use an internet gateway" without naming a provider (PC-156).
@@ -186,6 +210,9 @@ func (m ResourceMapping) validate() error {
 		if m.Edge.FromAttribute == "" || m.Edge.ToAttribute == "" {
 			return fmt.Errorf("mapping %s: edge.from_attribute and edge.to_attribute are both required", m.ResourceType)
 		}
+		if m.Edge.Affects != "" && !validAffects(m.Edge.Affects) {
+			return fmt.Errorf("mapping %s: edge.affects %q is not a valid core.Affects value", m.ResourceType, m.Edge.Affects)
+		}
 		if m.CapabilityLevel != "" {
 			return fmt.Errorf("mapping %s: capability_level is not permitted on an edge mapping — an edge produces no node to have a capability level", m.ResourceType)
 		}
@@ -206,6 +233,11 @@ func (m ResourceMapping) validate() error {
 	}
 	if m.NetworkRole != "" && m.NetworkRole != "subnet" && m.NetworkRole != "vpc" && m.NetworkRole != "route_table" && m.NetworkRole != "elastic_ip" && m.NetworkRole != "web_acl" {
 		return fmt.Errorf("mapping %s: network_role %q must be \"subnet\", \"vpc\", \"route_table\", \"elastic_ip\" or \"web_acl\"", m.ResourceType, m.NetworkRole)
+	}
+	for _, um := range m.UnresolvedMatters {
+		if um.Attribute == "" || !validAffects(um.Affects) {
+			return fmt.Errorf("mapping %s: unresolved_matters entry %+v needs an attribute and a valid affects", m.ResourceType, um)
+		}
 	}
 	if m.DefaultNACL && m.NodeType != core.NodeTypeNetworkBoundary {
 		return fmt.Errorf("mapping %s: default_nacl is only meaningful on a network_boundary node", m.ResourceType)
@@ -316,4 +348,13 @@ func Merge(registries ...Registry) Registry {
 func (r Registry) Lookup(resourceType string) (ResourceMapping, bool) {
 	m, ok := r[resourceType]
 	return m, ok
+}
+
+func validAffects(a string) bool {
+	switch a {
+	case core.AffectsPlacement, core.AffectsSecurityGroups, core.AffectsSGRules, core.AffectsRouting,
+		core.AffectsRoutes, core.AffectsNACL, core.AffectsTierLabel, core.AffectsExposure, core.AffectsCost, core.AffectsResourcePolicy:
+		return true
+	}
+	return false
 }

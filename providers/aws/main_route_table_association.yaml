@@ -11,3 +11,4 @@ edge:
   type: contained_in
   from_attribute: route_table_id
   to_attribute: vpc_id
+  affects: routing

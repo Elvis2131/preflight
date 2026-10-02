@@ -212,6 +212,31 @@ agent-iteration loop now fixes defect 7 too and still converges in 2 iterations 
 parts of such a policy that do not depend on the unresolved ARN is a larger change (tri-state resource
 matching) and is not attempted here.
 
+## Scenario 6: the value-level sweep (PC-158): two misses, one of them in the sweep itself
+
+**Predicted:** PC-157 was a one-off. Fixing the `jsonencode` drop and adding a mutation sweep over both golden
+bundles would find little else.
+
+**Observed, first run:** 160 of 1,333 mutations changed a verdict other than to `not_assessable`, in five shapes
+(security-group rule contents, placement, route and association edges, IAM attachments, tags). Fixed by mechanism, not
+by attribute. Writing a synthetic bundle for the constructs golden never uses then found more: an unreadable S3 bucket
+policy turned an explicit **Deny into an Allow**; an ambiguous CIDR was reported as a **deny** instead of
+not_assessable; an unreadable `multi_az` was priced at the Single-AZ rate. Reading the NACL ingest code found two
+defects no mutation would have: inline rules were read with the wrong attribute names (`rule_number`/`rule_action`
+instead of `rule_no`/`action`, so every inline rule had no number and no action), and an inline `subnet_ids`
+association was never recognised, so a NACL that **denied everything read as allowing everything**.
+
+**Observed, second miss (the sweep's own):** reintroducing the PC-157 bug made the sweep pass with zero violations. A
+mutation sweep compares mutated runs with a baseline of the *same* engine, so a bug that blinds the baseline (the
+policy was never read, so making it unreadable changed nothing) is invisible to it. The sweep now also asserts that the
+deliberately broken bundle's seeded defects are detected as they stand, and that attributes the engine is known to read
+go `not_assessable` rather than merely staying put. The in-CI negative control is an engine that ignores the unreadable
+records; the sweep must fail against it, and does.
+
+**Class:** the same one again, a value silently absent between two components. The lesson that generalises: *a check
+that has never failed on a known-bad input is not yet a check.* Every fix here was mutation-checked (disable the fix, see a
+test fail).
+
 ## What this adds up to
 
 Several real, consequential misses are documented above (the latency-model one's measurement was itself wrong first), both eventually caught, both with

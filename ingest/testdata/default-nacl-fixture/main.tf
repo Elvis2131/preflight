@@ -20,9 +20,9 @@ resource "aws_default_network_acl" "d" {
   default_network_acl_id = aws_vpc.v.default_network_acl_id
 
   ingress {
-    rule_number = 100
+    rule_no     = 100
     protocol    = "tcp"
-    rule_action = "allow"
+    action      = "allow"
     cidr_block  = "0.0.0.0/0"
     from_port   = 443
     to_port     = 443

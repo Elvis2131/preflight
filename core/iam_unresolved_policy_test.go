@@ -180,3 +180,45 @@ func TestIAMGolden_Defect7DetectedAndGoodBundleHonest(t *testing.T) {
 		t.Errorf("aws payments_app = %q, want not_assessable (its policy references resource ARNs)", got)
 	}
 }
+
+// PC-158: multi_az selects the RDS rate (Multi-AZ is roughly twice Single-AZ). A value ingest cannot read must
+// make the component cost_unknown, not be priced at the single-AZ default.
+func TestCost_UnreadableMultiAZ_IsCostUnknownNotSingleAZ(t *testing.T) {
+	table := core.PriceTable{SnapshotID: "t", Rows: []core.PriceRow{
+		{Service: "AmazonRDS", Unit: "Hrs", Price: 0.45, Currency: "USD", SKUAttributes: map[string]string{"instanceType": "db.r6g.xlarge", "databaseEngine": "PostgreSQL", "deploymentOption": "Single-AZ"}},
+		{Service: "AmazonRDS", Unit: "Hrs", Price: 0.90, Currency: "USD", SKUAttributes: map[string]string{"instanceType": "db.r6g.xlarge", "databaseEngine": "PostgreSQL", "deploymentOption": "Multi-AZ"}},
+	}}
+	cases := map[string]struct {
+		attr string
+		want core.CostDecision
+	}{
+		"multi_az = true":                 {`multi_az = true`, core.CostPriced},
+		"multi_az = false":                {`multi_az = false`, core.CostPriced},
+		"multi_az absent (default false)": {``, core.CostPriced},
+		"multi_az from a variable":        {`multi_az = var.ha`, core.CostUnknown},
+	}
+	for name, c := range cases {
+		t.Run(name, func(t *testing.T) {
+			ir := iamBundleIR(t, `resource "aws_db_instance" "main" {
+  identifier     = "main"
+  instance_class = "db.r6g.xlarge"
+  engine         = "postgres"
+  `+c.attr+`
+}`)
+			report := core.ComputeCost(ir, table, []string{"eu-west-1"}, core.NewProvenance(core.KindDerived, "test"))
+			for _, comp := range report.Components {
+				if comp.NodeID != "aws_db_instance.main" {
+					continue
+				}
+				if comp.Decision != c.want {
+					t.Fatalf("decision = %s (%s), want %s", comp.Decision, comp.Reason, c.want)
+				}
+				if name == "multi_az = true" && comp.MonthlyAmount < 600 {
+					t.Errorf("multi-AZ must be priced at the Multi-AZ rate (0.90/h), got %.2f/month", comp.MonthlyAmount)
+				}
+				return
+			}
+			t.Fatal("no cost component for the database")
+		})
+	}
+}

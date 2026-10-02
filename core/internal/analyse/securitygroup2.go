@@ -44,6 +44,10 @@ type SGRule struct {
 type SGProfile struct {
 	SGIDs []string
 	Rules []SGRule
+	// Unresolved lists inputs ingest could not read that bear on this resource's security groups (which
+	// groups are attached, or a rule inside one). Non-empty means the profile is incomplete: any verdict
+	// drawn from it is not_assessable (PC-158), never an implicit deny or allow.
+	Unresolved []string
 }
 
 // SGDecision is PC-112's own acceptance criterion, verbatim: "Decision output names
@@ -54,6 +58,10 @@ type SGDecision struct {
 	MatchedSG   string
 	MatchedRule *SGRule
 	Reason      string
+
+	// NotAssessable is true when the rules cannot decide (a source address only partly covered by a rule's
+	// CIDR range). Allowed is then false, but the outcome is NOT a denial: callers report not_assessable.
+	NotAssessable bool
 }
 
 // protocolMatches treats "-1" (AWS's own documented all-protocols sentinel) as a
@@ -140,7 +148,7 @@ func EvaluateDirectional(profile SGProfile, direction, sourceCIDR string, source
 			}
 		}
 		if anyAmbiguous {
-			return SGDecision{Allowed: false, MatchedRule: &rule,
+			return SGDecision{Allowed: false, NotAssessable: true, MatchedRule: &rule,
 				Reason: "not_assessable: source CIDR " + sourceCIDR + " partially overlaps a rule's CIDR range without being fully contained in it — cannot determine whether the real source address is covered"}
 		}
 	}

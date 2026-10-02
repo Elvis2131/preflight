@@ -17,6 +17,8 @@
 // control IDs is real, separate future work, not attempted here.
 package core
 
+import "strings"
+
 // BuildCISAWSCatalog exposes PC-18/28's own two existing, already-verified checks
 // through PC-121's catalog structure. Both are classified assessable_from_architecture
 // — they always were; this ticket only gives them a citable requirement ID(ish) slot
@@ -61,6 +63,14 @@ func BuildCISAWSCatalog(ir *IR, workload Workload) []ComplianceControlResult {
 }
 
 func natGatewayRedundancyComplianceResult(ir *IR, prov Provenance) ComplianceControlResult {
+	if unread := anyUnresolved(ir, AffectsPlacement); len(unread) > 0 {
+		return ComplianceControlResult{
+			ControlID: "cis_aws.nat_gateway_redundancy", Framework: FrameworkCISAWS, RequirementID: "unmapped",
+			Title: "NAT gateway redundancy across public subnets", Classification: ClassificationAssessable,
+			Result:    ComplianceResult{Status: ComplianceNotAssessable, Provenance: prov},
+			Rationale: "a placement input could not be read, so which subnet each NAT gateway lives in is unknown: " + strings.Join(unread, "; "),
+		}
+	}
 	var containmentEdges []DirectedEdge
 	for _, e := range ir.Edges {
 		if e.Type == EdgeTypeContainedIn {

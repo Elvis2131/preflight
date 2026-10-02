@@ -129,7 +129,18 @@ type NACLResolution struct {
 // an unresolved or dangling depends_on edge from the subnet — or when default NACLs
 // are declared but this subnet's VPC cannot be resolved to choose between them.
 func ResolveSubnetNACL(nodes []Node, edges []Edge, subnetID string) (NACLResolution, bool) {
+	// PC-158: an association or a rule ingest could not read puts this subnet's NACL in doubt.
+	for _, n := range nodes {
+		if n.ID == subnetID && len(UnresolvedInputs(n, AffectsNACL)) > 0 {
+			return NACLResolution{}, false
+		}
+	}
 	if p, ok := NACLProfileForSubnet(nodes, edges, subnetID); ok {
+		for _, n := range nodes {
+			if n.ID == p.NACLID && len(UnresolvedInputs(n, AffectsNACL)) > 0 {
+				return NACLResolution{}, false // a rule or association ingest could not read: the profile is incomplete
+			}
+		}
 		return NACLResolution{Profile: p, Source: NACLExplicit}, true
 	}
 	byID := map[string]Node{}
@@ -159,6 +170,9 @@ func ResolveSubnetNACL(nodes []Node, edges []Edge, subnetID string) (NACLResolut
 			continue
 		}
 		declaredAny = true
+		if len(UnresolvedInputs(n, AffectsNACL)) > 0 {
+			return NACLResolution{}, false // the declared default has a rule ingest could not read
+		}
 		for _, e := range edges {
 			if e.Type == EdgeTypeContainedIn && e.From == n.ID && e.To == vpcID && vpcID != "" {
 				profile := NACLProfile{NACLID: n.ID}

@@ -10,3 +10,4 @@ edge:
   type: depends_on
   from_attribute: subnet_id
   to_attribute: route_table_id
+  affects: routing

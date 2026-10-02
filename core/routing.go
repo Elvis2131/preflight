@@ -212,6 +212,21 @@ const (
 // ok is also false when an explicit association cannot be ruled out, when the subnet's VPC is
 // unknown, or when more than one main route table is declared for the VPC (ambiguous).
 func ResolveSubnetRouteTable(ir *IR, subnetID string) (tableID string, source RouteTableSource, ok bool) {
+	// PC-158: an association ingest could not read may concern this subnet, and a route table with a route
+	// it could not read has unknown routes: neither may be answered as if complete.
+	if sn, found := findNode(ir, subnetID); found && len(UnresolvedInputs(sn, AffectsRouting)) > 0 {
+		return "", "", false
+	}
+	id, src, ok := resolveSubnetRouteTable(ir, subnetID)
+	if ok {
+		if tn, found := findNode(ir, id); found && len(UnresolvedInputs(tn, AffectsRoutes)) > 0 {
+			return "", "", false
+		}
+	}
+	return id, src, ok
+}
+
+func resolveSubnetRouteTable(ir *IR, subnetID string) (tableID string, source RouteTableSource, ok bool) {
 	if id, found := EffectiveRouteTableID(ir.Edges, subnetID); found {
 		return id, RouteTableExplicit, true
 	}

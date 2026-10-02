@@ -22,3 +22,12 @@ public_address_model: launch_attribute
 ingest_only: true
 track_unresolved:
   - associate_public_ip_address
+
+# PC-158: attributes the engine reads. Declared but unreadable (a variable, a function, or something
+# outside this bundle) is recorded on the node, and the result that depends on it is not_assessable.
+unresolved_matters:
+  - attribute: subnet_id
+    affects: placement
+  - attribute: vpc_security_group_ids
+    affects: security_groups
+

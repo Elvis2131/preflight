@@ -43,6 +43,14 @@ func BuildFindings(ir *IR, workload Workload) []Finding {
 			"AZ loss: eu-west-1a data subnet"),
 		natGatewayRedundancyFinding(ir, containmentEdges),
 	}
+	// PC-158: these three read where things live (containment). A node whose placement attribute ingest
+	// could not read may sit inside the zone being killed, so the blast radius, and whether anything
+	// survives, is unknown: not_assessable, never the radius computed without it.
+	if unread := anyUnresolved(ir, AffectsPlacement); len(unread) > 0 {
+		for i := range findings {
+			findings[i] = degradeToNotAssessable(findings[i], "a placement input could not be read, so which resources live in this zone is unknown: "+strings.Join(unread, "; "))
+		}
+	}
 	// PC-129: a real, route-based check (does more than one route table's own
 	// default route share the SAME NAT gateway) — distinct from
 	// natGatewayRedundancyFinding above (PC-28's own containment-blast-radius-based
@@ -59,7 +67,13 @@ func BuildFindings(ir *IR, workload Workload) []Finding {
 	}
 
 	for _, node := range ir.Nodes {
-		if declaredPublicTier(node) {
+		switch {
+		case len(UnresolvedInputs(node, AffectsTierLabel)) > 0:
+			// PC-158: the tags this check reads could not be read, so whether the subnet is declared
+			// public is unknown. The check must not silently not run.
+			findings = append(findings, degradeToNotAssessable(publicSubnetRouteMismatchFinding(node, ir),
+				"the tags that declare this subnet's tier could not be read: "+strings.Join(UnresolvedInputs(node, AffectsTierLabel), "; ")))
+		case declaredPublicTier(node):
 			findings = append(findings, publicSubnetRouteMismatchFinding(node, ir))
 		}
 	}
@@ -384,4 +398,12 @@ func rpoFeasibilityFinding(node Node, workload Workload) Finding {
 		},
 		Outcome: outcome,
 	}
+}
+
+// degradeToNotAssessable keeps a finding's identity and evidence but withdraws its verdict: the input it
+// depends on could not be read (PC-158).
+func degradeToNotAssessable(f Finding, reason string) Finding {
+	prov := NewProvenance(KindDerived, "core/unresolved:"+f.ID)
+	f.Outcome = NotAssessable[any](reason, prov).ToEnvelope()
+	return f
 }

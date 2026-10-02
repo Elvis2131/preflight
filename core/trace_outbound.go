@@ -13,7 +13,10 @@
 // guessed allow or deny).
 package core
 
-import "fmt"
+import (
+	"fmt"
+	"strings"
+)
 
 // BuildOutboundTrace traces sourceID -> the internet on protocol/port.
 func BuildOutboundTrace(ir *IR, sourceID, protocol string, port int) Trace {
@@ -47,6 +50,13 @@ func BuildOutboundTrace(ir *IR, sourceID, protocol string, port int) Trace {
 		return finalizeOutbound(trace)
 	}
 
+	// An undeterminable route table (an association or route ingest could not read, or no declared main
+	// table) is not a denial: the engine cannot tell, so it says so (PC-158).
+	if _, _, resolvable := ResolveSubnetRouteTable(ir, subnetID); !resolvable {
+		step("route_selection", subnetID, "select the subnet's default route (0.0.0.0/0) toward the internet", TraceNotAssessable,
+			"subnet has no resolvable effective route table (an association or route could not be read, or the design declares no main route table)", "")
+		return finalizeOutbound(trace)
+	}
 	// Route: the default route must exist and its target must still exist.
 	allowed, targetKind, reason := EvaluateEgressRoute(ir, subnetID)
 	switch {
@@ -96,17 +106,22 @@ func BuildOutboundTrace(ir *IR, sourceID, protocol string, port int) Trace {
 	if srcRes.Source == NACLAssumedDefault {
 		assumedNote = "; " + NACLAssumedDefaultReason
 	}
-	step("nacl_source_egress", srcRes.Profile.NACLID, "evaluate source subnet's NACL, outbound", boolDecision(fwd[0].Allowed), fwd[0].Reason+assumedNote, "NACL "+fwd[0].NACLID+" rule "+fwd[0].MatchedRuleNumber)
+	step("nacl_source_egress", srcRes.Profile.NACLID, "evaluate source subnet's NACL, outbound", naclStepDecision(fwd[0]), fwd[0].Reason+assumedNote, "NACL "+fwd[0].NACLID+" rule "+fwd[0].MatchedRuleNumber)
 	if !fwd[0].Allowed {
 		return finalizeOutbound(trace)
 	}
 	if !naclOK {
-		step("nacl_response_path", srcRes.Profile.NACLID, "evaluate the stateless return path (source subnet inbound, ephemeral ports)", TraceDeny, "return traffic denied: "+ret[1].Reason+assumedNote, "")
+		step("nacl_response_path", srcRes.Profile.NACLID, "evaluate the stateless return path (source subnet inbound, ephemeral ports)", naclStepDecision(ret[1]), "return traffic not permitted: "+ret[1].Reason+assumedNote, "")
 		return finalizeOutbound(trace)
 	}
 
 	// Security group: outbound rule on the source; a response is allowed back (stateful).
 	srcSG := SecurityGroupProfile(ir.Nodes, ir.Edges, sourceID)
+	if len(srcSG.Unresolved) > 0 {
+		step("sg_source_egress", sourceID, "evaluate source's security groups, outbound (union of all attached SGs)", TraceNotAssessable,
+			"a security group input could not be read, so the rules are incomplete: "+strings.Join(srcSG.Unresolved, "; "), "")
+		return finalizeOutbound(trace)
+	}
 	if len(srcSG.SGIDs) == 0 {
 		step("sg_source_egress", sourceID, "evaluate source's security groups, outbound (union of all attached SGs)", TraceNotAssessable,
 			"no security group is attached to "+sourceID+" — its own outbound posture is unknown, never assumed", "")
@@ -114,7 +129,7 @@ func BuildOutboundTrace(ir *IR, sourceID, protocol string, port int) Trace {
 	}
 	openSG := SGProfile{SGIDs: []string{"internet"}, Rules: []SGRule{{Direction: "ingress", Protocol: "-1", CIDRs: []string{"0.0.0.0/0"}}}}
 	okConn, initD, _ := EvaluateConnection(srcSG, openSG, srcCIDR, "0.0.0.0/0", protocol, port)
-	step("sg_source_egress", sourceID, "evaluate source's security groups, outbound (union of all attached SGs)", boolDecision(okConn), sgReasonOrDefault(initD), "SG "+initD.MatchedSG)
+	step("sg_source_egress", sourceID, "evaluate source's security groups, outbound (union of all attached SGs)", sgStepDecision(initD), sgReasonOrDefault(initD), "SG "+initD.MatchedSG)
 	if !okConn {
 		return finalizeOutbound(trace)
 	}

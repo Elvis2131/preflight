@@ -162,11 +162,17 @@ func Ingest(dir string, registry providers.Registry, versionNumber int) (Result,
 		edgeOnly = append(edgeOnly, EdgeOnlyResource{ResourceType: r.Type, ResourceName: r.Name, Produced: routeProducedFor[r.Key()]})
 	}
 
+	naclEdges, naclOwned := buildNACLAssociationEdges(parsed, byKey, registry)
+	for k := range naclOwned {
+		ownedRouteRefs[k] = true
+	}
 	edges := buildEdges(parsed, byKey, registry, ownedRouteRefs)
+	edges = append(edges, naclEdges...)
 	edges = append(edges, mappedEdges...)
 	edges = append(edges, routeEdges...)
 	edges = append(edges, buildLBTargetEdges(parsed, byKey, registry)...)
 	mergeSecurityGroupRules(nodes, parsed)
+	edges = append(edges, stampUnresolvedInputs(nodes, parsed, byKey, registry, edgeOnly)...)
 	mergeNetworkACLRules(nodes, parsed)
 	markMainRouteTables(nodes, parsed)
 	mergeEKSNodeGroupSizing(nodes, parsed)

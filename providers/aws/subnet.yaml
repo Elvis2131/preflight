@@ -24,3 +24,13 @@ capability_level: NETWORK_BEHAVIOR
 # (the Terraform default, false, applies only when the attribute is not declared at all).
 track_unresolved:
   - map_public_ip_on_launch
+
+# PC-158: attributes the engine reads. Declared but unreadable (a variable, a function, or something
+# outside this bundle) is recorded on the node, and the result that depends on it is not_assessable.
+unresolved_matters:
+  - attribute: vpc_id
+    affects: placement
+  - attribute: tags
+    affects: tier_label
+    value: true
+

@@ -32,3 +32,15 @@ capabilities:
       raw.githubusercontent.com/hashicorp/terraform-provider-aws (2026-09-20).
 
 capability_level: REQUEST_SIMULATION
+
+# PC-158: attributes the engine reads. Declared but unreadable (a variable, a function, or something
+# outside this bundle) is recorded on the node, and the result that depends on it is not_assessable.
+unresolved_matters:
+  - attribute: internal
+    affects: exposure
+    value: true
+  - attribute: subnets
+    affects: placement
+  - attribute: security_groups
+    affects: security_groups
+

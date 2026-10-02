@@ -307,7 +307,7 @@ Four tiers, each protecting something specific:
 
 1. **Unit (`core`, ≥90% line, 100% on simulation/resolution-state paths).**
 2. **Golden-file snapshots** — reference Terraform → expected IR → expected findings/simulations, byte-compared. The regression backbone.
-3. **Property/mutation tests** — delete-a-resource sweep asserting `not_assessable` propagation (never a false pass/fail); untagged-value construction attempts that must fail; adversarial prompt-injection fixtures asserting verdicts are unchanged.
+3. **Property/mutation tests** — delete-a-resource sweep asserting `not_assessable` propagation (never a false pass/fail); **value-level sweep** (`tests/valuemutation`, PC-158) rewriting every attribute to an unreadable expression and asserting results go `not_assessable`, never flip or vanish, paired with seeded-defect and declared-dependency checks because a sweep alone cannot see a bug that blinds the baseline; untagged-value construction attempts that must fail; adversarial prompt-injection fixtures asserting verdicts are unchanged.
 4. **Acceptance — the agent-iteration test (the primary success criterion, not a smoke test).** The golden architecture ships deliberately broken. A scripted agent, consuming only the Assurance Delta, must reach the target state within a bounded iteration count. **If the agent can't self-correct from the output, the output isn't good enough — fix the output shape, not the agent.**
 
 Determinism (NFR-1) is disciplinary, not automatic: Go maps have deliberately randomized iteration order. Sort before any traversal that feeds output ordering. A CI hash-comparison gate exists specifically to catch regressions here.

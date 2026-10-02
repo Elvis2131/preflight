@@ -9,3 +9,10 @@ node_type: network_boundary
 reference_edge_type: contained_in
 
 capability_level: CONNECTIVITY
+
+# PC-158: attributes the engine reads. Declared but unreadable (a variable, a function, or something
+# outside this bundle) is recorded on the node, and the result that depends on it is not_assessable.
+unresolved_matters:
+  - attribute: subnet_ids
+    affects: placement
+

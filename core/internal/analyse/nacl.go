@@ -79,6 +79,10 @@ type NACLDecision struct {
 	MatchedRuleNumber  string // "100", or "*" for the catch-all
 	Reason             string
 	EphemeralPortsUsed string // set only when this decision relied on a default (assumed) ephemeral range
+
+	// NotAssessable is true when the rules cannot decide (an address only partly covered by a rule's range).
+	// Allowed is then false, but the outcome is NOT a denial: callers must report not_assessable (I4).
+	NotAssessable bool
 }
 
 func naclProtocolMatches(rule NACLRule, protocol string) bool {
@@ -120,7 +124,7 @@ func EvaluateNACLDirectional(profile NACLProfile, direction, cidr, protocol stri
 		}
 		match, ambiguous := cidrMatch(rule.CIDR, cidr)
 		if ambiguous {
-			return NACLDecision{Allowed: false, NACLID: profile.NACLID, MatchedRuleNumber: ruleNumberLabel(rule.Number),
+			return NACLDecision{Allowed: false, NotAssessable: true, NACLID: profile.NACLID, MatchedRuleNumber: ruleNumberLabel(rule.Number),
 				Reason: "not_assessable: CIDR partially overlaps rule " + ruleNumberLabel(rule.Number) + "'s range without being fully contained — cannot determine whether the real address is covered"}
 		}
 		if !match {

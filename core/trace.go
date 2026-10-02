@@ -16,7 +16,10 @@
 // guessed capable.
 package core
 
-import "fmt"
+import (
+	"fmt"
+	"strings"
+)
 
 type TraceDecision string
 
@@ -300,18 +303,21 @@ func BuildTrace(ir *IR, sourceID, destID, sourceCIDR, protocol string, port int)
 		if sourceAssumed {
 			stepProv = assumedProv
 		}
-		step("nacl_source_egress", sourceNACL.NACLID, "evaluate source subnet's NACL, outbound", boolDecision(fwd[0].Allowed), withAssumption(fwd[0].Reason, sourceAssumed), "NACL "+fwd[0].NACLID+" rule "+fwd[0].MatchedRuleNumber)
+		step("nacl_source_egress", sourceNACL.NACLID, "evaluate source subnet's NACL, outbound", naclStepDecision(fwd[0]), withAssumption(fwd[0].Reason, sourceAssumed), "NACL "+fwd[0].NACLID+" rule "+fwd[0].MatchedRuleNumber)
 		stepProv = prov
 		if destAssumed {
 			stepProv = assumedProv
 		}
 		if fwd[0].Allowed {
-			step("nacl_dest_ingress", destNACL.NACLID, "evaluate destination subnet's NACL, inbound", boolDecision(fwd[1].Allowed), withAssumption(fwd[1].Reason, destAssumed), "NACL "+fwd[1].NACLID+" rule "+fwd[1].MatchedRuleNumber)
+			step("nacl_dest_ingress", destNACL.NACLID, "evaluate destination subnet's NACL, inbound", naclStepDecision(fwd[1]), withAssumption(fwd[1].Reason, destAssumed), "NACL "+fwd[1].NACLID+" rule "+fwd[1].MatchedRuleNumber)
 		}
 		if !allowed && fwd[0].Allowed && fwd[1].Allowed {
 			// forward legs both passed; the failure is on the return leg
 			stepProv = prov
-			step("nacl_response_path", destNACL.NACLID, "evaluate the stateless return path (destination egress, source ingress, ephemeral ports)", d, withAssumption("return traffic denied: "+ret[0].Reason+"; "+ret[1].Reason, sourceAssumed || destAssumed), "")
+			if ret[0].NotAssessable || ret[1].NotAssessable {
+				d = TraceNotAssessable
+			}
+			step("nacl_response_path", destNACL.NACLID, "evaluate the stateless return path (destination egress, source ingress, ephemeral ports)", d, withAssumption("return traffic not permitted: "+ret[0].Reason+"; "+ret[1].Reason, sourceAssumed || destAssumed), "")
 			return finalize(trace)
 		}
 		stepProv = prov
@@ -337,6 +343,13 @@ func BuildTrace(ir *IR, sourceID, destID, sourceCIDR, protocol string, port int)
 	// simply doesn't match) is a genuine, computed implicit deny — AWS's own
 	// documented "allow rules only" semantics — and stays exactly that, unaffected
 	// by this check.
+	// PC-158: a security group input ingest could not read (an attachment, or a rule's protocol, port, source
+	// or direction) makes the profile incomplete; no verdict is drawn from it.
+	if unresolved := append(append([]string(nil), destSG.Unresolved...), sourceSG.Unresolved...); len(unresolved) > 0 {
+		step("sg_dest_ingress", destID, "evaluate destination's security groups, inbound (union of all attached SGs)", TraceNotAssessable,
+			"a security group input could not be read, so the rules are incomplete: "+strings.Join(unresolved, "; "), "")
+		return finalize(trace)
+	}
 	if len(destSG.SGIDs) == 0 || (sourceID != "" && len(sourceSG.SGIDs) == 0) {
 		unresolved := destID
 		if len(destSG.SGIDs) > 0 {
@@ -367,7 +380,7 @@ func BuildTrace(ir *IR, sourceID, destID, sourceCIDR, protocol string, port int)
 	if !initD.Allowed {
 		sgDecision = initD
 	}
-	step("sg_dest_ingress", destID, "evaluate destination's security groups, inbound (union of all attached SGs)", boolDecision(allowedConn), sgReasonOrDefault(sgDecision), "SG "+sgDecision.MatchedSG)
+	step("sg_dest_ingress", destID, "evaluate destination's security groups, inbound (union of all attached SGs)", sgStepDecision(sgDecision), sgReasonOrDefault(sgDecision), "SG "+sgDecision.MatchedSG)
 	if !allowedConn {
 		return finalize(trace)
 	}
@@ -402,6 +415,22 @@ func BuildTrace(ir *IR, sourceID, destID, sourceCIDR, protocol string, port int)
 	step("target_health", destID, "check the destination node's own resolution state (structural completeness, not a live health check — P0 is static analysis only)", healthDecision, healthReason, "")
 
 	return finalize(trace)
+}
+
+// naclStepDecision and sgStepDecision map an evaluator's decision to a trace decision: an ambiguous one (an
+// address only partly covered by a rule's range) is not_assessable, never a denial (I4).
+func naclStepDecision(d NACLDecision) TraceDecision {
+	if d.NotAssessable {
+		return TraceNotAssessable
+	}
+	return boolDecision(d.Allowed)
+}
+
+func sgStepDecision(d SGDecision) TraceDecision {
+	if d.NotAssessable {
+		return TraceNotAssessable
+	}
+	return boolDecision(d.Allowed)
 }
 
 func boolDecision(allowed bool) TraceDecision {

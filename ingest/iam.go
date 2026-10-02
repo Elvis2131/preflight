@@ -134,6 +134,7 @@ func mergeIAMPolicies(nodes []core.Node, parsed []ParsedResource) {
 		case "aws_iam_role_policy":
 			roleRefs, ok := r.AttributeReferences["role"]
 			if !ok || len(roleRefs) != 1 {
+				markEveryRoleUnresolved(nodes, byID, r)
 				continue
 			}
 			attachIdentityPolicy(nodes, byID, roleRefs[0].Key(), r.Key(), r)
@@ -141,6 +142,7 @@ func mergeIAMPolicies(nodes []core.Node, parsed []ParsedResource) {
 		case "aws_iam_role_policy_attachment":
 			roleRefs, hasRole := r.AttributeReferences["role"]
 			if !hasRole || len(roleRefs) != 1 {
+				markEveryRoleUnresolved(nodes, byID, r)
 				continue
 			}
 			policyRefs := r.AttributeReferences["policy_arn"]
@@ -226,4 +228,18 @@ func recordUnresolvedIdentityPolicy(nodes []core.Node, byID map[string]int, role
 	existing = append(existing, policyID+": "+reason)
 	sort.Strings(existing)
 	nodes[idx].RawAttributes[UnresolvedIdentityPoliciesAttr] = existing
+}
+
+// markEveryRoleUnresolved is for a policy attachment whose role could not be read (PC-158): it may apply
+// to any role, and it may grant anything, so no role's least-privilege result is safe.
+func markEveryRoleUnresolved(nodes []core.Node, byID map[string]int, res ParsedResource) {
+	if _, declared := res.AttrInfo["role"]; !declared {
+		return // no role attribute at all: nothing was dropped
+	}
+	for _, n := range nodes {
+		if n.Type == core.NodeTypeIdentity {
+			recordUnresolvedIdentityPolicy(nodes, byID, n.ID, res.Key(),
+				"a policy attachment names a role that could not be read, so it may apply to this role")
+		}
+	}
 }

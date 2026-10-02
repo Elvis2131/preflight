@@ -25,6 +25,8 @@ package core
 import (
 	"fmt"
 	"net/netip"
+	"sort"
+	"strings"
 )
 
 // EvaluateEgressRoute answers "can this subnet reach the internet" — a real
@@ -125,9 +127,24 @@ func BuildNATSharedAcrossAZsFindings(ir *IR) []Finding {
 		routeTablesByNAT[e.To] = append(routeTablesByNAT[e.To], e.From)
 	}
 
+	// PC-158: a route ingest could not read may also point at one of these gateways, so a gateway that
+	// looks used by a single table may in fact be shared. Say so rather than report nothing.
+	unread := anyUnresolved(ir, AffectsRoutes)
+	natIDs := make([]string, 0, len(routeTablesByNAT))
+	for natID := range routeTablesByNAT {
+		natIDs = append(natIDs, natID)
+	}
+	sort.Strings(natIDs)
+
 	var findings []Finding
-	for natID, routeTables := range routeTablesByNAT {
+	for _, natID := range natIDs {
+		routeTables := routeTablesByNAT[natID]
 		if len(routeTables) < 2 {
+			if len(unread) > 0 {
+				prov := NewProvenance(KindDerived, "core/nat_fault:shared-nat-spof:"+natID)
+				f := buildSharedNATFinding(natID, routeTables, prov)
+				findings = append(findings, degradeToNotAssessable(f, "a route could not be read, so whether another route table shares this NAT gateway is unknown: "+strings.Join(unread, "; ")))
+			}
 			continue // one route table per NAT gateway — the good, no-SPOF design
 		}
 		prov := NewProvenance(KindDerived, "core/nat_fault:shared-nat-spof:"+natID)

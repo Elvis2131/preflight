@@ -120,6 +120,10 @@ func perDatabaseSG(ir *IR, c ctl, prov Provenance, direction string, violates fu
 	var out []ComplianceControlResult
 	for _, db := range dbs {
 		profile := SecurityGroupProfile(ir.Nodes, ir.Edges, db.ID)
+		if len(profile.Unresolved) > 0 {
+			out = append(out, c.result(db.ID, ComplianceNotAssessable, "a security group input could not be read, so the rules are incomplete: "+strings.Join(profile.Unresolved, "; "), prov))
+			continue
+		}
 		if len(profile.SGIDs) == 0 {
 			out = append(out, c.result(db.ID, ComplianceNotAssessable, "no security group is attached to this resource, so its "+direction+" posture is unknown, never assumed", prov))
 			continue
@@ -191,6 +195,11 @@ func checkPublicFacingBehindWAF(ir *IR, c ctl, prov Provenance) []ComplianceCont
 	var out []ComplianceControlResult
 	for _, n := range ir.Nodes {
 		if n.Type != NodeTypeLoadBalancer {
+			continue
+		}
+		if unread := UnresolvedInputs(n, AffectsExposure); len(unread) > 0 {
+			// Whether this is internet-facing could not be read, so whether the control applies is unknown.
+			out = append(out, c.result(n.ID, ComplianceNotAssessable, "whether this load balancer is internet-facing could not be read: "+strings.Join(unread, "; "), prov))
 			continue
 		}
 		if internal, _ := n.RawAttributes["internal"].(bool); internal {

@@ -35,20 +35,30 @@ func SecurityGroupProfile(nodes []Node, edges []Edge, resourceID string) SGProfi
 	}
 
 	var sgIDs []string
+	var unresolved []string
+	if self, ok := byID[resourceID]; ok {
+		for _, u := range UnresolvedInputs(self, AffectsSecurityGroups) {
+			unresolved = append(unresolved, resourceID+": "+u)
+		}
+	}
 	for _, e := range edges {
 		if e.Type != EdgeTypeDependsOn || e.From != resourceID {
 			continue
 		}
 		if n, ok := byID[e.To]; ok {
-			if _, hasRules := n.RawAttributes["security_group_rules"]; hasRules {
+			_, hasRules := n.RawAttributes["security_group_rules"]
+			if hasRules || len(UnresolvedInputs(n, AffectsSGRules)) > 0 {
 				sgIDs = append(sgIDs, n.ID)
 			}
 		}
 	}
 
-	profile := SGProfile{SGIDs: sgIDs}
+	profile := SGProfile{SGIDs: sgIDs, Unresolved: unresolved}
 	for _, sgID := range sgIDs {
 		node := byID[sgID]
+		for _, u := range UnresolvedInputs(node, AffectsSGRules) {
+			profile.Unresolved = append(profile.Unresolved, sgID+": "+u)
+		}
 		for _, raw := range rawRuleMaps(node.RawAttributes["security_group_rules"]) {
 			profile.Rules = append(profile.Rules, toSGRule(raw))
 		}

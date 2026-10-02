@@ -6,7 +6,12 @@
 // IR schema change needed.
 package ingest
 
-import "preflight/core"
+import (
+	"fmt"
+
+	"preflight/core"
+	"preflight/providers"
+)
 
 // naclRuleAttrs are the real Terraform attribute names. aws_network_acl_rule's own
 // "egress" is a bool (true=egress, false=ingress); its inline block counterpart is
@@ -20,11 +25,24 @@ const (
 	naclAttrCIDRBlock  = "cidr_block"
 	naclAttrRuleAction = "rule_action" // "allow" | "deny" — real Terraform attribute name, both shapes
 	naclAttrEgress     = "egress"      // standalone aws_network_acl_rule's own bool attribute
+
+	// The inline-block names (aws_network_acl / aws_default_network_acl ingress{} and egress{}).
+	naclAttrInlineRuleNo = "rule_no"
+	naclAttrInlineAction = "action"
 )
 
-func normalizeNACLRule(direction string, attrs map[string]any) map[string]any {
+// normalizeNACLRule builds one rule map. The two Terraform shapes name the same facts differently
+// (provider docs, aws_network_acl and aws_network_acl_rule): an inline ingress{}/egress{} block uses
+// rule_no and action; the standalone aws_network_acl_rule resource uses rule_number and rule_action.
+// Reading the standalone names for both shapes (what this did until PC-158) ingested every inline rule
+// with no number and no action.
+func normalizeNACLRule(direction string, attrs map[string]any, inline bool) map[string]any {
+	numberAttr, actionAttr := naclAttrRuleNumber, naclAttrRuleAction
+	if inline {
+		numberAttr, actionAttr = naclAttrInlineRuleNo, naclAttrInlineAction
+	}
 	rule := map[string]any{"direction": direction}
-	if v, ok := attrs[naclAttrRuleNumber]; ok {
+	if v, ok := attrs[numberAttr]; ok {
 		rule["number"] = v
 	}
 	if v, ok := attrs[naclAttrProtocol]; ok {
@@ -39,7 +57,7 @@ func normalizeNACLRule(direction string, attrs map[string]any) map[string]any {
 	if v, ok := attrs[naclAttrCIDRBlock]; ok {
 		rule["cidr"] = v
 	}
-	if action, ok := attrs[naclAttrRuleAction].(string); ok {
+	if action, ok := attrs[actionAttr].(string); ok {
 		rule["allow"] = action == "allow"
 	}
 	return rule
@@ -61,7 +79,7 @@ func mergeNetworkACLRules(nodes []core.Node, parsed []ParsedResource) {
 			}
 			for _, direction := range []string{"ingress", "egress"} {
 				for _, nb := range r.NestedBlocks[direction] {
-					rulesByNACL[r.Key()] = append(rulesByNACL[r.Key()], normalizeNACLRule(direction, nb.Attributes))
+					rulesByNACL[r.Key()] = append(rulesByNACL[r.Key()], normalizeNACLRule(direction, nb.Attributes, true))
 				}
 			}
 			continue
@@ -75,7 +93,7 @@ func mergeNetworkACLRules(nodes []core.Node, parsed []ParsedResource) {
 			if egress, _ := r.Attributes[naclAttrEgress].(bool); egress {
 				direction = "egress"
 			}
-			rulesByNACL[owner[0].Key()] = append(rulesByNACL[owner[0].Key()], normalizeNACLRule(direction, r.Attributes))
+			rulesByNACL[owner[0].Key()] = append(rulesByNACL[owner[0].Key()], normalizeNACLRule(direction, r.Attributes, false))
 		}
 	}
 
@@ -102,4 +120,38 @@ func mergeNetworkACLRules(nodes []core.Node, parsed []ParsedResource) {
 			nodes[i].RawAttributes["default_nacl"] = true
 		}
 	}
+}
+
+// buildNACLAssociationEdges turns an aws_network_acl's inline subnet_ids into the subnet -> NACL
+// depends_on edge core reads (the same shape aws_network_acl_association produces). Without it the generic
+// reference walker produced a contained_in edge FROM the NACL TO each subnet, the association was never
+// recognised, and a subnet then resolved to the assumed allow-all default NACL: a NACL that denies everything
+// read as allowing everything (PC-158). The refs are marked owned so the walker does not also emit that edge.
+func buildNACLAssociationEdges(parsed []ParsedResource, byKey map[string]ParsedResource, registry providers.Registry) ([]core.Edge, map[string]bool) {
+	var edges []core.Edge
+	owned := map[string]bool{}
+	for _, r := range parsed {
+		if r.Type != "aws_network_acl" {
+			continue
+		}
+		info, declared := r.AttrInfo["subnet_ids"]
+		if !declared || info.Shape != ShapeRefs {
+			continue // unreadable or literal ids: recorded by stampNACL, not turned into edges
+		}
+		for _, ref := range info.Refs {
+			if !nodeWillExist(ref, byKey, registry) {
+				continue
+			}
+			edges = append(edges, core.Edge{
+				ID:         fmt.Sprintf("%s-subnet-association->%s", ref.Key(), r.Key()),
+				Type:       core.EdgeTypeDependsOn,
+				From:       ref.Key(),
+				To:         r.Key(),
+				Resolution: core.ResolutionKnown,
+				Provenance: core.NewProvenance(core.KindStated, sourceRef(r)),
+			})
+			owned[r.Key()+"\x00"+ref.Key()] = true
+		}
+	}
+	return edges, owned
 }

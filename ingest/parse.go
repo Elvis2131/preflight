@@ -70,6 +70,10 @@ type ParsedResource struct {
 	// without this an unknown value and an absent one look the same (PC-156).
 	NonLiteralAttributes map[string]bool
 
+	// AttrInfo classifies every declared attribute, keyed by name (top level) or "block.attr" (one level
+	// of nesting; a repeated block keeps the last occurrence here, see NestedBlocks[...].Info for each).
+	AttrInfo map[string]AttrInfo
+
 	// References are every resource-to-resource traversal found anywhere in this
 	// resource's body (including inside function calls like jsonencode(), and inside
 	// list/object literals) — hcl.Expression.Variables() walks nested expressions
@@ -107,6 +111,71 @@ type ParsedResource struct {
 type NestedBlock struct {
 	Attributes map[string]any
 	References map[string]ResourceRef
+	// Info classifies every attribute declared in this occurrence (PC-158).
+	Info map[string]AttrInfo
+}
+
+// AttrShape says how readable a declared attribute's expression is to ingest.
+type AttrShape string
+
+const (
+	// ShapeLiteral: a constant ingest evaluated (including jsonencode of constants).
+	ShapeLiteral AttrShape = "literal"
+	// ShapeRefs: nothing but resource references (one, or a list of them), e.g. aws_subnet.a.id.
+	ShapeRefs AttrShape = "refs"
+	// ShapeOther: anything else: a variable, a function, a conditional, a template mixing text and
+	// references. Ingest cannot read it, and PC-158 requires that to be visible, never silently absent.
+	ShapeOther AttrShape = "other"
+)
+
+// AttrInfo is what ingest knows about one declared attribute: its shape and, for ShapeRefs, the
+// resources it points at. It exists because an unreadable value and an absent one otherwise look the same
+// downstream, and "absent" often means a documented default (PC-158).
+type AttrInfo struct {
+	Shape AttrShape
+	Refs  []ResourceRef
+}
+
+// classifyAttr decides an attribute's shape from its expression.
+func classifyAttr(expr hcl.Expression) AttrInfo {
+	if _, ok := literalValue(expr); ok {
+		return AttrInfo{Shape: ShapeLiteral}
+	}
+	if sx, ok := expr.(hclsyntax.Expression); ok {
+		if travs, pure := pureTraversals(sx); pure {
+			var refs []ResourceRef
+			for _, tr := range travs {
+				ref, ok := resourceRefFromTraversal(tr)
+				if !ok {
+					return AttrInfo{Shape: ShapeOther}
+				}
+				refs = append(refs, ref)
+			}
+			return AttrInfo{Shape: ShapeRefs, Refs: refs}
+		}
+	}
+	return AttrInfo{Shape: ShapeOther}
+}
+
+// pureTraversals returns the traversals when expr is a single traversal or a list made only of them.
+func pureTraversals(expr hclsyntax.Expression) ([]hcl.Traversal, bool) {
+	switch e := expr.(type) {
+	case *hclsyntax.ScopeTraversalExpr:
+		return []hcl.Traversal{e.Traversal}, true
+	case *hclsyntax.TupleConsExpr:
+		var out []hcl.Traversal
+		for _, el := range e.Exprs {
+			sub, ok := pureTraversals(el)
+			if !ok {
+				return nil, false
+			}
+			out = append(out, sub...)
+		}
+		return out, true
+	case *hclsyntax.ParenthesesExpr:
+		return pureTraversals(e.Expression)
+	}
+	return nil, false
 }
 
 func (r ParsedResource) Key() string { return r.Type + "." + r.Name }
@@ -166,6 +235,7 @@ func parseResourceBlock(block *hclsyntax.Block, sourceFile string) ParsedResourc
 		Name:                 block.Labels[1],
 		Attributes:           map[string]any{},
 		NonLiteralAttributes: map[string]bool{},
+		AttrInfo:             map[string]AttrInfo{},
 		AttributeReferences:  map[string][]ResourceRef{},
 		SourceFile:           sourceFile,
 		SourceLine:           block.TypeRange.Start.Line,
@@ -180,6 +250,7 @@ func parseResourceBlock(block *hclsyntax.Block, sourceFile string) ParsedResourc
 		}
 		collectReferences(attr.Expr, &r.References)
 		collectAttributeReferences(attr.Expr, name, r.AttributeReferences)
+		r.AttrInfo[name] = classifyAttr(attr.Expr)
 		if v, ok := literalValue(attr.Expr); ok {
 			r.Attributes[name] = v
 		} else {
@@ -195,7 +266,7 @@ func parseResourceBlock(block *hclsyntax.Block, sourceFile string) ParsedResourc
 			r.HasDynamicBlock = true
 			continue
 		}
-		nb := NestedBlock{Attributes: map[string]any{}, References: map[string]ResourceRef{}}
+		nb := NestedBlock{Attributes: map[string]any{}, References: map[string]ResourceRef{}, Info: map[string]AttrInfo{}}
 		// Nested config blocks (vpc_config, scaling_config, ingress, ...) are walked
 		// one level for references and literals too, under a dotted key
 		// ("vpc_config.endpoint_public_access") — this is exactly the dotted
@@ -206,6 +277,9 @@ func parseResourceBlock(block *hclsyntax.Block, sourceFile string) ParsedResourc
 		for name, attr := range nested.Body.Attributes {
 			collectReferences(attr.Expr, &r.References)
 			collectAttributeReferences(attr.Expr, name, r.AttributeReferences)
+			info := classifyAttr(attr.Expr)
+			nb.Info[name] = info
+			r.AttrInfo[nested.Type+"."+name] = info
 			if v, ok := literalValue(attr.Expr); ok {
 				r.Attributes[nested.Type+"."+name] = v
 				nb.Attributes[name] = v

@@ -210,6 +210,11 @@ func matchRDSRow(n Node, table PriceTable) (PriceRow, bool, string) {
 	if !known {
 		return PriceRow{}, false, "database engine \"" + engineRaw + "\" is not in this fetcher's verified engine-name mapping — cost_unknown, not guessed"
 	}
+	// PC-158: multi_az selects the rate (Multi-AZ is roughly twice Single-AZ). A value ingest could not
+	// read must not be priced as the single-AZ default.
+	if unread := UnresolvedInputs(n, AffectsCost); len(unread) > 0 {
+		return PriceRow{}, false, "multi_az could not be read (" + strings.Join(unread, "; ") + ") — cost_unknown, not priced as single-AZ"
+	}
 	multiAZ, _ := n.RawAttributes["multi_az"].(bool)
 	deployment := "Single-AZ"
 	if multiAZ {

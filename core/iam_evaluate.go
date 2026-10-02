@@ -498,6 +498,11 @@ func EvaluateIAMRequest(ir *IR, req IAMRequest, prov Provenance) IAMEvaluationRe
 		if !ok {
 			return notAssessableResult(fmt.Sprintf("resource %q does not exist in this IR", req.ResourceID), prov)
 		}
+		// PC-158: a resource-based policy ingest could not read may hold an explicit Deny (or an Allow), so no
+		// decision about this resource is safe.
+		if unread := UnresolvedInputs(resourceNode, AffectsResourcePolicy); len(unread) > 0 {
+			return notAssessableResult(fmt.Sprintf("resource %q has a resource-based policy that could not be read: %s", req.ResourceID, strings.Join(unread, "; ")), prov)
+		}
 		if resourceNode.IAMResourcePolicy != nil {
 			for _, stmt := range resourceNode.IAMResourcePolicy.Statements {
 				if !actionResourceApplies(stmt, req.Action, req.ResourceARN) {

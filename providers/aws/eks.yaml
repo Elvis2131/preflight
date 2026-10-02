@@ -33,3 +33,12 @@ capabilities:
     # before promoting this to an assumed default.
 
 capability_level: REQUEST_SIMULATION
+
+# PC-158: attributes the engine reads. Declared but unreadable (a variable, a function, or something
+# outside this bundle) is recorded on the node, and the result that depends on it is not_assessable.
+unresolved_matters:
+  - attribute: vpc_config.subnet_ids
+    affects: placement
+  - attribute: vpc_config.security_group_ids
+    affects: security_groups
+

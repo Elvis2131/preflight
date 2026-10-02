@@ -46,9 +46,9 @@ resource "aws_route_table_association" "a" {
 resource "aws_network_acl" "n" {
   vpc_id = aws_vpc.v.id
   ingress {
-    rule_number = 100
+    rule_no     = 100
     protocol    = "tcp"
-    rule_action = "allow"
+    action      = "allow"
     cidr_block  = "0.0.0.0/0"
     from_port   = 443
     to_port     = 443
