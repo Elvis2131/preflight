@@ -235,4 +235,3 @@ func TestReport_Validate(t *testing.T) {
 		t.Fatalf("Validate() = %v, want nil", err)
 	}
 }
-

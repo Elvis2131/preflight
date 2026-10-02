@@ -83,7 +83,7 @@ func TestAllocateSubnets_PropertyTest_NoOverlapNoOutOfRange(t *testing.T) {
 		n := 1 + rng.Intn(20)
 		requests := make([]SubnetRequest, n)
 		for i := range requests {
-			requests[i] = SubnetRequest{Name: string(rune('a' + (i % 26))) + string(rune('0'+trial%10)) + string(rune('A'+i/26)), MinUsableHosts: 1 + rng.Intn(2000)}
+			requests[i] = SubnetRequest{Name: string(rune('a'+(i%26))) + string(rune('0'+trial%10)) + string(rune('A'+i/26)), MinUsableHosts: 1 + rng.Intn(2000)}
 		}
 		result, err := AllocateSubnets("10.0.0.0/16", requests, awsRules())
 		if err != nil {
