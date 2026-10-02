@@ -8,6 +8,8 @@
 package main
 
 import (
+	"context"
+	"encoding/json"
 	"flag"
 	"log"
 	"net/http"
@@ -17,6 +19,7 @@ import (
 	"time"
 
 	"preflight/cmd/runnerd/internal/pricingfetch"
+	"preflight/cmd/runnerd/internal/rung3"
 	"preflight/pricing"
 )
 
@@ -50,11 +53,51 @@ func runFetchPricing(dbPath, region string) {
 	log.Printf("runnerd -fetch-pricing: stored snapshot %s (%d entries) into %s", snap.ID, len(snap.Entries), dbPath)
 }
 
+// runRung3 is PC-25: one real, ephemeral experiment. It refuses to start without an explicitly named
+// sandbox account and a budget alert in it, and it always destroys what it created. Credentials are
+// whatever this process inherited (AWS_* environment or profile); nothing here reads or prints them.
+func runRung3(account, region, tfDir, predictions, out string, window time.Duration) {
+	runID := "r3-" + time.Now().UTC().Format("20060102t150405")
+	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
+	defer stop()
+	res, err := rung3.Run(ctx, rung3.Config{
+		Account: account, Region: region, TerraformDir: tfDir, PredictionsPath: predictions, RunID: runID,
+		FaultWindow: window, Log: func(f string, a ...any) { log.Printf("runnerd -rung3: "+f, a...) },
+	})
+	if res.RunID != "" {
+		b, _ := json.MarshalIndent(res, "", "  ")
+		if werr := os.WriteFile(out, append(b, '\n'), 0o644); werr != nil {
+			log.Printf("runnerd -rung3: could not write %s: %v", out, werr)
+		} else {
+			log.Printf("runnerd -rung3: result written to %s", out)
+		}
+		for _, c := range res.Comparison {
+			log.Printf("runnerd -rung3: %s %s: %s", c.ID, c.Verdict, c.Evidence)
+		}
+		log.Printf("runnerd -rung3: cleanup clean=%v", res.Cleanup.Clean)
+	}
+	if err != nil {
+		log.Fatalf("runnerd -rung3: %v", err)
+	}
+}
+
 func main() {
 	fetchPricing := flag.Bool("fetch-pricing", false, "fetch one real AWS pricing snapshot and store it, then exit (PC-116/ADR-006)")
 	pricingDB := flag.String("pricing-db", "pricing.db", "path to the pricing SQLite store")
 	pricingRegion := flag.String("pricing-region", "us-east-1", "AWS region to fetch pricing for")
+	rung3Run := flag.Bool("rung3", false, "run one real ephemeral AWS experiment (apply, FIS fault, capture, destroy), then exit (PC-25)")
+	rung3Account := flag.String("rung3-account", "", "REQUIRED with -rung3: the sandbox AWS account ID; the run refuses if the credentials resolve to any other")
+	rung3Region := flag.String("rung3-region", "us-east-1", "AWS region for the Rung 3 experiment")
+	rung3Dir := flag.String("rung3-terraform", "validate/rung3/terraform", "the experiment's Terraform directory")
+	rung3Pred := flag.String("rung3-predictions", "validate/rung3/predictions.json", "the predictions committed before the run")
+	rung3Out := flag.String("rung3-out", "validate/rung3/result.json", "where to write the observed result")
+	rung3Window := flag.Duration("rung3-window", 150*time.Second, "how long to observe after the fault starts")
 	flag.Parse()
+
+	if *rung3Run {
+		runRung3(*rung3Account, *rung3Region, *rung3Dir, *rung3Pred, *rung3Out, *rung3Window)
+		return
+	}
 
 	if *fetchPricing {
 		runFetchPricing(*pricingDB, *pricingRegion)
