@@ -7,9 +7,11 @@ package server_test
 
 import (
 	"path/filepath"
+	"strings"
 	"testing"
 	"time"
 
+	"preflight/core"
 	"preflight/pricing"
 	"preflight/server"
 )
@@ -209,4 +211,65 @@ func isAPIError(err error, target **server.APIError) bool {
 	}
 	*target = ae
 	return true
+}
+
+// ADR-006 amendment: with the real eu-west-1 NAT Gateway rows in the snapshot, the golden bundle's
+// three NAT gateways (one per AZ) are priced end to end through /assess and the report — the
+// resilient-versus-cheap comparison, in dollars. The broken bundle has fewer.
+func TestAssess_PricesNATGatewaysFromTheSnapshot_EndToEnd(t *testing.T) {
+	snap := realPricingSnapshot("nat-snap")
+	for i := range snap.Entries {
+		snap.Entries[i].Region = "eu-west-1"
+	}
+	snap.Entries = append(snap.Entries,
+		pricing.PriceEntry{Service: "AmazonEC2", Region: "eu-west-1", Unit: "Hrs", Price: 0.048, Currency: "USD",
+			SKUAttributes: map[string]string{"usagetype": "EU-NatGateway-Hours", "operation": "NatGateway", "product_family": "NAT Gateway", "rate_description": "$0.048 per NAT Gateway Hour"}},
+		pricing.PriceEntry{Service: "AmazonEC2", Region: "eu-west-1", Unit: "GB", Price: 0.048, Currency: "USD",
+			SKUAttributes: map[string]string{"usagetype": "EU-NatGateway-Bytes", "operation": "NatGateway", "product_family": "NAT Gateway"}},
+	)
+
+	natMonthly := func(bundle string) (count int, total float64) {
+		store, err := server.OpenStore(":memory:")
+		if err != nil {
+			t.Fatal(err)
+		}
+		defer store.Close()
+		ps, err := pricing.OpenStore(":memory:")
+		if err != nil {
+			t.Fatal(err)
+		}
+		defer ps.Close()
+		if err := ps.PutSnapshot(snap); err != nil {
+			t.Fatal(err)
+		}
+		if err := ps.SetActive("nat-snap"); err != nil {
+			t.Fatal(err)
+		}
+		store.AttachPricingStore(ps)
+		dir, _ := filepath.Abs("../golden/" + bundle)
+		workload, _ := filepath.Abs("../golden/workload.yaml")
+		resp, err := server.Assess(store, server.AssessRequest{SessionID: "nat-" + bundle, BundleDir: dir, WorkloadPath: workload})
+		if err != nil || resp.Cost == nil {
+			t.Fatalf("Assess %s: err=%v cost=%v", bundle, err, resp.Cost)
+		}
+		for _, c := range resp.Cost.Components {
+			if strings.HasPrefix(c.NodeID, "aws_nat_gateway.") {
+				count++
+				if c.Decision != core.CostPriced {
+					t.Errorf("%s: %+v, want priced", c.NodeID, c)
+				}
+				total += c.MonthlyAmount
+			}
+		}
+		return
+	}
+	n, total := natMonthly("aws")
+	if n != 3 || total < 105.11 || total > 105.13 {
+		t.Errorf("golden/aws: %d NAT gateways, $%.2f/month; want 3 x $35.04 = $105.12", n, total)
+	}
+	bn, btotal := natMonthly("aws-broken")
+	if bn >= n || btotal >= total {
+		t.Errorf("the broken bundle (fewer NAT gateways) must cost less: %d NATs $%.2f vs %d NATs $%.2f", bn, btotal, n, total)
+	}
+	t.Logf("NAT-per-AZ (golden/aws): %d gateways = $%.2f/month; broken bundle: %d gateway(s) = $%.2f/month", n, total, bn, btotal)
 }

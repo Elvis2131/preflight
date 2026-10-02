@@ -149,6 +149,55 @@ only read/write already-fetched, already-normalized local data.
 - EC2 and NAT Gateway pricing remain `cost_unknown` until a follow-up ticket builds a
   real, targeted fetch strategy for them — not silently absent, a stated gap.
 
+## Amendment 2026-10-02 (PC-132): store the NAT Gateway family of the EC2 offer
+
+This section amends §3 without rewriting it. The §3 text above stands as the record of the
+original v1 decision; where it conflicts with this section, this section governs, **for the NAT
+Gateway product family only**.
+
+**What changed.** `AmazonEC2` is now fetched, but only its `NAT Gateway` product family is stored.
+The offer is **streamed** (a token-by-token JSON decode, `pricingfetch.decodeOffer`), and every
+product outside the family is dropped as it is read — never held in memory, never stored. This is
+the "true streaming decode" §3 and the Revisit trigger below named as the way forward.
+
+**Why.** Leaving NAT data processing permanently `cost_unknown` would remove one of the most useful
+cost/resilience trade-offs the report can show: NAT-per-AZ (resilient, three times the hourly and
+processing cost) against a single NAT (cheaper, a SPOF that PC-129 already flags). With the rows
+stored, the golden bundle's three NAT gateways price at $35.04 each ($0.048/h x 730 h, eu-west-1),
+$105.12/month for NAT-per-AZ against $35.04 for the broken bundle's single NAT.
+
+**Filter criteria.** `productFamily == "NAT Gateway"` in the `AmazonEC2` offer; on-demand terms only.
+The exclusion in §3 still applies to **every EC2 row outside this filter** (instances, EBS, etc.).
+
+**Measured on the real file** (`AmazonEC2/20260925174521/eu-west-1`, retrieved anonymously
+2026-10-02): download 441,439,512 bytes (about 16 s); decode **1.4 s**, peak resident memory
+**21 MB** (the compiled test binary measured on its own); **108,166 products scanned, 6 kept**
+(4,111 bytes of JSON in the snapshot). Reading stops once the on-demand terms are done — the much
+larger Reserved terms follow and are never needed. The full file is still transferred on every
+fetch of a region; only the storage and the memory are bounded.
+
+**Real rows kept** (eu-west-1): `EU-NatGateway-Hours` $0.048/Hrs, `EU-NatGateway-Bytes` $0.048/GB,
+`EU-RegionalNatGateway-Hours` $0.048/Hrs, `EU-RegionalNatGateway-Bytes` $0.048/GB, and the two
+`EU-NatGateway-Prvd-*` provisioned-bandwidth rows. The engine prices only the zonal rows
+(`NatGateway-Hours`, `NatGateway-Bytes`, operation `NatGateway`); the regional and provisioned rows
+are stored but never matched.
+
+**Evidence.** `testdata/amazonec2_euwest1_nat_offer.json` is a verbatim extract of that real file
+(source URL, version and capture date in `testdata/README-amazonec2-capture.md`), including two real
+non-NAT instance products so the filter test has something to exclude. The streaming decoder is
+tested for: the filter, stopping before an invalid Reserved block, an unfiltered service keeping
+everything, refusing a file whose terms precede its products, and rejecting a truncated download.
+
+**A latent defect this found.** Checking the real eu-west-1 ELB file showed `EU-Outposts-LCUUsage`
+(unit `LCU-Hrs`, **$0**) next to the on-demand `EU-LCUUsage`. A suffix match on the usage type would
+have matched it. Usage types are now matched exactly after dropping only a genuine region prefix
+(short, upper-case: `EU-`, `USE1-`), and usage costs are priced in the workload's single declared
+region instead of any row in the snapshot.
+
+**Still true.** Credentials: none are used or needed for any of this (§2). Snapshot size stays tiny.
+Other regions: per-region fetches repeat the full download; a multi-region fetch is a deliberate,
+separate choice.
+
 ## Revisit trigger
 
 Reopen if EC2/NAT Gateway pricing becomes a blocking product need — the "decode fully

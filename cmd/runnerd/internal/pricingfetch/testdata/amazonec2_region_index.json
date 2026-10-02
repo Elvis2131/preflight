@@ -1,0 +1,10 @@
+{
+  "formatVersion" : "v1.0",
+  "publicationDate" : "2026-09-25T17:45:21Z",
+  "regions" : {
+    "eu-west-1" : {
+      "regionCode" : "eu-west-1",
+      "currentVersionUrl" : "/offers/v1.0/aws/AmazonEC2/20260925174521/eu-west-1/index.json"
+    }
+  }
+}

@@ -43,7 +43,11 @@ func usageCostPriceTable() core.PriceTable {
 			egress("10240", "51200", 0.085),
 			egress("51200", "153600", 0.07),
 			{Service: "AWSDataTransfer", Region: "eu-west-1", SKUAttributes: map[string]string{"usagetype": "EU-DataTransfer-Regional-Bytes", "transferType": "IntraRegion"}, Unit: "GB", Price: 0.01, Currency: "USD"},
-			{Service: "AWSELB", Region: "us-east-1", SKUAttributes: map[string]string{"usagetype": "LCUUsage", "operation": "LoadBalancing:Application"}, Unit: "LCU-Hrs", Price: 0.008, Currency: "USD"},
+			// Real eu-west-1 AWSELB rows (offer 20260911124544): the on-demand LCU rate and two decoys that
+			// must NOT match — the Outposts rate ($0) and the reserved-capacity rate.
+			{Service: "AWSELB", Region: "eu-west-1", SKUAttributes: map[string]string{"usagetype": "EU-LCUUsage", "operation": "LoadBalancing:Application"}, Unit: "LCU-Hrs", Price: 0.008, Currency: "USD"},
+			{Service: "AWSELB", Region: "eu-west-1", SKUAttributes: map[string]string{"usagetype": "EU-Outposts-LCUUsage", "operation": "LoadBalancing:Application"}, Unit: "LCU-Hrs", Price: 0, Currency: "USD"},
+			{Service: "AWSELB", Region: "eu-west-1", SKUAttributes: map[string]string{"usagetype": "EU-ReservedLCUUsage", "operation": "LoadBalancing:Application"}, Unit: "ReservedLCU-Hr", Price: 0.008, Currency: "USD"},
 		},
 	}
 }

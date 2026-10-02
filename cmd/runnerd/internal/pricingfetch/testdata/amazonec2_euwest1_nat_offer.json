@@ -1,0 +1,358 @@
+{
+  "formatVersion" : "v1.0",
+  "disclaimer" : "This pricing list is for informational purposes only. All prices are subject to the additional terms included in the pricing pages on http://aws.amazon.com. All Free Tier prices are also subject to the terms included at https://aws.amazon.com/free/",
+  "offerCode" : "AmazonEC2",
+  "version" : "20260925174521",
+  "publicationDate" : "2026-09-25T17:45:21Z",
+  "products" : {
+    "9F25CQRR8AA58QZS" : {
+      "sku" : "9F25CQRR8AA58QZS",
+      "productFamily" : "NAT Gateway",
+      "attributes" : {
+        "servicecode" : "AmazonEC2",
+        "location" : "EU (Ireland)",
+        "locationType" : "AWS Region",
+        "group" : "NGW:NatGateway",
+        "groupDescription" : "Charge for per GB data processed by NAT Gateways with provisioned bandwidth",
+        "usagetype" : "EU-NatGateway-Prvd-Bytes",
+        "operation" : "NatGateway",
+        "regionCode" : "eu-west-1",
+        "servicename" : "Amazon Elastic Compute Cloud"
+      }
+    },
+    "AVQ7WERG9GYTK6BD" : {
+      "sku" : "AVQ7WERG9GYTK6BD",
+      "productFamily" : "NAT Gateway",
+      "attributes" : {
+        "servicecode" : "AmazonEC2",
+        "location" : "EU (Ireland)",
+        "locationType" : "AWS Region",
+        "group" : "NGW:NatGateway",
+        "groupDescription" : "Per hour and per Gbps charge for NAT Gateways with provisioned bandwidth",
+        "usagetype" : "EU-NatGateway-Prvd-Gbps",
+        "operation" : "NatGateway",
+        "regionCode" : "eu-west-1",
+        "servicename" : "Amazon Elastic Compute Cloud"
+      }
+    },
+    "DTH8595YVPFXV226" : {
+      "sku" : "DTH8595YVPFXV226",
+      "productFamily" : "NAT Gateway",
+      "attributes" : {
+        "servicecode" : "AmazonEC2",
+        "location" : "EU (Ireland)",
+        "locationType" : "AWS Region",
+        "group" : "NGW:NatGateway",
+        "groupDescription" : "Charge for per GB data processed by NatGateways",
+        "usagetype" : "EU-NatGateway-Bytes",
+        "operation" : "NatGateway",
+        "regionCode" : "eu-west-1",
+        "servicename" : "Amazon Elastic Compute Cloud"
+      }
+    },
+    "EQKFCWWHPDRFVY6T" : {
+      "sku" : "EQKFCWWHPDRFVY6T",
+      "productFamily" : "NAT Gateway",
+      "attributes" : {
+        "servicecode" : "AmazonEC2",
+        "location" : "EU (Ireland)",
+        "locationType" : "AWS Region",
+        "group" : "NGW:NatGateway",
+        "groupDescription" : "Hourly charge for Regional NAT Gateways",
+        "usagetype" : "EU-RegionalNatGateway-Hours",
+        "operation" : "RegionalNatGateway",
+        "regionCode" : "eu-west-1",
+        "servicename" : "Amazon Elastic Compute Cloud"
+      }
+    },
+    "KFNSSCHWD43WZK2R" : {
+      "sku" : "KFNSSCHWD43WZK2R",
+      "productFamily" : "NAT Gateway",
+      "attributes" : {
+        "servicecode" : "AmazonEC2",
+        "location" : "EU (Ireland)",
+        "locationType" : "AWS Region",
+        "group" : "NGW:NatGateway",
+        "groupDescription" : "Hourly charge for NAT Gateways",
+        "usagetype" : "EU-NatGateway-Hours",
+        "operation" : "NatGateway",
+        "regionCode" : "eu-west-1",
+        "servicename" : "Amazon Elastic Compute Cloud"
+      }
+    },
+    "SCVPQWR4PN8NY9DD" : {
+      "sku" : "SCVPQWR4PN8NY9DD",
+      "productFamily" : "NAT Gateway",
+      "attributes" : {
+        "servicecode" : "AmazonEC2",
+        "location" : "EU (Ireland)",
+        "locationType" : "AWS Region",
+        "group" : "NGW:NatGateway",
+        "groupDescription" : "Charge for per GB data processed by NAT Gateways",
+        "usagetype" : "EU-RegionalNatGateway-Bytes",
+        "operation" : "RegionalNatGateway",
+        "regionCode" : "eu-west-1",
+        "servicename" : "Amazon Elastic Compute Cloud"
+      }
+    },
+    "WUMXDGCE8BPN384M" : {
+      "sku" : "WUMXDGCE8BPN384M",
+      "productFamily" : "Compute Instance",
+      "attributes" : {
+        "servicecode" : "AmazonEC2",
+        "location" : "EU (Ireland)",
+        "locationType" : "AWS Region",
+        "instanceType" : "r5n.8xlarge",
+        "currentGeneration" : "Yes",
+        "instanceFamily" : "Memory optimized",
+        "vcpu" : "32",
+        "physicalProcessor" : "Intel Xeon Platinum 8259 (Cascade Lake)",
+        "clockSpeed" : "2.5 GHz",
+        "memory" : "256 GiB",
+        "storage" : "EBS only",
+        "networkPerformance" : "25 Gigabit",
+        "processorArchitecture" : "64-bit",
+        "tenancy" : "Shared",
+        "operatingSystem" : "Linux",
+        "licenseModel" : "No License required",
+        "usagetype" : "EU-BoxUsage:r5n.8xlarge",
+        "operation" : "RunInstances:0100",
+        "availabilityzone" : "NA",
+        "capacitystatus" : "Used",
+        "classicnetworkingsupport" : "false",
+        "dedicatedEbsThroughput" : "5000 Mbps",
+        "dedicatedEbsThroughputDescription" : "5000 Mbps",
+        "ecu" : "NA",
+        "enhancedNetworkingSupported" : "No",
+        "gpuMemory" : "NA",
+        "instanceFamilyCategory" : "Memory Optimized",
+        "intelAvxAvailable" : "Yes",
+        "intelAvx2Available" : "Yes",
+        "intelTurboAvailable" : "Yes",
+        "marketoption" : "OnDemand",
+        "normalizationSizeFactor" : "64",
+        "preInstalledSw" : "SQL Ent",
+        "processorFeatures" : "Intel AVX; Intel AVX2; Intel AVX512; Intel Turbo",
+        "regionCode" : "eu-west-1",
+        "servicename" : "Amazon Elastic Compute Cloud",
+        "vpcnetworkingsupport" : "true"
+      }
+    },
+    "6NNDUYA6DNJNYRPC" : {
+      "sku" : "6NNDUYA6DNJNYRPC",
+      "productFamily" : "Compute Instance",
+      "attributes" : {
+        "servicecode" : "AmazonEC2",
+        "location" : "EU (Ireland)",
+        "locationType" : "AWS Region",
+        "instanceType" : "c5n.18xlarge",
+        "currentGeneration" : "Yes",
+        "instanceFamily" : "Compute optimized",
+        "vcpu" : "72",
+        "physicalProcessor" : "Intel Xeon Platinum 8124M",
+        "clockSpeed" : "3 GHz",
+        "memory" : "192 GiB",
+        "storage" : "EBS only",
+        "networkPerformance" : "100 Gigabit",
+        "processorArchitecture" : "64-bit",
+        "tenancy" : "Shared",
+        "operatingSystem" : "Linux",
+        "licenseModel" : "No License required",
+        "usagetype" : "EU-Reservation:c5n.18xlarge",
+        "operation" : "RunInstances",
+        "availabilityzone" : "NA",
+        "capacitystatus" : "AllocatedCapacityReservation",
+        "classicnetworkingsupport" : "false",
+        "dedicatedEbsThroughput" : "14000 Mbps",
+        "dedicatedEbsThroughputDescription" : "14000 Mbps",
+        "ecu" : "281",
+        "enhancedNetworkingSupported" : "Yes",
+        "gpuMemory" : "NA",
+        "instanceFamilyCategory" : "Compute Optimized",
+        "instancesku" : "N45J86GJAXMBC3MG",
+        "intelAvxAvailable" : "Yes",
+        "intelAvx2Available" : "Yes",
+        "intelTurboAvailable" : "Yes",
+        "marketoption" : "OnDemand",
+        "normalizationSizeFactor" : "144",
+        "preInstalledSw" : "NA",
+        "processorFeatures" : "Intel AVX; Intel AVX2; Intel AVX512; Intel Turbo",
+        "regionCode" : "eu-west-1",
+        "servicename" : "Amazon Elastic Compute Cloud",
+        "vpcnetworkingsupport" : "true"
+      }
+    }
+  },
+  "terms" : {
+    "OnDemand" : {
+      "9F25CQRR8AA58QZS" : {
+        "9F25CQRR8AA58QZS.JRTCKXETXF" : {
+          "offerTermCode" : "JRTCKXETXF",
+          "sku" : "9F25CQRR8AA58QZS",
+          "effectiveDate" : "2026-09-01T00:00:00Z",
+          "priceDimensions" : {
+            "9F25CQRR8AA58QZS.JRTCKXETXF.6YS6EN2CT7" : {
+              "rateCode" : "9F25CQRR8AA58QZS.JRTCKXETXF.6YS6EN2CT7",
+              "description" : "$0.00 per GB Data Processed by NAT Gateways with Provisioned Bandwidth",
+              "beginRange" : "0",
+              "endRange" : "Inf",
+              "unit" : "GB",
+              "pricePerUnit" : {
+                "USD" : "0.0000000000"
+              },
+              "appliesTo" : [ ]
+            }
+          },
+          "termAttributes" : { }
+        }
+      },
+      "AVQ7WERG9GYTK6BD" : {
+        "AVQ7WERG9GYTK6BD.JRTCKXETXF" : {
+          "offerTermCode" : "JRTCKXETXF",
+          "sku" : "AVQ7WERG9GYTK6BD",
+          "effectiveDate" : "2026-09-01T00:00:00Z",
+          "priceDimensions" : {
+            "AVQ7WERG9GYTK6BD.JRTCKXETXF.6YS6EN2CT7" : {
+              "rateCode" : "AVQ7WERG9GYTK6BD.JRTCKXETXF.6YS6EN2CT7",
+              "description" : "$1.164 per Gbps-hour of NAT Gateways with Provisioned Bandwidth",
+              "beginRange" : "0",
+              "endRange" : "Inf",
+              "unit" : "Gbps-hrs",
+              "pricePerUnit" : {
+                "USD" : "1.1640000000"
+              },
+              "appliesTo" : [ ]
+            }
+          },
+          "termAttributes" : { }
+        }
+      },
+      "DTH8595YVPFXV226" : {
+        "DTH8595YVPFXV226.JRTCKXETXF" : {
+          "offerTermCode" : "JRTCKXETXF",
+          "sku" : "DTH8595YVPFXV226",
+          "effectiveDate" : "2026-09-01T00:00:00Z",
+          "priceDimensions" : {
+            "DTH8595YVPFXV226.JRTCKXETXF.6YS6EN2CT7" : {
+              "rateCode" : "DTH8595YVPFXV226.JRTCKXETXF.6YS6EN2CT7",
+              "description" : "$0.048 per GB Data Processed by NAT Gateways",
+              "beginRange" : "0",
+              "endRange" : "Inf",
+              "unit" : "GB",
+              "pricePerUnit" : {
+                "USD" : "0.0480000000"
+              },
+              "appliesTo" : [ ]
+            }
+          },
+          "termAttributes" : { }
+        }
+      },
+      "EQKFCWWHPDRFVY6T" : {
+        "EQKFCWWHPDRFVY6T.JRTCKXETXF" : {
+          "offerTermCode" : "JRTCKXETXF",
+          "sku" : "EQKFCWWHPDRFVY6T",
+          "effectiveDate" : "2026-09-01T00:00:00Z",
+          "priceDimensions" : {
+            "EQKFCWWHPDRFVY6T.JRTCKXETXF.6YS6EN2CT7" : {
+              "rateCode" : "EQKFCWWHPDRFVY6T.JRTCKXETXF.6YS6EN2CT7",
+              "description" : "Hourly charge for Regional NAT Gateways",
+              "beginRange" : "0",
+              "endRange" : "Inf",
+              "unit" : "Hrs",
+              "pricePerUnit" : {
+                "USD" : "0.0480000000"
+              },
+              "appliesTo" : [ ]
+            }
+          },
+          "termAttributes" : { }
+        }
+      },
+      "KFNSSCHWD43WZK2R" : {
+        "KFNSSCHWD43WZK2R.JRTCKXETXF" : {
+          "offerTermCode" : "JRTCKXETXF",
+          "sku" : "KFNSSCHWD43WZK2R",
+          "effectiveDate" : "2026-09-01T00:00:00Z",
+          "priceDimensions" : {
+            "KFNSSCHWD43WZK2R.JRTCKXETXF.6YS6EN2CT7" : {
+              "rateCode" : "KFNSSCHWD43WZK2R.JRTCKXETXF.6YS6EN2CT7",
+              "description" : "$0.048 per NAT Gateway Hour",
+              "beginRange" : "0",
+              "endRange" : "Inf",
+              "unit" : "Hrs",
+              "pricePerUnit" : {
+                "USD" : "0.0480000000"
+              },
+              "appliesTo" : [ ]
+            }
+          },
+          "termAttributes" : { }
+        }
+      },
+      "SCVPQWR4PN8NY9DD" : {
+        "SCVPQWR4PN8NY9DD.JRTCKXETXF" : {
+          "offerTermCode" : "JRTCKXETXF",
+          "sku" : "SCVPQWR4PN8NY9DD",
+          "effectiveDate" : "2026-09-01T00:00:00Z",
+          "priceDimensions" : {
+            "SCVPQWR4PN8NY9DD.JRTCKXETXF.6YS6EN2CT7" : {
+              "rateCode" : "SCVPQWR4PN8NY9DD.JRTCKXETXF.6YS6EN2CT7",
+              "description" : "Charge for per GB data processed by NAT Gateways",
+              "beginRange" : "0",
+              "endRange" : "Inf",
+              "unit" : "GB",
+              "pricePerUnit" : {
+                "USD" : "0.0480000000"
+              },
+              "appliesTo" : [ ]
+            }
+          },
+          "termAttributes" : { }
+        }
+      },
+      "WUMXDGCE8BPN384M" : {
+        "WUMXDGCE8BPN384M.JRTCKXETXF" : {
+          "offerTermCode" : "JRTCKXETXF",
+          "sku" : "WUMXDGCE8BPN384M",
+          "effectiveDate" : "2026-09-01T00:00:00Z",
+          "priceDimensions" : {
+            "WUMXDGCE8BPN384M.JRTCKXETXF.6YS6EN2CT7" : {
+              "rateCode" : "WUMXDGCE8BPN384M.JRTCKXETXF.6YS6EN2CT7",
+              "description" : "$14.672 per On Demand Linux with SQL Server Enterprise r5n.8xlarge Instance Hour",
+              "beginRange" : "0",
+              "endRange" : "Inf",
+              "unit" : "Hrs",
+              "pricePerUnit" : {
+                "USD" : "14.6720000000"
+              },
+              "appliesTo" : [ ]
+            }
+          },
+          "termAttributes" : { }
+        }
+      },
+      "6NNDUYA6DNJNYRPC" : {
+        "6NNDUYA6DNJNYRPC.JRTCKXETXF" : {
+          "offerTermCode" : "JRTCKXETXF",
+          "sku" : "6NNDUYA6DNJNYRPC",
+          "effectiveDate" : "2026-09-01T00:00:00Z",
+          "priceDimensions" : {
+            "6NNDUYA6DNJNYRPC.JRTCKXETXF.6YS6EN2CT7" : {
+              "rateCode" : "6NNDUYA6DNJNYRPC.JRTCKXETXF.6YS6EN2CT7",
+              "description" : "$0.00 per Reservation Linux c5n.18xlarge Instance Hour",
+              "beginRange" : "0",
+              "endRange" : "Inf",
+              "unit" : "Hrs",
+              "pricePerUnit" : {
+                "USD" : "0.0000000000"
+              },
+              "appliesTo" : [ ]
+            }
+          },
+          "termAttributes" : { }
+        }
+      }
+    }
+  }
+}

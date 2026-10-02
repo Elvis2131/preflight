@@ -32,10 +32,11 @@ func runFetchPricing(dbPath, region string) {
 	}
 	defer store.Close()
 
-	services := []string{"AWSELB", "AWSDataTransfer", "AmazonS3", "AmazonElastiCache", "AmazonRDS"}
+	services := []string{"AWSELB", "AWSDataTransfer", "AmazonS3", "AmazonElastiCache", "AmazonRDS", "AmazonEC2"}
 	// AWSDataTransfer carries internet egress + cross-AZ rates (PC-132, ~1.5MB/region).
-	// EC2 and NAT Gateway deliberately excluded — ADR-006 §3: the real, measured
-	// 481MB/region EC2 offer file is deferred past v1, not silently dropped.
+	// AmazonEC2 is fetched but ONLY its NAT Gateway product family is stored (ADR-006
+	// amendment, 2026-10-02): the ~441-481MB offer is streamed and everything else is dropped as
+	// it is read — pricingfetch.productFamilyFilters. Every other EC2 row stays out of scope.
 
 	client := &http.Client{Timeout: 5 * time.Minute}
 	snapshotID := time.Now().UTC().Format("20060102T150405Z")

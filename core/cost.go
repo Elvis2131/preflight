@@ -113,8 +113,14 @@ var engineNameToAWS = map[string]string{
 func ComputeCost(ir *IR, table PriceTable, workloadRegions []string, prov Provenance) CostReport {
 	report := CostReport{SnapshotID: table.SnapshotID, HoursPerMonthAssumed: HoursPerMonthAssumption, Currency: "USD"}
 
+	nats := natGatewayIDs(ir)
 	for _, n := range ir.Nodes {
-		cc := costOneNode(n, table, workloadRegions, prov)
+		var cc ComponentCost
+		if nats[n.ID] {
+			cc = costNATGateway(n, table, workloadRegions, prov)
+		} else {
+			cc = costOneNode(n, table, workloadRegions, prov)
+		}
 		report.Components = append(report.Components, cc)
 		if cc.Decision == CostPriced {
 			report.PricedTotal += cc.MonthlyAmount
@@ -324,4 +330,63 @@ func ApplyCostBudget(report CostReport, requirements []Requirement) CostReport {
 	report.BudgetPriority = priority
 	report.BudgetExceeded = report.PricedTotal > amount
 	return report
+}
+
+// natGatewayIDs is the set of nodes that ARE NAT gateways, found structurally: the target of a
+// route whose target_kind is "nat_gateway" (ingest/routes.go) — never by a provider resource
+// name (I1).
+func natGatewayIDs(ir *IR) map[string]bool {
+	out := map[string]bool{}
+	for _, e := range ir.Edges {
+		if e.Type != EdgeTypeRoutesTo {
+			continue
+		}
+		if kind, _ := e.RawAttributes["target_kind"].(string); kind == "nat_gateway" {
+			out[e.To] = true
+		}
+	}
+	return out
+}
+
+// costNATGateway prices a NAT gateway's HOURLY charge (AmazonEC2 offer, productFamily "NAT Gateway",
+// usagetype "<REGION>-NatGateway-Hours", unit Hrs — ADR-006 amendment, 2026-10-02). It needs no
+// sizing: the price depends only on the region. Data processing is a usage charge and is priced
+// from declared traffic elsewhere (usage_cost.go). With no resolvable region, or no matching row,
+// it is cost_unknown with a stated reason — never a default, never zero.
+func costNATGateway(n Node, table PriceTable, workloadRegions []string, prov Provenance) ComponentCost {
+	base := ComponentCost{NodeID: n.ID, SnapshotID: table.SnapshotID, Currency: "USD", Provenance: prov}
+	region, source, why := ResolveComponentRegion(n.Sizing, workloadRegions)
+	if region == "" {
+		base.Decision, base.Reason = CostUnknown, why
+		return base
+	}
+	base.Region, base.RegionSource = region, source
+	var prices []float64
+	var rate string
+	for _, r := range regionTable(table, region).Rows {
+		if usageTypeIs(r, "NatGateway-Hours") && r.SKUAttributes["operation"] == "NatGateway" && r.Unit == "Hrs" {
+			prices = append(prices, r.Price)
+			rate = r.SKUAttributes["rate_description"]
+		}
+	}
+	switch {
+	case len(prices) == 0:
+		base.Decision, base.Reason = CostUnknown, "no NAT gateway hourly price row for region "+region+" in this snapshot (ADR-006 amendment: the snapshot stores AmazonEC2's NAT Gateway family only when it was fetched)"
+	case !allEqual(prices):
+		base.Decision, base.Reason = CostUnknown, "several NAT gateway hourly rows disagree on the rate for region "+region+" — refusing to pick one"
+	default:
+		base.Decision = CostPriced
+		base.MonthlyAmount = prices[0] * HoursPerMonthAssumption
+		base.SKURateCode = rate
+	}
+	return base
+}
+
+func allEqual(v []float64) bool {
+	for _, x := range v[1:] {
+		if x != v[0] {
+			return false
+		}
+	}
+	return true
 }

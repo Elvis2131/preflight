@@ -29,3 +29,25 @@ func TestFetch_LiveAWSELB_RealNetworkCall(t *testing.T) {
 	}
 	t.Logf("live fetch: %d entries, source=%s", len(entries), source)
 }
+
+// ADR-006 amendment: the real ~441-481 MB AmazonEC2 offer is streamed and only the NAT Gateway
+// family is kept. Needs ~450 MB of download; run deliberately:
+//
+//	go test -tags live_pricing ./cmd/runnerd/internal/pricingfetch/ -run EC2 -v
+func TestFetch_LiveAmazonEC2_NATOnly_RealNetworkCall(t *testing.T) {
+	client := &http.Client{Timeout: 10 * time.Minute}
+	start := time.Now()
+	entries, source, err := Fetch(client, "AmazonEC2", "eu-west-1")
+	if err != nil {
+		t.Fatalf("live EC2 fetch failed: %v", err)
+	}
+	if len(entries) < 4 {
+		t.Fatalf("got %d NAT rows, want at least the zonal hours/bytes pair", len(entries))
+	}
+	for _, e := range entries {
+		if e.SKUAttributes["product_family"] != "NAT Gateway" {
+			t.Fatalf("non-NAT row stored: %+v", e)
+		}
+	}
+	t.Logf("live EC2 fetch: %d NAT rows in %s; source=%s", len(entries), time.Since(start).Round(time.Second), source)
+}

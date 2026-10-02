@@ -80,6 +80,13 @@ type UsageBasedCostEntry struct {
 // required input (SteadyRPS, AvgRequestBytes, AvgResponseBytes) produces exactly one
 // not_assessable entry naming the missing field — never a partial guess.
 func ComputeUsageBasedCost(ir *IR, workload Workload, table PriceTable, killed map[string]bool) []UsageBasedCostEntry {
+	// A workload that declares exactly one region is priced in it: a snapshot may carry several
+	// regions (or just the one fetched), and "first row wins" is never acceptable. With several
+	// regions declared there is no single region to choose, and rows spanning regions stay
+	// cost_unknown (priceUsageEntry) rather than a guess.
+	if len(workload.Regions) == 1 {
+		table = regionTable(table, workload.Regions[0])
+	}
 	var out []UsageBasedCostEntry
 	for _, j := range workload.Journeys {
 		out = append(out, usageCostForJourney(ir, j, table, killed)...)
@@ -324,12 +331,29 @@ func tieredAmount(rows []PriceRow, gb float64) (float64, bool) {
 	return total, true
 }
 
-// usageTypeIs matches a usagetype exactly after dropping AWS's region prefix
-// ("EU-", "USE1-", or none for us-east-1) — so "RegionalNatGateway-Bytes" does not
-// match "NatGateway-Bytes".
+// usageTypeIs matches a usagetype exactly after dropping AWS's REGION prefix ("EU-", "USE1-", or
+// none for us-east-1) — so "RegionalNatGateway-Bytes" does not match "NatGateway-Bytes". Only a
+// genuine region prefix is dropped: short and all upper-case/digits. That matters: the real
+// eu-west-1 ELB file also holds "EU-Outposts-LCUUsage" (a $0 Outposts rate) and
+// "EU-ReservedLCUUsage", and neither is the on-demand "EU-LCUUsage".
 func usageTypeIs(r PriceRow, want string) bool {
 	u := r.SKUAttributes["usagetype"]
-	return u == want || strings.HasSuffix(u, "-"+want)
+	if i := strings.Index(u, "-"); i > 0 && isRegionPrefix(u[:i]) {
+		u = u[i+1:]
+	}
+	return u == want
+}
+
+func isRegionPrefix(s string) bool {
+	if len(s) == 0 || len(s) > 6 {
+		return false
+	}
+	for _, c := range s {
+		if (c < 'A' || c > 'Z') && (c < '0' || c > '9') {
+			return false
+		}
+	}
+	return true
 }
 
 // matchNATDataProcessingRow/matchInternetEgressRow/matchCrossAZTransferRow/

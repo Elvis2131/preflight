@@ -14,6 +14,7 @@ package pricingfetch
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -35,27 +36,43 @@ type regionIndex struct {
 	} `json:"regions"`
 }
 
-// offerFile is the real shape of one service/region's own price list file —
-// verified live against AWSELB/us-east-1, 2026-09-25 (ADR-006 §1).
-type offerFile struct {
-	Disclaimer string `json:"disclaimer"`
-	Version    string `json:"version"`
-	Products   map[string]struct {
-		SKU           string            `json:"sku"`
-		ProductFamily string            `json:"productFamily"`
-		Attributes    map[string]string `json:"attributes"`
-	} `json:"products"`
-	Terms struct {
-		OnDemand map[string]map[string]struct {
-			PriceDimensions map[string]struct {
-				Description  string            `json:"description"`
-				BeginRange   string            `json:"beginRange"`
-				EndRange     string            `json:"endRange"`
-				Unit         string            `json:"unit"`
-				PricePerUnit map[string]string `json:"pricePerUnit"`
-			} `json:"priceDimensions"`
-		} `json:"OnDemand"`
-	} `json:"terms"`
+// product, priceDimension and term are the real shapes inside one service/region's price list
+// file — verified live against AWSELB/us-east-1 (2026-09-25) and AmazonEC2/eu-west-1
+// (2026-10-02, ADR-006 amendment).
+type product struct {
+	SKU           string            `json:"sku"`
+	ProductFamily string            `json:"productFamily"`
+	Attributes    map[string]string `json:"attributes"`
+}
+
+type priceDimension struct {
+	Description  string            `json:"description"`
+	BeginRange   string            `json:"beginRange"`
+	EndRange     string            `json:"endRange"`
+	Unit         string            `json:"unit"`
+	PricePerUnit map[string]string `json:"pricePerUnit"`
+}
+
+type term struct {
+	PriceDimensions map[string]priceDimension `json:"priceDimensions"`
+}
+
+// productFamilyFilters names the services whose offer file is too large to keep whole, and the
+// ONLY product families of it that are stored (ADR-006 amendment, 2026-10-02). AmazonEC2's file
+// is ~441-481 MB per region; the one thing a current story needs from it is NAT Gateway pricing
+// (hourly and per-GB data processing), so the offer is STREAMED and everything outside that
+// product family is dropped as it is read — never held in memory, never stored. A service with
+// no entry here is stored whole, as before.
+var productFamilyFilters = map[string]string{
+	"AmazonEC2": "NAT Gateway",
+}
+
+// offer is the filtered content of one price list file.
+type offer struct {
+	Version      string
+	ProductsSeen int
+	Products     map[string]product
+	OnDemand     map[string]map[string]term
 }
 
 // httpClient is a minimal interface so tests can substitute a fake without a real
@@ -79,14 +96,15 @@ func Fetch(client httpClient, serviceCode, region string) ([]pricing.PriceEntry,
 		return nil, "", fmt.Errorf("pricingfetch: service %s has no price list for region %s", serviceCode, region)
 	}
 
-	offer, err := fetchOfferFile(client, entry.CurrentVersionURL)
+	family := productFamilyFilters[serviceCode]
+	off, err := fetchOffer(client, entry.CurrentVersionURL, family)
 	if err != nil {
 		return nil, "", err
 	}
 
 	var out []pricing.PriceEntry
-	for sku, product := range offer.Products {
-		terms, ok := offer.Terms.OnDemand[sku]
+	for sku, product := range off.Products {
+		terms, ok := off.OnDemand[sku]
 		if !ok {
 			continue // no on-demand pricing for this SKU — real, not an error
 		}
@@ -128,7 +146,10 @@ func Fetch(client httpClient, serviceCode, region string) ([]pricing.PriceEntry,
 		}
 		return rangeStart(a) < rangeStart(b)
 	})
-	source := fmt.Sprintf("AWS Bulk Price List API, %s %s", serviceCode, offer.Version)
+	source := fmt.Sprintf("AWS Bulk Price List API, %s %s", serviceCode, off.Version)
+	if family != "" {
+		source += fmt.Sprintf(" (streamed; stored only productFamily %q: %d of %d products)", family, len(off.Products), off.ProductsSeen)
+	}
 	return out, source, nil
 }
 
@@ -166,16 +187,166 @@ func fetchRegionIndex(client httpClient, serviceCode string) (regionIndex, error
 	return idx, nil
 }
 
-func fetchOfferFile(client httpClient, path string) (offerFile, error) {
-	body, err := get(client, bulkAPIBase+path)
+// fetchOffer streams one price list file and keeps only what the snapshot needs: every product
+// (family == "") or just those of one product family, with their on-demand terms. The body is
+// never read into memory whole — AmazonEC2's is hundreds of MB — and reading stops once the
+// on-demand terms are done (the much larger Reserved terms follow and are never needed).
+func fetchOffer(client httpClient, path, family string) (offer, error) {
+	resp, err := client.Get(bulkAPIBase + path)
 	if err != nil {
-		return offerFile{}, err
+		return offer{}, fmt.Errorf("pricingfetch: GET %s: %w", path, err)
 	}
-	var offer offerFile
-	if err := json.Unmarshal(body, &offer); err != nil {
-		return offerFile{}, fmt.Errorf("pricingfetch: parse offer file %s: %w", path, err)
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusOK {
+		return offer{}, fmt.Errorf("pricingfetch: GET %s: status %d", path, resp.StatusCode)
 	}
-	return offer, nil
+	off, err := decodeOffer(resp.Body, family)
+	if err != nil {
+		return offer{}, fmt.Errorf("pricingfetch: parse offer file %s: %w", path, err)
+	}
+	return off, nil
+}
+
+// decodeOffer walks the offer file's JSON token by token. The file's own order is products,
+// then terms; terms are only meaningful for products already seen, so a file with terms before
+// products is rejected loudly rather than silently mis-filtered.
+func decodeOffer(r io.Reader, family string) (offer, error) {
+	dec := json.NewDecoder(r)
+	off := offer{Products: map[string]product{}, OnDemand: map[string]map[string]term{}}
+	if err := expectDelim(dec, '{'); err != nil {
+		return off, err
+	}
+	sawProducts := false
+	for dec.More() {
+		key, err := readKey(dec)
+		if err != nil {
+			return off, err
+		}
+		switch key {
+		case "version":
+			if err := dec.Decode(&off.Version); err != nil {
+				return off, err
+			}
+		case "products":
+			sawProducts = true
+			if err := expectDelim(dec, '{'); err != nil {
+				return off, err
+			}
+			for dec.More() {
+				sku, err := readKey(dec)
+				if err != nil {
+					return off, err
+				}
+				var p product
+				if err := dec.Decode(&p); err != nil {
+					return off, err
+				}
+				off.ProductsSeen++
+				if family == "" || p.ProductFamily == family {
+					off.Products[sku] = p
+				}
+			}
+			if err := expectDelim(dec, '}'); err != nil {
+				return off, err
+			}
+		case "terms":
+			if !sawProducts {
+				return off, errors.New("terms precede products — cannot filter by product; refusing to guess")
+			}
+			return off, decodeTerms(dec, &off)
+		default:
+			if err := skipValue(dec); err != nil {
+				return off, err
+			}
+		}
+	}
+	return off, nil
+}
+
+// decodeTerms reads the "terms" object, keeping on-demand terms only for products kept, and
+// returns as soon as OnDemand is done.
+func decodeTerms(dec *json.Decoder, off *offer) error {
+	if err := expectDelim(dec, '{'); err != nil {
+		return err
+	}
+	for dec.More() {
+		kind, err := readKey(dec)
+		if err != nil {
+			return err
+		}
+		if kind != "OnDemand" {
+			if err := skipValue(dec); err != nil {
+				return err
+			}
+			continue
+		}
+		if err := expectDelim(dec, '{'); err != nil {
+			return err
+		}
+		for dec.More() {
+			sku, err := readKey(dec)
+			if err != nil {
+				return err
+			}
+			if _, keep := off.Products[sku]; !keep {
+				if err := skipValue(dec); err != nil {
+					return err
+				}
+				continue
+			}
+			var terms map[string]term
+			if err := dec.Decode(&terms); err != nil {
+				return err
+			}
+			off.OnDemand[sku] = terms
+		}
+		return nil // everything needed is read; the (much larger) Reserved terms are never needed
+	}
+	return nil
+}
+
+func expectDelim(dec *json.Decoder, want json.Delim) error {
+	tok, err := dec.Token()
+	if err != nil {
+		return err
+	}
+	if d, ok := tok.(json.Delim); !ok || d != want {
+		return fmt.Errorf("expected %q, got %v", want, tok)
+	}
+	return nil
+}
+
+func readKey(dec *json.Decoder) (string, error) {
+	tok, err := dec.Token()
+	if err != nil {
+		return "", err
+	}
+	k, ok := tok.(string)
+	if !ok {
+		return "", fmt.Errorf("expected an object key, got %v", tok)
+	}
+	return k, nil
+}
+
+// skipValue consumes one JSON value without buffering it.
+func skipValue(dec *json.Decoder) error {
+	depth := 0
+	for {
+		tok, err := dec.Token()
+		if err != nil {
+			return err
+		}
+		if d, ok := tok.(json.Delim); ok {
+			if d == '{' || d == '[' {
+				depth++
+			} else {
+				depth--
+			}
+		}
+		if depth == 0 {
+			return nil
+		}
+	}
 }
 
 func get(client httpClient, url string) ([]byte, error) {

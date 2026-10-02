@@ -9,6 +9,7 @@ package core_test
 
 import (
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"preflight/core"
@@ -188,5 +189,78 @@ func TestComputeCost_MissingSizing_IsCostUnknown(t *testing.T) {
 	}
 	if report.Components[0].Reason == "" {
 		t.Error("expected a real reason naming the missing sizing, got empty string")
+	}
+}
+
+// ---- NAT gateway hourly price (ADR-006 amendment, 2026-10-02) ----
+// Rows are REAL AmazonEC2 eu-west-1 NAT Gateway rows (offer 20260925174521), with the regional-NAT
+// and provisioned-bandwidth siblings that must not be mistaken for the zonal hourly rate.
+
+func natRows() []core.PriceRow {
+	return []core.PriceRow{
+		{Service: "AmazonEC2", Region: "eu-west-1", Unit: "Hrs", Price: 0.048, Currency: "USD", SKUAttributes: map[string]string{"usagetype": "EU-NatGateway-Hours", "operation": "NatGateway", "rate_description": "$0.048 per NAT Gateway Hour"}},
+		{Service: "AmazonEC2", Region: "eu-west-1", Unit: "Hrs", Price: 0.048, Currency: "USD", SKUAttributes: map[string]string{"usagetype": "EU-RegionalNatGateway-Hours", "operation": "RegionalNatGateway"}},
+		{Service: "AmazonEC2", Region: "eu-west-1", Unit: "Gbps-hrs", Price: 1.164, Currency: "USD", SKUAttributes: map[string]string{"usagetype": "EU-NatGateway-Prvd-Gbps", "operation": "NatGateway"}},
+		{Service: "AmazonEC2", Region: "eu-west-1", Unit: "GB", Price: 0.048, Currency: "USD", SKUAttributes: map[string]string{"usagetype": "EU-NatGateway-Bytes", "operation": "NatGateway"}},
+	}
+}
+
+func natComponents(t *testing.T, bundle string, rows []core.PriceRow) map[string]core.ComponentCost {
+	t.Helper()
+	awsReg, err := awsprovider.Load()
+	if err != nil {
+		t.Fatal(err)
+	}
+	result, err := ingest.Ingest(filepath.Join("..", "golden", bundle), awsReg, 1)
+	if err != nil || result.IR == nil {
+		t.Fatalf("Ingest %s: %v", bundle, err)
+	}
+	report := core.ComputeCost(result.IR, core.PriceTable{SnapshotID: "s", Rows: rows}, []string{"eu-west-1"}, core.NewProvenance(core.KindDerived, "test"))
+	out := map[string]core.ComponentCost{}
+	for _, c := range report.Components {
+		if strings.HasPrefix(c.NodeID, "aws_nat_gateway.") {
+			out[c.NodeID] = c
+		}
+	}
+	return out
+}
+
+// Hand-verified: $0.048/hr x 730 h = $35.04 per NAT gateway per month. NAT-per-AZ costs three times
+// one NAT — the resilience/cost trade-off the report can now show.
+func TestComputeCost_NATGateways_PricedFromRealRows(t *testing.T) {
+	nats := natComponents(t, "aws", natRows())
+	if len(nats) != 3 {
+		t.Fatalf("golden/aws has 3 NAT gateways (one per AZ); found %d: %v", len(nats), nats)
+	}
+	var total float64
+	for id, c := range nats {
+		if c.Decision != core.CostPriced || c.MonthlyAmount != 0.048*core.HoursPerMonthAssumption {
+			t.Errorf("%s = %+v, want priced at 0.048 x 730 = $35.04", id, c)
+		}
+		if !strings.Contains(c.SKURateCode, "NAT Gateway Hour") {
+			t.Errorf("%s: rate code %q should be the hourly row, not a sibling", id, c.SKURateCode)
+		}
+		total += c.MonthlyAmount
+	}
+	if total < 105.11 || total > 105.13 {
+		t.Errorf("NAT-per-AZ total = %.2f, want 3 x 35.04 = 105.12", total)
+	}
+}
+
+func TestComputeCost_NATGateways_UnpricedWithoutARow_IsUnknownNeverZero(t *testing.T) {
+	// Only the siblings that must not be mistaken for the zonal hourly rate.
+	rows := []core.PriceRow{natRows()[1], natRows()[2], natRows()[3]}
+	for id, c := range natComponents(t, "aws", rows) {
+		if c.Decision != core.CostUnknown || c.MonthlyAmount != 0 || !strings.Contains(c.Reason, "no NAT gateway hourly price row") {
+			t.Errorf("%s = %+v, want cost_unknown naming the missing row (a regional-NAT or provisioned-bandwidth row must not stand in)", id, c)
+		}
+	}
+	// A different region's row does not price an eu-west-1 NAT.
+	other := natRows()[:1]
+	other[0].Region = "us-east-1"
+	for id, c := range natComponents(t, "aws", other) {
+		if c.Decision != core.CostUnknown {
+			t.Errorf("%s priced from another region's row: %+v", id, c)
+		}
 	}
 }
