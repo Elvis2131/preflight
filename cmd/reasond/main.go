@@ -38,12 +38,12 @@ func main() {
 
 	var client *reason.Client
 	if key := os.Getenv("NVIDIA_API_KEY"); key != "" {
-		c, err := reason.NewClient(reason.Config{APIKey: key, Model: model, Reasoning: os.Getenv("PREFLIGHT_REASON_REASONING")})
+		c, err := reason.NewClient(reason.Config{APIKey: key, Model: model, Reasoning: reason.ProductReasoning(os.Getenv("PREFLIGHT_REASON_REASONING"))})
 		if err != nil {
 			log.Fatalf("reasond: %v", err)
 		}
 		client = c
-		log.Printf("reasond (P2): annotating with %s", model)
+		log.Printf("reasond (P2): annotating with %s (reasoning: %q; PC-160)", model, reason.ProductReasoning(os.Getenv("PREFLIGHT_REASON_REASONING")))
 	} else {
 		log.Println("reasond (P2): NVIDIA_API_KEY is not set — /v1/annotate will answer 503 degraded (no_api_key); the product keeps working without narratives")
 	}

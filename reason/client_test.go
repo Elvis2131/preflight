@@ -189,3 +189,20 @@ func TestReasoningMode_WireFormat(t *testing.T) {
 		t.Error("an unknown reasoning mode must be a configuration error")
 	}
 }
+
+// PC-160: the operator-facing setting resolves to the measured product default.
+func TestProductReasoning(t *testing.T) {
+	for in, want := range map[string]string{
+		"":                       ReasoningLowEffort,
+		ReasoningProviderDefault: ReasoningDefault,
+		ReasoningOff:             ReasoningOff,
+		ReasoningLowEffort:       ReasoningLowEffort,
+	} {
+		if got := ProductReasoning(in); got != want {
+			t.Errorf("ProductReasoning(%q) = %q, want %q", in, got, want)
+		}
+	}
+	if _, err := NewClient(Config{APIKey: testKey, Model: "m", Reasoning: ProductReasoning("nonsense")}); err == nil {
+		t.Error("a mistyped setting must be a start-up error, not silently the default")
+	}
+}

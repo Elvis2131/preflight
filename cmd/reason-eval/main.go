@@ -102,7 +102,7 @@ func main() {
 	out := flag.String("out", "docs/eval/reason-eval.json", "where to write the JSON report")
 	model := flag.String("model", "nvidia/nemotron-3-super-120b-a12b", "model ID")
 	fixture := flag.String("findings", "golden/fixtures/aws.findings.json", "findings to annotate")
-	reasoning := flag.String("reasoning", "", "reasoning mode: \"\" (provider default), off, or low_effort (PC-160)")
+	reasoning := flag.String("reasoning", "", "reasoning mode: low_effort (the product default, PC-160 — also what \"\" means), off, or provider_default")
 	rescore := flag.String("rescore", "", "recompute the scored fields of an existing report from its saved narratives (no model call, no key needed)")
 	checkDetection := flag.String("check-detection", "", "read-only: report which saved narratives overstate an unknown detection state (never rewrites the report)")
 	flag.Parse()
@@ -119,7 +119,7 @@ func main() {
 	if key == "" {
 		log.Fatal("NVIDIA_API_KEY is not set")
 	}
-	client, err := reason.NewClient(reason.Config{APIKey: key, Model: *model, Reasoning: *reasoning})
+	client, err := reason.NewClient(reason.Config{APIKey: key, Model: *model, Reasoning: reason.ProductReasoning(*reasoning)})
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -153,7 +153,7 @@ func main() {
 		byID[f.ID] = f
 	}
 	r := evalReport{
-		Model: *model, Reasoning: *reasoning, RanAt: time.Now().UTC().Format(time.RFC3339), Findings: len(findings),
+		Model: *model, Reasoning: reason.ProductReasoning(*reasoning), RanAt: time.Now().UTC().Format(time.RFC3339), Findings: len(findings),
 		Accepted: len(rep.Annotations), Rejected: rep.Rejected, FindingsUnchanged: bytes.Equal(before, after),
 		InjectionFindingID: inj.ID, Usage: rep.Usage, ElapsedSeconds: time.Since(start).Seconds(),
 		FabricatedLikelihood: []string{}, DetectionOverstated: []string{},

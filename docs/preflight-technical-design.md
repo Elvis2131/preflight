@@ -297,7 +297,7 @@ measurable target and a verification method — an NFR that cannot be tested is 
 | NFR-6 | `/assess` deterministic payload latency, golden reference architecture (~40 nodes) | p95 < 5s, p99 < 8s | It is an authoring-loop call; beyond ~5s engineers and agents stop using it mid-edit |
 | NFR-7 | `/simulate` single fault set | p95 < 1s | Interactive "what if" exploration |
 | NFR-8 | Parse + IR construction | < 1.5s for 200 resources | Leaves budget for analysis inside NFR-6 |
-| NFR-9 | LLM narrative first token | < 3s after deterministic payload | Streamed, so never blocks NFR-6 |
+| NFR-9 | LLM narrative first annotation | median ≤ 4s and p90 ≤ 8s after the deterministic payload (low reasoning effort, free tier, golden fixture, ≥ 15 live runs) | Streamed, so never blocks NFR-6. **Restated by PC-160 (2026-10-02); the original target was "first token < 3s".** Measured: 3s was met by 13 of 25 runs; median 2.7s, p90 7.1s, max 7.4s. See ADR-005 and `docs/eval/nfr9-first-annotation-latency.md`. A paid tier or another model may justify tightening it; that needs a new measurement, not an assumption |
 | NFR-10 | Graph algorithm complexity ceiling | Min-cut ≤ O(V·E) on ≤500-node graphs | Bounds worst case for realistic estates without premature optimisation |
 
 ### 3.3 Reliability and operability

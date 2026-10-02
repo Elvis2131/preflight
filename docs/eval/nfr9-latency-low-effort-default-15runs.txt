@@ -1,0 +1,15 @@
+{"run": 1, "assess_s": 0.261, "first_event": "event: annotation @ 1.08s", "first_annotation_s": 1.08}
+{"run": 2, "assess_s": 0.212, "first_event": "event: annotation @ 7.40s", "first_annotation_s": 7.4}
+{"run": 3, "assess_s": 0.199, "first_event": "event: annotation @ 1.25s", "first_annotation_s": 1.25}
+{"run": 4, "assess_s": 0.2, "first_event": "event: annotation @ 1.46s", "first_annotation_s": 1.46}
+{"run": 5, "assess_s": 0.202, "first_event": "event: annotation @ 2.03s", "first_annotation_s": 2.03}
+{"run": 6, "assess_s": 0.204, "first_event": "event: annotation @ 4.95s", "first_annotation_s": 4.95}
+{"run": 7, "assess_s": 0.209, "first_event": "event: annotation @ 3.04s", "first_annotation_s": 3.04}
+{"run": 8, "assess_s": 0.182, "first_event": "event: annotation @ 7.37s", "first_annotation_s": 7.37}
+{"run": 9, "assess_s": 0.197, "first_event": "event: annotation @ 1.42s", "first_annotation_s": 1.42}
+{"run": 10, "assess_s": 0.221, "first_event": "event: annotation @ 3.53s", "first_annotation_s": 3.53}
+{"run": 11, "assess_s": 0.182, "first_event": "event: annotation @ 1.88s", "first_annotation_s": 1.88}
+{"run": 12, "assess_s": 0.196, "first_event": "event: annotation @ 3.58s", "first_annotation_s": 3.58}
+{"run": 13, "assess_s": 0.204, "first_event": "event: annotation @ 7.07s", "first_annotation_s": 7.07}
+{"run": 14, "assess_s": 0.192, "first_event": "event: annotation @ 5.01s", "first_annotation_s": 5.01}
+{"run": 15, "assess_s": 0.197, "first_event": "event: annotation @ 5.66s", "first_annotation_s": 5.66}

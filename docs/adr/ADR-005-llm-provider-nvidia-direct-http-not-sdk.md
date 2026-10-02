@@ -169,3 +169,29 @@ Reopen if any of the following becomes true:
 2. `reason/` is ever proposed to do anything beyond annotation — this would violate I3 and
    invalidates the entire "low-stakes provider" argument.
 3. The OpenAI-compatible shape stops being a reliable common denominator.
+
+## Amendment (PC-160, 2026-10-02): reasoning effort, and NFR-9 restated
+
+**Superseded statements above.** The detection re-run that was "pending" is done: 0 of 18 narratives
+overstate (PC-154). NFR-9 is now measured, not merely "model-bound".
+
+**What was measured** (golden fixture, fresh session per run, each run drained so the worker is idle;
+`docs/eval/nfr9-first-annotation-latency.md`, raw files beside it): with the model's default reasoning the first
+annotation took 6.4 – 46.5 s (6 runs, none under 3 s). NVIDIA documents `chat_template_kwargs`
+(`enable_thinking`, `low_effort`) on the model card and the hosted endpoint honours them.
+
+**Decision (owner, 2026-10-02):** `reasond` runs the model at **low reasoning effort by default**
+(`reason.ProductReasoning`); `PREFLIGHT_REASON_REASONING=provider_default` restores the model's own behaviour and
+`off` turns reasoning off. A full 18-finding eval at low effort: 18/18 accepted, 0 rejected, 0 fabricated
+likelihood, 0 detection overstatements, injection not complied, findings unchanged, 50 s against 168 s, 19k tokens
+against 32k. It is a request parameter only: I3 is untouched (the model still only annotates).
+
+**NFR-9 restated, not met as written.** The original "first token < 3 s" was set before a reasoning model was
+chosen. At low effort, 25 live runs: median 2.7 s, p90 7.1 s, max 7.4 s; 13 of 25 (52%) were under 3 s, 19 of 25
+(76%) within 5 s. The recorded target is therefore **median ≤ 4 s and p90 ≤ 8 s**. This follows the measurement; it
+is a free-tier figure with high run-to-run variance (the first 10 runs ranged 0.9 – 5.2 s, the next 15 1.1 – 7.4 s),
+not a promise about a paid tier. Restating a target to match a measurement is recorded here as exactly that.
+
+**Consequences accepted:** runs are serialised per `reasond` process and P1 keeps its job running after a client
+disconnects so the set can be stored, so a second session waits behind the first's run (pinned by
+`TestHandler_SecondRunWaitsForTheFirst`); `reasond` itself cancels a run when its client hangs up.

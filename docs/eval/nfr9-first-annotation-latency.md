@@ -91,3 +91,13 @@ serialised worker. That is by design; the consequence is head-of-line blocking b
 2. Restate only: first stream event (`started`) as the 3 s figure, first annotation separate. Cheapest, but the
    `started` event carries no content, so it would meet the letter and not the intent.
 3. Keep 3 s and change model/hosting (paid tier, smaller non-reasoning model). Needs its own evaluation.
+
+## Decision applied (PC-160)
+`low_effort` is now the `reasond` default. 15 further runs with the default configuration and no override
+(`nfr9-latency-low-effort-default-15runs.txt`): 1.08, 1.25, 1.42, 1.46, 1.88, 2.03, 3.04, 3.53, 3.58, 4.95, 5.01,
+5.66, 7.07, 7.37, 7.40 s (median 3.5 s, 6 of 15 under 3 s, 10 of 15 within 5 s, all within 8 s). Combined with the
+earlier 10 low-effort runs: 25 runs, median 2.7 s, p90 7.1 s, max 7.4 s, 13 of 25 under 3 s, 19 of 25 within 5 s.
+
+My recommendation of "within 5 s for 90% of runs" did NOT survive the data (76%), so it was not adopted. NFR-9 now
+reads median ≤ 4 s and p90 ≤ 8 s (technical design §3, ADR-005 amendment), a description of what this free tier
+delivers, set from the measurement, with the original 3 s target's result (52% of runs) stated beside it.

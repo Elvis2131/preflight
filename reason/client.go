@@ -36,7 +36,26 @@ const (
 	ReasoningDefault   = ""
 	ReasoningOff       = "off"
 	ReasoningLowEffort = "low_effort"
+
+	// ReasoningProviderDefault is the operator-facing spelling of ReasoningDefault: leave the
+	// model's own reasoning behaviour untouched.
+	ReasoningProviderDefault = "provider_default"
 )
+
+// ProductReasoning resolves the operator's setting (an env var or flag) to a Config.Reasoning value.
+// PC-160: with nothing set, the product runs the model at low reasoning effort. Measured on the
+// hosted endpoint, that took the median first annotation from ~9 s to 2.4 s and a whole 18-finding run
+// from 168 s to 50 s with every scored check unchanged (docs/eval/nfr9-first-annotation-latency.md).
+// "provider_default" restores the model's own behaviour.
+func ProductReasoning(setting string) string {
+	switch setting {
+	case "":
+		return ReasoningLowEffort
+	case ReasoningProviderDefault:
+		return ReasoningDefault
+	}
+	return setting
+}
 
 // Client is a minimal chat-completions client over net/http. No SDK (ADR-005).
 type Client struct {
