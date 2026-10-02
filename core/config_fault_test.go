@@ -417,7 +417,7 @@ func TestGolden_ConfigurationBlastSurface_Checkout_HandVerified(t *testing.T) {
 		f = &c
 	}
 	value, _ := f.Outcome.Value.(string)
-	if f.Outcome.State != core.AssessmentStateAssessed || value != "5 of 7 real rules on this journey's path would break it if changed alone" {
+	if f.Outcome.State != core.AssessmentStateAssessed || value != "5 of 7 rules on the security groups and NACLs along this journey's path (every rule on those groups, not only the ones this journey uses) would break it if changed alone" {
 		t.Errorf("finding outcome = %+v", f.Outcome)
 	}
 }

@@ -1014,7 +1014,7 @@
     },
     "evidence": [
       {
-        "description": "5 of 7 real rules on this journey's own path, if removed alone, would break it"
+        "description": "5 of 7 rules on the security groups and NACLs along this journey's path (every rule on those groups), if removed alone, would break it"
       },
       {
         "node_id": "aws_security_group.alb",
@@ -1044,7 +1044,7 @@
     ],
     "outcome": {
       "state": "assessed",
-      "value": "5 of 7 real rules on this journey's path would break it if changed alone",
+      "value": "5 of 7 rules on the security groups and NACLs along this journey's path (every rule on those groups, not only the ones this journey uses) would break it if changed alone",
       "provenance": {
         "kind": "derived",
         "source": "core/config_blast_surface:checkout"
@@ -1173,7 +1173,7 @@
     },
     "evidence": [
       {
-        "description": "1 of 4 real rules on this journey's own path, if removed alone, would break it"
+        "description": "1 of 4 rules on the security groups and NACLs along this journey's path (every rule on those groups), if removed alone, would break it"
       },
       {
         "node_id": "aws_security_group.workload",
@@ -1183,7 +1183,7 @@
     ],
     "outcome": {
       "state": "assessed",
-      "value": "1 of 4 real rules on this journey's path would break it if changed alone",
+      "value": "1 of 4 rules on the security groups and NACLs along this journey's path (every rule on those groups, not only the ones this journey uses) would break it if changed alone",
       "provenance": {
         "kind": "derived",
         "source": "core/config_blast_surface:payment-rail"

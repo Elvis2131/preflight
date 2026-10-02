@@ -57,10 +57,10 @@ func configurationBlastSurfaceFinding(ir *IR, j DeclaredJourney) Finding {
 			capNote = " (search capped at " + strconv.Itoa(ConfigBlastSurfaceCap) + " candidate rules — more may exist)"
 		}
 		if len(surface.BreakingChanges) > 0 {
-			value = strconv.Itoa(len(surface.BreakingChanges)) + " of " + strconv.Itoa(surface.RulesConsidered) + " real rules on this journey's path would break it if changed alone" + capNote
+			value = strconv.Itoa(len(surface.BreakingChanges)) + " of " + strconv.Itoa(surface.RulesConsidered) + " rules on the security groups and NACLs along this journey's path (every rule on those groups, not only the ones this journey uses) would break it if changed alone" + capNote
 			evidence = journeyBlastSurfaceEvidence(surface)
 		} else {
-			value = "no single rule change among the " + strconv.Itoa(surface.RulesConsidered) + " real rules on this journey's path breaks it" + capNote
+			value = "no single rule change among the " + strconv.Itoa(surface.RulesConsidered) + " rules on the security groups and NACLs along this journey's path breaks it" + capNote
 			evidence = []EvidenceRef{{Description: value}}
 		}
 	}
@@ -100,7 +100,7 @@ func configurationBlastSurfaceFinding(ir *IR, j DeclaredJourney) Finding {
 // one), plus a summary EvidenceRef naming the total/cap. Finding.Evidence requires at
 // least one entry; this always produces at least the summary.
 func journeyBlastSurfaceEvidence(surface ConfigBlastSurfaceResult) []EvidenceRef {
-	summary := strconv.Itoa(len(surface.BreakingChanges)) + " of " + strconv.Itoa(surface.RulesConsidered) + " real rules on this journey's own path, if removed alone, would break it"
+	summary := strconv.Itoa(len(surface.BreakingChanges)) + " of " + strconv.Itoa(surface.RulesConsidered) + " rules on the security groups and NACLs along this journey's path (every rule on those groups), if removed alone, would break it"
 	if surface.Capped {
 		summary += " (search capped at " + strconv.Itoa(ConfigBlastSurfaceCap) + " candidate rules — more may exist)"
 	}

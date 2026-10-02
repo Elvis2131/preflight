@@ -47,6 +47,18 @@ import (
 // (steady_rps) instead of a per-hour one.
 const SecondsPerMonthAssumption = HoursPerMonthAssumption * 3600
 
+// bytesPerBillingGB is the size of the "GB" the byte-based price rows are quoted in. It is an
+// ASSUMPTION, stated rather than hidden: AWS documents GB = 2^30 bytes for S3 storage
+// (docs.aws.amazon.com/AmazonS3/latest/userguide/aws-usage-report-understand.html) and for
+// EBS (aws.amazon.com/ebs/pricing), but no AWS page checked (VPC pricing, EC2 on-demand
+// pricing) defines GB for data transfer or NAT gateway data processing. A decimal GB (10^9)
+// would make every byte-based figure ~7.4% HIGHER; the choice is surfaced in the assumed
+// provenance reason of every usage entry, never silent.
+const bytesPerBillingGB = 1024 * 1024 * 1024
+
+// billingGBAssumptionNote is appended to the usage conversion's assumed reason.
+const billingGBAssumptionNote = "; GB is taken as 2^30 bytes (documented by AWS for S3 and EBS; not found documented for data transfer or NAT processing, so unconfirmed there — a decimal GB would make these figures ~7.4%% higher)"
+
 // UsageCostKind names which real AWS usage-based billing dimension one entry prices.
 type UsageCostKind string
 
@@ -139,11 +151,11 @@ func missingUsageCostInput(j DeclaredJourney) string {
 func monthlyGigabytes(j DeclaredJourney, snapshotID string) (float64, Provenance) {
 	prov := NewProvenance(KindAssumed, fmt.Sprintf("workload.yaml:journeys[%s].steady_rps", j.ID))
 	prov.Reason = fmt.Sprintf(
-		"monthly volume assumed as steady_rps (%.4g) x (avg_request_bytes + avg_response_bytes) x %.0f seconds/month (the same %.0f-hours/month convention HoursPerMonthAssumption already uses, in seconds)",
+		"monthly volume assumed as steady_rps (%.4g) x (avg_request_bytes + avg_response_bytes) x %.0f seconds/month (the same %.0f-hours/month convention HoursPerMonthAssumption already uses, in seconds)"+billingGBAssumptionNote,
 		*j.SteadyRPS, SecondsPerMonthAssumption, HoursPerMonthAssumption)
 	bytesPerRequest := *j.AvgRequestBytes + *j.AvgResponseBytes
 	totalBytes := *j.SteadyRPS * bytesPerRequest * SecondsPerMonthAssumption
-	gb := totalBytes / (1024 * 1024 * 1024)
+	gb := totalBytes / bytesPerBillingGB
 	return gb, prov
 }
 
@@ -152,7 +164,7 @@ func monthlyGigabytes(j DeclaredJourney, snapshotID string) (float64, Provenance
 type egressVolumes struct{ RequestGB, ResponseGB float64 }
 
 func directionalEgressGB(j DeclaredJourney) egressVolumes {
-	perSecond := *j.SteadyRPS * SecondsPerMonthAssumption / (1024 * 1024 * 1024)
+	perSecond := *j.SteadyRPS * SecondsPerMonthAssumption / bytesPerBillingGB
 	return egressVolumes{RequestGB: perSecond * *j.AvgRequestBytes, ResponseGB: perSecond * *j.AvgResponseBytes}
 }
 

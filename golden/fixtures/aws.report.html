@@ -700,10 +700,10 @@ code{background:#f1f5f9;padding:0 .2rem}
 <p>Per-dimension counts only — no composite architecture score.</p>
 <h3>Scorecard status counts</h3>
 <table><tr><th>Status</th><th>Count</th></tr>
-<tr><td>1 of 4 real rules on this journey&#39;s path would break it if changed alone</td><td>1</td></tr>
+<tr><td>1 of 4 rules on the security groups and NACLs along this journey&#39;s path (every rule on those groups, not only the ones this journey uses) would break it if changed alone</td><td>1</td></tr>
 <tr><td>2 component(s) affected</td><td>1</td></tr>
 <tr><td>4 component(s) affected</td><td>1</td></tr>
-<tr><td>5 of 7 real rules on this journey&#39;s path would break it if changed alone</td><td>1</td></tr>
+<tr><td>5 of 7 rules on the security groups and NACLs along this journey&#39;s path (every rule on those groups, not only the ones this journey uses) would break it if changed alone</td><td>1</td></tr>
 <tr><td>consistent: declared public, and a real default route to an internet gateway confirms it</td><td>3</td></tr>
 <tr><td>not_assessable</td><td>1</td></tr>
 <tr><td>satisfied</td><td>9</td></tr>
@@ -988,7 +988,7 @@ satisfied
 <span class="reason">not_assessable: impact dimension not evaluated by this check</span>
 </td>
 <td>
-5 of 7 real rules on this journey&#39;s path would break it if changed alone
+5 of 7 rules on the security groups and NACLs along this journey&#39;s path (every rule on those groups, not only the ones this journey uses) would break it if changed alone
 </td>
 </tr><tr>
 <td><code>finding.resilience.configuration-blast-surface.settlement</code><br>Journey &#34;Settlement: EKS -&gt; SQS&#34;: configuration blast surface (single rule changes that would break it)</td>
@@ -1008,7 +1008,7 @@ satisfied
 <span class="reason">not_assessable: impact dimension not evaluated by this check</span>
 </td>
 <td>
-1 of 4 real rules on this journey&#39;s path would break it if changed alone
+1 of 4 rules on the security groups and NACLs along this journey&#39;s path (every rule on those groups, not only the ones this journey uses) would break it if changed alone
 </td>
 </tr></table>
 
