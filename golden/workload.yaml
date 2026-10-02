@@ -68,6 +68,15 @@ journeys:
       - aws_db_instance.payments
     protocol: tcp
     port: 443
+    # PC-152: each hop uses its own port (the journey's port, 443, is the default for any
+    # hop not listed). internet -> ALB is HTTPS on 443; the ALB reaches the workload on
+    # 8080 (security.tf workload_from_alb); the workload reaches the database on 5432
+    # (security.tf workload_to_database). Without these the whole path was traced on 443
+    # and was blocked at the workload's security group by the declaration, not the design.
+    hop_ports:
+      aws_lb.payments: 443
+      aws_eks_cluster.payments: 8080
+      aws_db_instance.payments: 5432
     criticality: tier1
     peak_rps: 800
     steady_rps: 500

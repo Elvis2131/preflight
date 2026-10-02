@@ -32,6 +32,9 @@ export interface DeclaredJourney {
   criticality: string;
   peak_rps?: number;
   steady_rps?: number;
+  // PC-152: optional per-hop port overrides keyed by the hop's destination (the exact path
+  // element); a hop with no entry uses `port`. Not yet authorable in the form.
+  hop_ports?: Record<string, number>;
 }
 
 export interface Workload {

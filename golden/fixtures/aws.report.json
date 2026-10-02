@@ -6,8 +6,9 @@
     "scorecard_status_counts": {
       "2 component(s) affected": 1,
       "4 component(s) affected": 1,
+      "5 of 7 real rules on this journey's path would break it if changed alone": 1,
       "consistent: declared public, and a real default route to an internet gateway confirms it": 3,
-      "not_assessable": 2,
+      "not_assessable": 1,
       "satisfied": 9
     },
     "compliance_catalog_counts": {
@@ -1694,12 +1695,37 @@
         },
         "evidence": [
           {
-            "description": "journey \"checkout\" does not structurally flow today (Blocked at aws_eks_cluster.payments (sg_dest_ingress): no rule matched (implicit deny — AWS security groups support allow rules only)) — a configuration blast surface is not meaningful without a working baseline"
+            "description": "5 of 7 real rules on this journey's own path, if removed alone, would break it"
+          },
+          {
+            "node_id": "aws_security_group.alb",
+            "description": "removing this rule (ingress tcp) alone breaks the journey",
+            "attribute": "security_group_rules"
+          },
+          {
+            "node_id": "aws_security_group.alb",
+            "description": "removing this rule (egress tcp) alone breaks the journey",
+            "attribute": "security_group_rules"
+          },
+          {
+            "node_id": "aws_security_group.workload",
+            "description": "removing this rule (ingress tcp) alone breaks the journey",
+            "attribute": "security_group_rules"
+          },
+          {
+            "node_id": "aws_security_group.workload",
+            "description": "removing this rule (egress tcp) alone breaks the journey",
+            "attribute": "security_group_rules"
+          },
+          {
+            "node_id": "aws_security_group.database",
+            "description": "removing this rule (ingress tcp) alone breaks the journey",
+            "attribute": "security_group_rules"
           }
         ],
         "outcome": {
-          "state": "not_assessable",
-          "reason": "journey \"checkout\" does not structurally flow today (Blocked at aws_eks_cluster.payments (sg_dest_ingress): no rule matched (implicit deny — AWS security groups support allow rules only)) — a configuration blast surface is not meaningful without a working baseline",
+          "state": "assessed",
+          "value": "5 of 7 real rules on this journey's path would break it if changed alone",
           "provenance": {
             "kind": "derived",
             "source": "core/config_blast_surface:checkout"
@@ -1780,7 +1806,7 @@
     "flows": [
       {
         "JourneyID": "checkout",
-        "Flows": false,
+        "Flows": true,
         "Hops": [
           {
             "From": "internet",
@@ -1792,9 +1818,16 @@
           {
             "From": "aws_lb.payments",
             "To": "aws_eks_cluster.payments",
-            "Allowed": false,
-            "Reason": "Blocked at aws_eks_cluster.payments (sg_dest_ingress): no rule matched (implicit deny — AWS security groups support allow rules only)",
+            "Allowed": true,
+            "Reason": "Allowed: aws_lb.payments -\u003e aws_eks_cluster.payments:8080/tcp reaches its destination.",
             "GroupIndex": 2
+          },
+          {
+            "From": "aws_eks_cluster.payments",
+            "To": "aws_db_instance.payments",
+            "Allowed": true,
+            "Reason": "Allowed: aws_eks_cluster.payments -\u003e aws_db_instance.payments:5432/tcp reaches its destination.",
+            "GroupIndex": 3
           }
         ],
         "ReachedByGroup": [
@@ -1804,10 +1837,15 @@
           [
             "aws_lb.payments"
           ],
-          []
+          [
+            "aws_eks_cluster.payments"
+          ],
+          [
+            "aws_db_instance.payments"
+          ]
         ],
-        "BlockedAt": "aws_eks_cluster.payments",
-        "BlockedReason": "Blocked at aws_eks_cluster.payments (sg_dest_ingress): no rule matched (implicit deny — AWS security groups support allow rules only)"
+        "BlockedAt": "",
+        "BlockedReason": ""
       },
       {
         "JourneyID": "settlement",
@@ -1832,6 +1870,26 @@
       }
     ],
     "load": [
+      {
+        "NodeID": "aws_db_instance.payments",
+        "NodeType": "managed_database",
+        "OfferedRPS": 800,
+        "CapacityKey": "managed_database_rps",
+        "Capacity": 300,
+        "Utilization": 2.6666666666666665,
+        "NotAssessableReason": "",
+        "LoadDivisionNote": ""
+      },
+      {
+        "NodeID": "aws_eks_cluster.payments",
+        "NodeType": "container_workload",
+        "OfferedRPS": 800,
+        "CapacityKey": "container_workload_rps",
+        "Capacity": 500,
+        "Utilization": 1.6,
+        "NotAssessableReason": "",
+        "LoadDivisionNote": ""
+      },
       {
         "NodeID": "aws_lb.payments",
         "NodeType": "load_balancer",

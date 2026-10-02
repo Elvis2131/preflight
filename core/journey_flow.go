@@ -178,6 +178,7 @@ func computeJourneyPathFlow(ir *IR, j DeclaredJourney, killed map[string]bool) J
 		var nextReached []string
 		reasonFor := map[string]string{}
 
+		hopPort := j.PortForHop(j.Path[i+1])
 		for _, d := range sortedStrings(groups[i+1]) {
 			if killed[d] {
 				reason := "component " + d + " is unreachable under the declared fault"
@@ -201,9 +202,9 @@ func computeJourneyPathFlow(ir *IR, j DeclaredJourney, killed map[string]bool) J
 			for _, s := range sources {
 				var trace Trace
 				if s == JourneyInternetSentinel {
-					trace = BuildTrace(ir, "", d, "0.0.0.0/0", j.Protocol, j.Port)
+					trace = BuildTrace(ir, "", d, "0.0.0.0/0", j.Protocol, hopPort)
 				} else {
-					trace = BuildTrace(ir, s, d, "", j.Protocol, j.Port)
+					trace = BuildTrace(ir, s, d, "", j.Protocol, hopPort)
 				}
 				result.Hops = append(result.Hops, JourneyHopFlow{From: s, To: d, Allowed: trace.Allowed, Reason: trace.Concise, GroupIndex: i + 1})
 				lastSource, lastReason = s, trace.Concise
@@ -224,7 +225,7 @@ func computeJourneyPathFlow(ir *IR, j DeclaredJourney, killed map[string]bool) J
 			// rather than once per (source, destination) pair — is not a shortcut,
 			// it is the actual real answer.
 			if isFinalTransition && j.IAMCheck != nil {
-				iamTrace := BuildTraceWithIAM(ir, lastSource, d, j.IAMCheck.PrincipalID, j.IAMCheck.Action, j.IAMCheck.ResourceARN, "", j.Protocol, j.Port)
+				iamTrace := BuildTraceWithIAM(ir, lastSource, d, j.IAMCheck.PrincipalID, j.IAMCheck.Action, j.IAMCheck.ResourceARN, "", j.Protocol, hopPort)
 				if !iamTrace.Allowed {
 					result.Hops = append(result.Hops, JourneyHopFlow{From: lastSource, To: d, Allowed: false, Reason: iamTrace.Concise, GroupIndex: i + 1})
 					reasonFor[d] = iamTrace.Concise

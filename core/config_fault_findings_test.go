@@ -4,12 +4,15 @@ package core_test
 // four-dimension values and flow into delta/report."
 
 import (
+	"strings"
 	"testing"
 
 	"preflight/core"
 )
 
-func TestBuildConfigurationBlastSurfaceFindings_UnsatisfiedWhenFragile(t *testing.T) {
+// The blast surface is reported as a count, never as a verdict: a working least-privilege
+// journey always has load-bearing rules, and that must not read as 'unsatisfied'.
+func TestBuildConfigurationBlastSurfaceFindings_DescriptiveNotAVerdict(t *testing.T) {
 	ir := buildFlowTestIR(true, true)
 	workload := core.Workload{
 		Journeys: []core.DeclaredJourney{
@@ -22,8 +25,14 @@ func TestBuildConfigurationBlastSurfaceFindings_UnsatisfiedWhenFragile(t *testin
 	if f == nil {
 		t.Fatal("expected a configuration-blast-surface finding for j1")
 	}
-	if f.Outcome.Value != string(core.ComplianceUnsatisfied) {
-		t.Fatalf("Outcome.Value = %q, want %q", f.Outcome.Value, core.ComplianceUnsatisfied)
+	value, _ := f.Outcome.Value.(string)
+	if f.Outcome.State != core.AssessmentStateAssessed || !strings.Contains(value, "would break it if changed alone") {
+		t.Fatalf("Outcome = %+v, want an assessed, descriptive count of the rules that would break the journey", f.Outcome)
+	}
+	for _, verdict := range []string{"unsatisfied", "satisfied", "partial"} {
+		if value == verdict {
+			t.Fatalf("Outcome.Value = %q: a blast surface must never be a pass/fail verdict (a working design has load-bearing rules)", verdict)
+		}
 	}
 	if f.Dimensions.Detection != core.DetectionUnknown {
 		t.Fatalf("Detection = %q, want %q — the Card's own explicit instruction: a config change isn't detected by redundancy", f.Dimensions.Detection, core.DetectionUnknown)

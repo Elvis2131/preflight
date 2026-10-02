@@ -1083,12 +1083,37 @@
     },
     "evidence": [
       {
-        "description": "journey \"checkout\" does not structurally flow today (Blocked at aws_eks_cluster.payments (sg_dest_ingress): no rule matched (implicit deny — AWS security groups support allow rules only)) — a configuration blast surface is not meaningful without a working baseline"
+        "description": "5 of 7 real rules on this journey's own path, if removed alone, would break it"
+      },
+      {
+        "node_id": "aws_security_group.alb",
+        "description": "removing this rule (ingress tcp) alone breaks the journey",
+        "attribute": "security_group_rules"
+      },
+      {
+        "node_id": "aws_security_group.alb",
+        "description": "removing this rule (egress tcp) alone breaks the journey",
+        "attribute": "security_group_rules"
+      },
+      {
+        "node_id": "aws_security_group.workload",
+        "description": "removing this rule (ingress tcp) alone breaks the journey",
+        "attribute": "security_group_rules"
+      },
+      {
+        "node_id": "aws_security_group.workload",
+        "description": "removing this rule (egress tcp) alone breaks the journey",
+        "attribute": "security_group_rules"
+      },
+      {
+        "node_id": "aws_security_group.database",
+        "description": "removing this rule (ingress tcp) alone breaks the journey",
+        "attribute": "security_group_rules"
       }
     ],
     "outcome": {
-      "state": "not_assessable",
-      "reason": "journey \"checkout\" does not structurally flow today (Blocked at aws_eks_cluster.payments (sg_dest_ingress): no rule matched (implicit deny — AWS security groups support allow rules only)) — a configuration blast surface is not meaningful without a working baseline",
+      "state": "assessed",
+      "value": "5 of 7 real rules on this journey's path would break it if changed alone",
       "provenance": {
         "kind": "derived",
         "source": "core/config_blast_surface:checkout"

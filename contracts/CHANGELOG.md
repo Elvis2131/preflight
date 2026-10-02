@@ -10,6 +10,18 @@ Each generated `contracts/*.schema.json` carries its own version in `x-schema-ve
 stamped by `cmd/gen-contracts` — check that field against this file, not the other way
 around, since a schema file is regenerated output, not hand-edited.
 
+## workload.schema.json 1.5.0 — 2026-10-02 (PC-152: DeclaredJourney.hop_ports added)
+
+**Additive change to `workload.schema.json` only.** A declared journey gains optional
+`hop_ports`: a map from a hop's destination (the exact `path` element) to the port that hop
+uses, so a multi-tier path can declare internet → ALB on 443, ALB → workload on 8080 and
+workload → database on 5432. A hop with no entry uses the journey's `port`, never a port
+guessed from security group rules. Keys must be a hop destination on that journey's path
+(not its start, not an element the path repeats) and values 1–65535; `Workload.Validate`
+rejects anything else rather than silently falling back. A document written against 1.4.0
+validates unchanged and behaves exactly as before. The document's own `schema_version`
+field is unaffected.
+
 ## ir.schema.json 1.4.0 — 2026-10-01 (PC-110: Sizing.region added)
 
 **Additive change to `ir.schema.json` only.** `Sizing` gains optional `region` — the AWS region

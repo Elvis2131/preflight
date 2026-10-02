@@ -423,7 +423,7 @@
     ],
     "outcome": {
       "state": "assessed",
-      "value": "unsatisfied",
+      "value": "3 of 4 real rules on this journey's path would break it if changed alone",
       "provenance": {
         "kind": "derived",
         "source": "core/config_blast_surface:web"
@@ -510,7 +510,7 @@
     ],
     "outcome": {
       "state": "assessed",
-      "value": "unsatisfied",
+      "value": "4 of 6 real rules on this journey's path would break it if changed alone",
       "provenance": {
         "kind": "derived",
         "source": "core/config_blast_surface:api"
@@ -597,7 +597,7 @@
     ],
     "outcome": {
       "state": "assessed",
-      "value": "unsatisfied",
+      "value": "4 of 6 real rules on this journey's path would break it if changed alone",
       "provenance": {
         "kind": "derived",
         "source": "core/config_blast_surface:data"

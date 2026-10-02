@@ -702,8 +702,9 @@ code{background:#f1f5f9;padding:0 .2rem}
 <table><tr><th>Status</th><th>Count</th></tr>
 <tr><td>2 component(s) affected</td><td>1</td></tr>
 <tr><td>4 component(s) affected</td><td>1</td></tr>
+<tr><td>5 of 7 real rules on this journey&#39;s path would break it if changed alone</td><td>1</td></tr>
 <tr><td>consistent: declared public, and a real default route to an internet gateway confirms it</td><td>3</td></tr>
-<tr><td>not_assessable</td><td>2</td></tr>
+<tr><td>not_assessable</td><td>1</td></tr>
 <tr><td>satisfied</td><td>9</td></tr>
 </table>
 <h3>NFR conformance</h3>
@@ -985,8 +986,8 @@ satisfied
 <td class="not-assessable">
 <span class="reason">not_assessable: impact dimension not evaluated by this check</span>
 </td>
-<td class="not-assessable">
-<span class="reason">not_assessable: journey &#34;checkout&#34; does not structurally flow today (Blocked at aws_eks_cluster.payments (sg_dest_ingress): no rule matched (implicit deny — AWS security groups support allow rules only)) — a configuration blast surface is not meaningful without a working baseline</span>
+<td>
+5 of 7 real rules on this journey&#39;s path would break it if changed alone
 </td>
 </tr><tr>
 <td><code>finding.resilience.configuration-blast-surface.settlement</code><br>Journey &#34;Settlement: EKS -&gt; SQS&#34;: configuration blast surface (single rule changes that would break it)</td>
@@ -1004,7 +1005,7 @@ satisfied
 <h2>Traffic and capacity</h2>
 
 <table><tr><th>Journey</th><th>Flows</th><th>Blocked at</th><th>Reason</th></tr>
-<tr><td>checkout</td><td>false</td><td>aws_eks_cluster.payments</td><td class="reason">Blocked at aws_eks_cluster.payments (sg_dest_ingress): no rule matched (implicit deny — AWS security groups support allow rules only)</td></tr><tr><td>settlement</td><td>false</td><td>aws_sqs_queue.settlement</td><td class="reason">Blocked at aws_sqs_queue.settlement (route_selection): destination has no resolvable effective route table</td></tr>
+<tr><td>checkout</td><td>true</td><td></td><td class="reason"></td></tr><tr><td>settlement</td><td>false</td><td>aws_sqs_queue.settlement</td><td class="reason">Blocked at aws_sqs_queue.settlement (route_selection): destination has no resolvable effective route table</td></tr>
 </table>
 
 

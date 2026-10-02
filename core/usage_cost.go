@@ -101,13 +101,14 @@ func usageCostForJourney(ir *IR, j DeclaredJourney, table PriceTable, killed map
 
 	flow := ComputeJourneyFlow(ir, j, killed)
 	monthlyGB, assumedProv := monthlyGigabytes(j, table.SnapshotID)
+	egress := directionalEgressGB(j)
 
 	var out []UsageBasedCostEntry
 	for _, hop := range flow.Hops {
 		if !hop.Allowed {
 			break // traffic does not actually reach beyond a blocked hop
 		}
-		out = append(out, classifyHopUsageCost(ir, j.ID, hop, monthlyGB, table, assumedProv)...)
+		out = append(out, classifyHopUsageCost(ir, j.ID, hop, monthlyGB, egress, table, assumedProv)...)
 	}
 	return out
 }
@@ -139,12 +140,29 @@ func monthlyGigabytes(j DeclaredJourney, snapshotID string) (float64, Provenance
 	return gb, prov
 }
 
-func classifyHopUsageCost(ir *IR, journeyID string, hop JourneyHopFlow, monthlyGB float64, table PriceTable, assumedProv Provenance) []UsageBasedCostEntry {
+// egressVolumes splits the monthly volume by direction so only the bytes that leave AWS are
+// billed as internet egress.
+type egressVolumes struct{ RequestGB, ResponseGB float64 }
+
+func directionalEgressGB(j DeclaredJourney) egressVolumes {
+	perSecond := *j.SteadyRPS * SecondsPerMonthAssumption / (1024 * 1024 * 1024)
+	return egressVolumes{RequestGB: perSecond * *j.AvgRequestBytes, ResponseGB: perSecond * *j.AvgResponseBytes}
+}
+
+func classifyHopUsageCost(ir *IR, journeyID string, hop JourneyHopFlow, monthlyGB float64, egress egressVolumes, table PriceTable, assumedProv Provenance) []UsageBasedCostEntry {
 	var out []UsageBasedCostEntry
 
-	// Internet egress: either side of the hop is the internet sentinel.
+	// Internet egress: either side of the hop is the internet sentinel. AWS charges data
+	// transfer OUT to the internet only; inbound transfer is free (EC2 pricing, "Data
+	// Transfer"). On an internet-originated hop the bytes leaving AWS are the RESPONSE; on a
+	// hop whose destination is the internet they are the REQUEST. Billing both directions
+	// would overstate the cost by the free inbound bytes.
 	if hop.From == JourneyInternetSentinel || hop.To == JourneyInternetSentinel {
-		out = append(out, priceUsageEntry(journeyID, hop, UsageCostInternetEgress, monthlyGB, table, assumedProv,
+		leaving := egress.ResponseGB
+		if hop.To == JourneyInternetSentinel {
+			leaving = egress.RequestGB
+		}
+		out = append(out, priceUsageEntry(journeyID, hop, UsageCostInternetEgress, leaving, table, assumedProv,
 			matchInternetEgressRow))
 	}
 

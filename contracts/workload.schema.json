@@ -45,6 +45,13 @@
         },
         "fallback": {
           "$ref": "#/$defs/JourneyFallback"
+        },
+        "hop_ports": {
+          "additionalProperties": {
+            "type": "integer"
+          },
+          "type": "object",
+          "description": "Optional per-hop port overrides keyed by the hop's destination (the exact Path element). A hop with no entry uses the journey's port."
         }
       },
       "additionalProperties": false,
@@ -195,5 +202,5 @@
     "requirements"
   ],
   "x-changelog": "contracts/CHANGELOG.md",
-  "x-schema-version": "1.4.0"
+  "x-schema-version": "1.5.0"
 }

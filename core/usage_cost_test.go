@@ -124,9 +124,10 @@ func TestComputeUsageBasedCost_InternetEgress_RealPricedAmount(t *testing.T) {
 	if egress.Decision != core.CostPriced {
 		t.Fatalf("Decision = %q, want priced: %s", egress.Decision, egress.Reason)
 	}
-	// Hand-verified: 10 req/s * 5000 bytes/req * (730*3600) s/month = 131,400,000,000
-	// bytes/month = ~122.4 GB (bytes / 1024^3), all within the first tier.
-	wantGB := 10.0 * 5000.0 * core.SecondsPerMonthAssumption / (1024 * 1024 * 1024)
+	// Hand-verified: only the RESPONSE leaves AWS on an internet-originated hop (inbound
+	// transfer is free): 10 req/s * 4000 response bytes * (730*3600) s/month = ~97.9 GB
+	// (bytes / 1024^3), all within the first tier.
+	wantGB := 10.0 * 4000.0 * core.SecondsPerMonthAssumption / (1024 * 1024 * 1024)
 	// ~122.4 GB sits wholly inside the first real eu-west-1 tier ($0.09, 0-10240 GB).
 	wantAmount := wantGB * 0.09
 	if diff := egress.MonthlyGB - wantGB; diff > 0.001 || diff < -0.001 {
@@ -236,34 +237,55 @@ func TestComputeUsageBasedCost_LBDataProcessed(t *testing.T) {
 // underlying baseline itself does not flow" are two different honest reasons for the
 // same zero-entries outcome, and this test pins down which one golden/aws
 // demonstrates).
-func TestGoldenUsageCost_Checkout_OnlyTheReachedHopIsCosted(t *testing.T) {
+func TestGoldenUsageCost_Checkout_HandVerified(t *testing.T) {
 	ir := realGoldenIR(t)
 	workload := loadGoldenWorkload(t)
 
-	var checkout core.DeclaredJourney
-	for _, j := range workload.Journeys {
-		if j.ID == "checkout" {
-			checkout = j
+	// PC-152: with each hop's real port, the golden checkout journey flows end to end
+	// (internet -> ALB -> EKS -> RDS), so every hop carries traffic and is costed.
+	// Hand-verified: 500 rps x (2048 request + 8192 response bytes) x 2,628,000 s / 1024^3
+	// = 12,531.28 GB/month through each hop. Internet egress bills ONLY the 8192-byte
+	// responses (inbound is free): 10,025.02 GB, all in the first tier ($0.09/GB) =
+	// $902.25. The ALB's LCU processed-bytes lower bound uses the full volume:
+	// 12,531.28 LCU-hours x $0.008 = $100.25 on each hop the ALB touches. Cross-AZ is
+	// cost_unknown because golden's subnet AZs come from unresolved Terraform locals.
+	type key struct {
+		from, to string
+		kind     core.UsageCostKind
+	}
+	got := map[key]core.UsageBasedCostEntry{}
+	for _, r := range core.ComputeUsageBasedCost(ir, workload, usageCostPriceTable(), nil) {
+		if r.JourneyID == "checkout" {
+			got[key{r.HopFrom, r.HopTo, r.Kind}] = r
 		}
 	}
-	if checkout.AvgRequestBytes == nil {
-		t.Fatal("expected golden/workload.yaml's checkout journey to declare avg_request_bytes")
+	want := []struct {
+		k      key
+		priced bool
+		amount float64
+	}{
+		{key{core.JourneyInternetSentinel, "aws_lb.payments", core.UsageCostInternetEgress}, true, 10025.0244140625 * 0.09},
+		{key{core.JourneyInternetSentinel, "aws_lb.payments", core.UsageCostLBDataProcessed}, true, 12531.280517578125 * 0.008},
+		{key{"aws_lb.payments", "aws_eks_cluster.payments", core.UsageCostLBDataProcessed}, true, 12531.280517578125 * 0.008},
+		{key{"aws_lb.payments", "aws_eks_cluster.payments", core.UsageCostCrossAZTransfer}, false, 0},
+		{key{"aws_eks_cluster.payments", "aws_db_instance.payments", core.UsageCostCrossAZTransfer}, false, 0},
 	}
-
-	// PC-149: internet -> ALB is Allowed (default NACL, assumed); ALB -> EKS blocks at
-	// the workload SG. Only the first hop carries traffic, so only it is costed.
-	kinds := map[core.UsageCostKind]int{}
-	for _, r := range core.ComputeUsageBasedCost(ir, workload, usageCostPriceTable(), nil) {
-		if r.JourneyID != "checkout" {
+	if len(got) != len(want) {
+		t.Errorf("got %d checkout usage entries, want %d: %+v", len(got), len(want), got)
+	}
+	for _, w := range want {
+		r, ok := got[w.k]
+		if !ok {
+			t.Errorf("missing %+v", w.k)
 			continue
 		}
-		if r.HopFrom != core.JourneyInternetSentinel || r.HopTo != "aws_lb.payments" {
-			t.Errorf("checkout costed a hop past the blocked one: %+v", r)
+		if w.priced {
+			if r.Decision != core.CostPriced || r.MonthlyAmount < w.amount-0.01 || r.MonthlyAmount > w.amount+0.01 {
+				t.Errorf("%+v = %v $%.2f, want priced $%.2f", w.k, r.Decision, r.MonthlyAmount, w.amount)
+			}
+		} else if r.Decision != core.CostUnknown || r.MonthlyAmount != 0 {
+			t.Errorf("%+v = %v $%.2f, want cost_unknown (no resolvable availability zone)", w.k, r.Decision, r.MonthlyAmount)
 		}
-		kinds[r.Kind]++
-	}
-	if kinds[core.UsageCostInternetEgress] != 1 || kinds[core.UsageCostLBDataProcessed] != 1 || len(kinds) != 2 {
-		t.Errorf("want exactly one internet_egress and one lb_data_processed entry for internet->ALB, got %v", kinds)
 	}
 }
 
@@ -359,20 +381,21 @@ func TestUsageCost_RealRowShapes_NegativeControls(t *testing.T) {
 	}
 }
 
-// A volume that spans tiers: 5000 req/s x 5000 B x 2,628,000 s = ~61,200 GB/month, so
-// 10240 GB at $0.09 + 40960 GB at $0.085 + the rest at $0.07 (real eu-west-1 tiers).
+// A volume that spans tiers: 6000 req/s x 4000 response bytes x 2,628,000 s = ~58,740
+// GB/month leaving AWS, so 10240 GB at $0.09 + 40960 GB at $0.085 + the rest at $0.07
+// (real eu-west-1 tiers).
 func TestComputeUsageBasedCost_InternetEgress_SpansTiers(t *testing.T) {
 	ir := buildInternetReachableIR()
 	j := core.DeclaredJourney{
 		ID: "j1", Name: "j1", Path: []string{core.JourneyInternetSentinel, "edge"}, Protocol: "tcp", Port: 443, Criticality: "tier1",
-		SteadyRPS: steadyRPS(5000), AvgRequestBytes: avgBytes(1000), AvgResponseBytes: avgBytes(4000),
+		SteadyRPS: steadyRPS(6000), AvgRequestBytes: avgBytes(1000), AvgResponseBytes: avgBytes(4000),
 	}
 	results := core.ComputeUsageBasedCost(ir, core.Workload{Journeys: []core.DeclaredJourney{j}}, usageCostPriceTable(), nil)
 	for _, r := range results {
 		if r.Kind != core.UsageCostInternetEgress {
 			continue
 		}
-		gb := 5000.0 * 5000.0 * core.SecondsPerMonthAssumption / (1024 * 1024 * 1024)
+		gb := 6000.0 * 4000.0 * core.SecondsPerMonthAssumption / (1024 * 1024 * 1024)
 		want := 10240*0.09 + 40960*0.085 + (gb-51200)*0.07
 		if diff := r.MonthlyAmount - want; diff > 0.01 || diff < -0.01 {
 			t.Errorf("MonthlyAmount = %v, want %v", r.MonthlyAmount, want)

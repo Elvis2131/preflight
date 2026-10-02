@@ -1,5 +1,7 @@
 package core
 
+import "fmt"
+
 // RequirementPriority is PRD §4's distinction: "hard = constraint (violation is a
 // failing finding), preference = ranked goal (violation trades against, not fails)."
 type RequirementPriority string
@@ -80,6 +82,23 @@ type DeclaredJourney struct {
 	// is down). Nil means no fallback was declared, and a journey that does not flow
 	// simply fails: graceful degradation is never assumed (the Card's own rule).
 	Fallback *JourneyFallback `json:"fallback,omitempty" yaml:"fallback,omitempty"`
+
+	// HopPorts is PC-152's own addition: optional per-hop port overrides, keyed by the
+	// hop's DESTINATION — the Path element exactly as written (a hop group such as
+	// "a|b" is one key). A real multi-tier path uses different ports per hop (internet ->
+	// ALB on 443, ALB -> workload on 8080, workload -> database on 5432), which a single
+	// Port cannot express. A hop with no entry uses Port — never a port guessed from the
+	// security group rules — so every existing workload behaves exactly as before.
+	HopPorts map[string]int `json:"hop_ports,omitempty" yaml:"hop_ports,omitempty" validate:"omitempty,dive,min=1,max=65535" jsonschema:"description=Optional per-hop port overrides keyed by the hop's destination (the exact Path element). A hop with no entry uses the journey's port."`
+}
+
+// PortForHop is the port the hop whose destination is the given Path element uses: its
+// HopPorts entry when declared, otherwise the journey's own Port.
+func (j DeclaredJourney) PortForHop(destination string) int {
+	if p, ok := j.HopPorts[destination]; ok {
+		return p
+	}
+	return j.Port
 }
 
 // JourneyFallback is a journey's declared degraded mode (PC-131). Path uses the same
@@ -147,5 +166,37 @@ type Workload struct {
 // Validate checks this Workload against the same struct tags
 // contracts/workload.schema.json is generated from.
 func (w Workload) Validate() error {
-	return validate.Struct(w)
+	if err := validate.Struct(w); err != nil {
+		return err
+	}
+	for _, j := range w.Journeys {
+		if err := j.validateHopPorts(); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+// validateHopPorts rejects a hop port that names something that is not a hop's
+// destination on this journey's path (a typo would otherwise silently fall back to the
+// journey port), and refuses overrides on a path that visits the same element twice,
+// where a destination key would be ambiguous.
+func (j DeclaredJourney) validateHopPorts() error {
+	if len(j.HopPorts) == 0 {
+		return nil
+	}
+	seen := map[string]int{}
+	for _, el := range j.Path {
+		seen[el]++
+	}
+	for key := range j.HopPorts {
+		count, onPath := seen[key]
+		switch {
+		case !onPath || key == j.Path[0]:
+			return fmt.Errorf("journey %q: hop_ports key %q is not the destination of any hop on its path", j.ID, key)
+		case count > 1:
+			return fmt.Errorf("journey %q: hop_ports key %q appears more than once on the path, so the override is ambiguous", j.ID, key)
+		}
+	}
+	return nil
 }

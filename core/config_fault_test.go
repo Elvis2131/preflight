@@ -17,6 +17,7 @@ package core_test
 // BuildTrace's sg_dest_ingress step calls.
 
 import (
+	"fmt"
 	"strings"
 	"testing"
 
@@ -362,5 +363,61 @@ func TestGolden_Simulate_SGRuleChange_BreaksFlowingJourney(t *testing.T) {
 	}}}, syntheticProv())
 	if len(after.FlowDetail) != 1 || after.FlowDetail[0].Flows {
 		t.Fatalf("after removing the ALB's 443 rule the journey must stop flowing: %+v", after.FlowDetail)
+	}
+}
+
+// PC-130's third criterion on golden: "Configuration blast surface computed for golden
+// journeys, hand-verified; cap reported if hit." Hand-derived from golden/aws/security.tf:
+// the checkout path (internet -> ALB -> workload -> RDS) touches three security groups
+// carrying 7 rules (ALB: ingress 443, egress 8080 = 2; workload: ingress 8080, egress 443,
+// egress 5432, egress 6379 = 4; database: ingress 5432 = 1). Exactly the five that admit
+// one of the three hops break the journey if removed alone; the workload's egress 443 (to
+// the internet) and egress 6379 (to the cache) are on the path's security groups but carry
+// no checkout traffic, so removing either breaks nothing.
+func TestGolden_ConfigurationBlastSurface_Checkout_HandVerified(t *testing.T) {
+	ir := realGoldenIR(t)
+	var checkout core.DeclaredJourney
+	for _, j := range loadGoldenWorkload(t).Journeys {
+		if j.ID == "checkout" {
+			checkout = j
+		}
+	}
+	surface := core.ComputeConfigurationBlastSurface(ir, checkout, nil)
+	if surface.RulesConsidered != 7 || len(surface.BreakingChanges) != 5 || surface.Capped {
+		t.Fatalf("considered=%d breaking=%d capped=%v, want 7 / 5 / not capped", surface.RulesConsidered, len(surface.BreakingChanges), surface.Capped)
+	}
+	got := map[string]bool{}
+	for _, b := range surface.BreakingChanges {
+		if b.SGRule == nil {
+			t.Fatalf("golden has no NACL rules; a breaking change must be an SG rule: %+v", b)
+		}
+		got[fmt.Sprintf("%s %s %d", b.SGNodeID, b.SGRule.Direction, b.SGRule.FromPort)] = true
+	}
+	for _, want := range []string{
+		"aws_security_group.alb ingress 443",
+		"aws_security_group.alb egress 8080",
+		"aws_security_group.workload ingress 8080",
+		"aws_security_group.workload egress 5432",
+		"aws_security_group.database ingress 5432",
+	} {
+		if !got[want] {
+			t.Errorf("expected %q to be a breaking rule; got %v", want, got)
+		}
+	}
+	for _, notWant := range []string{"aws_security_group.workload egress 443", "aws_security_group.workload egress 6379"} {
+		if got[notWant] {
+			t.Errorf("%q carries no checkout traffic and must not be breaking", notWant)
+		}
+	}
+
+	// The finding built from it is descriptive and assessed, never a verdict.
+	var f *core.Finding
+	for _, c := range core.BuildConfigurationBlastSurfaceFindings(ir, core.Workload{Journeys: []core.DeclaredJourney{checkout}}) {
+		c := c
+		f = &c
+	}
+	value, _ := f.Outcome.Value.(string)
+	if f.Outcome.State != core.AssessmentStateAssessed || value != "5 of 7 real rules on this journey's path would break it if changed alone" {
+		t.Errorf("finding outcome = %+v", f.Outcome)
 	}
 }

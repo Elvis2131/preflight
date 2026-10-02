@@ -19,11 +19,19 @@ package core
 import "strconv"
 
 // BuildConfigurationBlastSurfaceFindings runs ComputeConfigurationBlastSurface for
-// every declared journey and reports whether ANY single real rule change would break
-// it — Unsatisfied when the blast surface is non-empty (a real fragility),
-// Satisfied when no single rule removal breaks the journey, and NotAssessable when
-// the journey does not structurally flow at all today (a blast surface is undefined
-// without a working baseline to measure fragility against).
+// every declared journey and reports its blast surface: how many of the real rules on
+// its own path would break it if changed alone.
+//
+// It is DESCRIPTIVE, not a verdict (corrected under PC-152). An earlier version marked a
+// journey Unsatisfied whenever any single rule was load-bearing — but in a
+// least-privilege design every rule that is the only one admitting a hop is load-bearing,
+// so every working journey was "unsatisfied" and the agent-iteration acceptance test (a
+// target of "all hard requirements satisfied") became unreachable. The Card asks for
+// "the set of single rule changes that would break it", derived information in the same
+// shape as the zone-kill findings ("2 component(s) affected"); whether a given
+// fragility matters is the architect's judgement, never a pass/fail here. It is
+// NotAssessable only when the journey does not structurally flow at all today (a blast
+// surface is undefined without a working baseline to measure against).
 func BuildConfigurationBlastSurfaceFindings(ir *IR, workload Workload) []Finding {
 	var findings []Finding
 	for _, j := range workload.Journeys {
@@ -36,32 +44,33 @@ func configurationBlastSurfaceFinding(ir *IR, j DeclaredJourney) Finding {
 	prov := NewProvenance(KindDerived, "core/config_blast_surface:"+j.ID)
 
 	baseline := ComputeJourneyFlow(ir, j, nil)
-	var status ComplianceStatus
+	notAssessable := false
 	var evidence []EvidenceRef
+	var value string
 	if !baseline.Flows {
-		status = ComplianceNotAssessable
+		notAssessable = true
 		evidence = []EvidenceRef{{Description: "journey \"" + j.ID + "\" does not structurally flow today (" + baseline.BlockedReason + ") — a configuration blast surface is not meaningful without a working baseline"}}
 	} else {
 		surface := ComputeConfigurationBlastSurface(ir, j, nil)
+		capNote := ""
+		if surface.Capped {
+			capNote = " (search capped at " + strconv.Itoa(ConfigBlastSurfaceCap) + " candidate rules — more may exist)"
+		}
 		if len(surface.BreakingChanges) > 0 {
-			status = ComplianceUnsatisfied
+			value = strconv.Itoa(len(surface.BreakingChanges)) + " of " + strconv.Itoa(surface.RulesConsidered) + " real rules on this journey's path would break it if changed alone" + capNote
 			evidence = journeyBlastSurfaceEvidence(surface)
 		} else {
-			status = ComplianceSatisfied
-			desc := "no single rule change among the " + strconv.Itoa(surface.RulesConsidered) + " real rules on this journey's own path breaks it"
-			if surface.Capped {
-				desc += " (search capped at " + strconv.Itoa(ConfigBlastSurfaceCap) + " candidate rules — more may exist)"
-			}
-			evidence = []EvidenceRef{{Description: desc}}
+			value = "no single rule change among the " + strconv.Itoa(surface.RulesConsidered) + " real rules on this journey's path breaks it" + capNote
+			evidence = []EvidenceRef{{Description: value}}
 		}
 	}
 
 	var notAssessableReason string
-	if status == ComplianceNotAssessable {
+	if notAssessable {
 		notAssessableReason = evidence[0].Description
 	}
-	outcome := AssessmentEnvelope{State: AssessmentStateAssessed, Value: string(status), Provenance: prov}
-	if status == ComplianceNotAssessable {
+	outcome := AssessmentEnvelope{State: AssessmentStateAssessed, Value: value, Provenance: prov}
+	if notAssessable {
 		outcome = NotAssessable[any](notAssessableReason, prov).ToEnvelope()
 	}
 
