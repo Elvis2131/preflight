@@ -12,10 +12,9 @@ not a caveat bolted onto the output.
 **A scoping note, stated rather than implied**: "observed" here means *independently
 verified ground truth* — hand-computation against the real Terraform, or direct
 verification against primary AWS/Azure documentation — not a live cloud experiment.
-Running a real, ephemeral chaos experiment against a deployed account (Rung 3 of this
-project's own validation ladder) is separate, not-yet-started work (PC-25). This
-document is honest about that boundary rather than implying more empirical weight than
-these predictions currently carry.
+Scenarios 1 to 6 are of that kind. **Scenario 7 is the exception: one real, ephemeral experiment against a deployed
+AWS account (Rung 3 of this project's own validation ladder, PC-25).** It is a single run of a single fault, and the
+document is honest about that boundary rather than implying more empirical weight than it has.
 
 ## Scenario 1: availability-zone loss
 
@@ -237,6 +236,73 @@ records; the sweep must fail against it, and does.
 **Class:** the same one again, a value silently absent between two components. The lesson that generalises: *a check
 that has never failed on a known-bad input is not yet a check.* Every fix here was mutation-checked (disable the fix, see a
 test fail).
+
+## Scenario 7: a real instance loss behind a load balancer (PC-25, Rung 3, one run)
+
+**Setup.** Two web instances in two availability zones behind an internet-facing ALB (declared health check: one
+check every 10 s, unhealthy after 2 failures), each serving a page it fetches from S3 at boot. Applied to a real
+account in `eu-north-1`, one instance stopped, clients sending 5 requests a second throughout, everything destroyed
+afterwards. The predictions were committed *before* the run (`validate/rung3/predictions.json`, commit e957ec7); the
+only later edit to that file changed the experiment's description line, not a claim (commit 842e0a5).
+Raw record: `validate/rung3/result.json`.
+
+**Two deviations from the plan, both forced by the account's organisation policy.** The account only allows
+`eu-north-1`, and the AWS Fault Injection Service is explicitly denied by an organisation policy that I cannot read.
+So the fault was injected with a direct EC2 `StopInstances` call, which is the call FIS's `aws:ec2:stop-instances`
+action makes (AWS docs), instead of an FIS experiment. This validates the fault's effect on the architecture, not FIS
+itself. And the experiment is **instance loss, not availability-zone loss**: Preflight's zone-kill findings are written
+for the golden bundle's own subnets and say nothing about other bundles.
+
+**Predicted, and what the run showed.**
+
+| | Prediction | Source | Observed |
+|---|---|---|---|
+| P1 | After the fault the service stays reachable and every request is served by web-b | Preflight `node_loss` simulation | **Confirmed.** All 151 requests in the final 30 s were 200 from web-b; the baseline was served by both instances |
+| P2 | Simulation verdict "unaffected" (no entry point loses storage) | Preflight | Not tested by this run |
+| P3 | The ALB stops sending traffic to the stopped instance within 30 s of it ceasing to respond; about half of requests fail until then | AWS docs (health-check interval and unhealthy threshold) | **Numbers confirmed, mechanism not.** Failures began at 40.0 s and ended at 66.2 s: a 26.2 s window, 51% of requests in it failed |
+| P4 | Once stopped, the target shows `unused` / `Target.InvalidState`, not `unhealthy` | AWS docs | **Confirmed**, at the 47 s sample |
+
+**What I did not predict, and what it changes.**
+- **The target never reported `unhealthy`.** At 2 s sampling it went from `healthy` straight to `unused` between the 44 s
+  and 47 s samples. So the mechanism P3 named (two failed health checks at 10 s intervals) was not what the target
+  group showed; the instance-state path ended it. P3's numbers held, but I would not call the prediction right for the
+  reason it gave.
+- **Requests kept failing for about 19 s after the target group said `unused`.** Failures ran until 66.2 s while the
+  API had reported `unused` from 47 s on, and roughly half of requests (the ones sent to web-a) kept failing at the
+  same rate (12 or 13 of 25 per 5 s) until a sharp stop at 66 s. Read plainly: the load balancer's own report of
+  the target's state led what its data path actually did by close to 20 s. The AWS page I used says a stopped target is
+  `unused`; it says nothing about how quickly traffic stops following that. A single run cannot say whether 19 s is
+  typical.
+- **The first failure came 40 s after the stop call, not at once.** A graceful OS shutdown kept the web process (started
+  from user data, not as a managed service) answering for about 40 s. The 26.2 s figure is therefore measured from the
+  moment the instance stopped responding, as P3 defined it, not from the API call.
+- **The engine had nothing to say about failover time.** It models structure, not health-check timing, and produced no
+  RTO finding for this bundle. The only prediction of duration here came from AWS's documentation applied by hand, and it
+  was incomplete. Whether a declared 60 s RTO would have been met depends on where the clock starts: 26 s of degraded
+  service from the first failed request, but 66 s from the stop call to the last failed request. The engine said
+  neither.
+
+**Measurement caveats.** The client treats a request as failed if it gets no 200 within 3 s; every failure here was
+that timeout (67 of 67, 3.0 s each), not an ALB error response, so the failure share depends on that choice. One run, one
+fault, one region, free-tier-sized instances: this is evidence about this design's behaviour once, not a distribution.
+
+**What else the first attempt turned up.** Preflight's `/assess` refused the first draft of this bundle with
+`insufficient_model`: a stateless web tier alone is below the Minimum Viable Graph, correct by design. The bundle gained
+the S3 content origin, which instances really fetch from at boot, rather than an unused resource added to get past
+the check.
+
+**Cleanup, and a bug in my own check.** Everything was destroyed (terraform's state was empty) and I confirmed directly
+that nothing was left: both instances `terminated`, and no volume, endpoint, VPC, load balancer, target group, network
+interface, security group, bucket or role remained. The runner nevertheless reported cleanup incomplete, because it
+trusted the resource-tagging API, which kept listing five deleted resources. The runner's own verdict is preserved
+unedited in `result.json` (`clean: false`). The check now treats the tagging API as a source of candidates only and
+confirms each against the service that owns it, never assuming a resource it cannot confirm is gone; checked against the
+real account, all five were classified gone, and a test covers both directions.
+
+**Class.** A control plane's description of a resource and the data plane's behaviour disagreeing in time: the same
+family as the earlier scenarios (two components, one shared fact, different answers), now seen between AWS's own
+APIs. Preflight predicted *whether* the service survives and was right; it is silent on *how long* the degraded
+window lasts, and that is the number an SRE would ask for first.
 
 ## What this adds up to
 

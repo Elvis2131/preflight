@@ -80,7 +80,15 @@ func (f *fakeCloud) exec(_ context.Context, name string, args ...string) ([]byte
 		f.faultAt.Store(time.Now().UnixNano())
 		return []byte(`{"StoppingInstances":[{"InstanceId":"i-a"}]}`), nil
 	case name == "aws" && strings.HasPrefix(joined, "ec2 describe-instances"):
+		if strings.Contains(joined, "i-gone") {
+			return []byte("terminated\n"), nil
+		}
 		return []byte("stopped\n"), nil
+	case name == "aws" && (strings.HasPrefix(joined, "ec2 describe-volumes") || strings.HasPrefix(joined, "ec2 describe-vpc-endpoints")):
+		if strings.Contains(joined, "-gone") {
+			return nil, errors.New("InvalidVolume.NotFound: it does not exist")
+		}
+		return []byte("{}"), nil
 	case name == "aws" && strings.HasPrefix(joined, "resourcegroupstaggingapi"):
 		var parts []string
 		for _, l := range f.leftover {
@@ -416,5 +424,31 @@ func TestObservedIsOnlyProducedHere(t *testing.T) {
 	got, _ := observedProducers(tmp)
 	if len(got) != 1 {
 		t.Errorf("the scan must flag a second producer, got %v", got)
+	}
+}
+
+// The first live run was reported "incomplete" because the tagging API still listed resources that were
+// already gone. Candidates are now confirmed against the owning service; real leftovers still count.
+func TestCleanup_StaleTaggingEntriesAreNotLeftovers(t *testing.T) {
+	f := newFake(t)
+	f.leftover = []string{
+		"arn:aws:ec2:eu-north-1:111:instance/i-gone1",        // terminated: not a leftover
+		"arn:aws:ec2:eu-north-1:111:volume/vol-gone2",        // does not exist
+		"arn:aws:ec2:eu-north-1:111:vpc-endpoint/vpce-gone3", // does not exist
+	}
+	res, err := Run(context.Background(), testConfig(t, f))
+	if err != nil || !res.Cleanup.Clean {
+		t.Fatalf("stale tagging entries must not fail the run: err=%v cleanup=%+v", err, res.Cleanup)
+	}
+
+	f = newFake(t)
+	f.leftover = []string{
+		"arn:aws:ec2:eu-north-1:111:instance/i-gone1",
+		"arn:aws:ec2:eu-north-1:111:volume/vol-real",                         // still exists
+		"arn:aws:elasticloadbalancing:eu-north-1:111:loadbalancer/app/x/abc", // a type this code cannot confirm: reported, never guessed away
+	}
+	res, err = Run(context.Background(), testConfig(t, f))
+	if err == nil || res.Cleanup.Clean || len(res.Cleanup.TaggedLeftover) != 2 {
+		t.Fatalf("a live volume and an unconfirmable resource must both be reported: err=%v cleanup=%+v", err, res.Cleanup)
 	}
 }

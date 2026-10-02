@@ -432,15 +432,25 @@ func destroyAndVerify(ctx context.Context, c Config, tf func(context.Context, ..
 	if st, err := tf(ctx, "state", "list"); err == nil {
 		cl.StateEmpty = strings.TrimSpace(string(st)) == ""
 	}
-	// The tagging API is eventually consistent; give a just-deleted resource time to drop out.
+	// The tagging API is eventually consistent and keeps listing deleted resources for a while (the
+	// first live run was reported "incomplete" for two instances that were terminated and a volume and
+	// endpoint that no longer existed). So it is only a source of candidates: each one is confirmed
+	// against the service that owns it, and anything this code cannot confirm is gone counts as still
+	// there (never assumed deleted).
 	for i := 0; i < 12; i++ {
 		left, err := taggedLeftovers(ctx, c)
-		if err == nil && len(left) == 0 {
+		var live []string
+		for _, arn := range left {
+			if exists, _ := stillExists(ctx, c, arn); exists {
+				live = append(live, arn)
+			}
+		}
+		if err == nil && len(live) == 0 {
 			cl.TaggedLeftover = nil
 			break
 		}
 		if err == nil {
-			cl.TaggedLeftover = left
+			cl.TaggedLeftover = live
 		}
 		time.Sleep(c.DestroyPoll)
 	}
@@ -470,3 +480,37 @@ func taggedLeftovers(ctx context.Context, c Config) ([]string, error) {
 }
 
 func sortProbes(p []Probe) { sort.Slice(p, func(i, j int) bool { return p[i].AtMs < p[j].AtMs }) }
+
+// stillExists asks the owning service whether the resource the tagging API listed is really there.
+// An unrecognised type, or a failed lookup that is not a clear "does not exist", answers true: the
+// run reports it rather than guessing it away.
+func stillExists(ctx context.Context, c Config, arn string) (bool, error) {
+	parts := strings.SplitN(arn, ":", 6)
+	if len(parts) < 6 || parts[2] != "ec2" {
+		return true, nil
+	}
+	kind, id, ok := strings.Cut(parts[5], "/")
+	if !ok {
+		return true, nil
+	}
+	notFound := func(err error) bool { return err != nil && strings.Contains(err.Error(), ".NotFound") }
+	switch kind {
+	case "instance":
+		out, err := c.Exec(ctx, "aws", "ec2", "describe-instances", "--instance-ids", id, "--region", c.Region, "--query", "Reservations[0].Instances[0].State.Name", "--output", "text")
+		if notFound(err) {
+			return false, nil
+		}
+		if err != nil {
+			return true, err
+		}
+		st := strings.TrimSpace(string(out))
+		return st != "terminated", nil // a terminated instance stays listed for about an hour and bills nothing
+	case "volume":
+		_, err := c.Exec(ctx, "aws", "ec2", "describe-volumes", "--volume-ids", id, "--region", c.Region, "--output", "json")
+		return !notFound(err), err
+	case "vpc-endpoint":
+		_, err := c.Exec(ctx, "aws", "ec2", "describe-vpc-endpoints", "--vpc-endpoint-ids", id, "--region", c.Region, "--output", "json")
+		return !notFound(err), err
+	}
+	return true, nil
+}
