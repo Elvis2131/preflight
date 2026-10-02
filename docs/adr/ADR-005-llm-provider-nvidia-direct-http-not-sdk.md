@@ -118,6 +118,48 @@ Limits: this is an acceptance eval of one model, not a comparison between models
 measures structure and honesty, not prose quality, which needs a human reader; output is
 nondeterministic, and this is two runs.
 
+## Wiring `reason/` into `/assess` (PC-154) — decisions
+
+Recorded here, as PC-19/94 did for the delta.
+
+1. **P2 serves, P1 consumes, over HTTP by URL.** `reasond` (P2) is the only process that reads
+   `NVIDIA_API_KEY` and the only one that calls NVIDIA. `POST /v1/annotate` takes the frozen,
+   already-returned findings and streams Server-Sent Events (`started`, `annotation`, `rejected`,
+   `done`). With no key it still starts and answers 503 `{"degraded":"no_api_key"}`. P1 (`assessd`)
+   reaches it by `PREFLIGHT_REASOND_URL` only and holds no key.
+2. **`/assess` never depends on P2.** Its payload is byte-identical whether the worker runs, is
+   stopped or is absent (tested), and it returns in well under 5 s with a worker that never
+   answers. Narratives arrive separately on `GET /sessions/{id}/versions/{n}/annotations`.
+3. **Annotations are STORED with the version, not regenerated.** NVIDIA's free tier is
+   rate-limited (~40 RPM, best effort) and a run costs about 3 minutes and 25k tokens, so
+   regenerating on every read would be slow, costly and flaky. A complete set, or a degraded set
+   with at least one annotation, is persisted and replayed without calling the worker again. A run
+   that produced nothing because the worker was unreachable or keyless is **not** persisted, so a
+   later request retries it instead of caching the failure.
+4. **Failure is a state, not an error.** Not configured, unreachable, keyless, rate-limited,
+   truncated and partial runs are a `degraded` event on a 200 stream followed by `done`; the
+   findings are never changed (I3).
+5. **The boundary is a package boundary, enforced three ways:** the shared wire types live in
+   `core` (data only); a test over the real dependency graph shows P1 has no import path to
+   `reason/`; a source scan shows P1 never names the key or the provider's address; and a
+   `depguard` rule forbids the import. All three were negative-controlled.
+6. **Display.** Analyze mode shows stored narratives automatically and generates new ones only on
+   an explicit click (it costs minutes and tokens); the report carries them as their own section.
+   Both are labelled as written by a language model, kept visibly separate from the findings, and
+   the report escapes them as untrusted text.
+
+**Detection must keep its exact meaning** (PC-17): `unknown` means no mechanism is *known or
+declared*, never that none exists. Both recorded eval runs overstated it once on the same finding
+("no detection mechanism exists" / "no detection mechanism" with the qualifier dropped). The
+prompt now restates the meaning with each finding and a scorer flags the overstatement
+(`cmd/reason-eval -check-detection`); the re-run with zero overstatements is **pending** a key in
+the environment.
+
+**NFR-9 (first token within 3 s of the deterministic payload) is not demonstrated against the real
+model.** The plumbing is: with an instant worker the first annotation reaches the caller well
+inside 3 s (tested). The real model reasons before it answers, and a finding takes about 10 s, so
+the honest first-annotation latency is model-bound and must be measured live, not asserted.
+
 ## Revisit trigger
 
 Reopen if any of the following becomes true:
