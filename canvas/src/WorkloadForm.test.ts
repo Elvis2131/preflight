@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { buildWorkload, emptyWorkloadFormValue, COMPLIANCE_FRAMEWORK_OPTIONS } from "./WorkloadForm";
+import { buildWorkload, workloadToFormValue, emptyWorkloadFormValue, COMPLIANCE_FRAMEWORK_OPTIONS } from "./WorkloadForm";
 
 // PC-87's own acceptance criteria, verbatim: (1) "form output validates against the
 // same workload.schema.json contract" — buildWorkload must never invent a field the
@@ -9,6 +9,25 @@ import { buildWorkload, emptyWorkloadFormValue, COMPLIANCE_FRAMEWORK_OPTIONS } f
 // functionally distinct" — a hard requirement must never carry a rank key at all.
 
 describe("buildWorkload", () => {
+  it("preserves template hop ports through the form instead of tracing every service on 443", () => {
+    const workload = buildWorkload(emptyWorkloadFormValue());
+    workload.journeys = [{ id: "request", name: "Application request", path: ["internet", "lb", "app", "db"], protocol: "tcp", port: 443, criticality: "tier1", hop_ports: { app: 8443, db: 5432 } }];
+    const form = workloadToFormValue(workload);
+    expect(buildWorkload(form).journeys).toEqual(workload.journeys);
+    form.journeyRows[0].hopPorts!.app = 9443;
+    expect(buildWorkload(form).journeys![0].hop_ports).toEqual({ app: 9443, db: 5432 });
+    expect(workload.journeys[0].hop_ports!.app).toBe(8443);
+  });
+
+  it("uses only overrides for current hop destinations after a path edit", () => {
+    const workload = buildWorkload(emptyWorkloadFormValue());
+    workload.journeys = [{ id: "request", name: "Application request", path: ["internet", "lb", "app", "db"], protocol: "tcp", port: 443, criticality: "tier1", hop_ports: { app: 8443, db: 5432 } }];
+    const form = workloadToFormValue(workload);
+    form.journeyRows[0].pathText = "internet, lb, app";
+    expect(buildWorkload(form).journeys![0].hop_ports).toEqual({ app: 8443 });
+    form.journeyRows[0].pathText = "internet, lb";
+    expect(buildWorkload(form).journeys![0].hop_ports).toBeUndefined();
+  });
   it("maps basic fields and splits comma-separated lists", () => {
     const w = buildWorkload({
       ...emptyWorkloadFormValue(),

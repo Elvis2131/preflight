@@ -45,7 +45,7 @@ interface FrameworkOption {
 }
 export const COMPLIANCE_FRAMEWORK_OPTIONS: FrameworkOption[] = [
   { id: "cis_aws", label: "CIS AWS Foundations Benchmark" },
-  { id: "pci_dss_4", label: "PCI DSS v4.0" },
+  { id: "pci_dss_4", label: "PCI DSS v4.0.1" },
   { id: "soc2", label: "SOC 2" },
   { id: "hipaa", label: "HIPAA", comingSoon: "no control catalog implemented yet" },
 ];
@@ -62,6 +62,7 @@ interface JourneyRow {
   criticality: string;
   peakRPSText: string;
   steadyRPSText: string;
+  hopPorts?: Record<string, number>;
 }
 
 function emptyJourneyRow(): JourneyRow {
@@ -121,6 +122,7 @@ export function workloadToFormValue(w: Workload): WorkloadFormValue {
       criticality: j.criticality,
       peakRPSText: j.peak_rps === undefined ? "" : String(j.peak_rps),
       steadyRPSText: j.steady_rps === undefined ? "" : String(j.steady_rps),
+      ...(j.hop_ports ? { hopPorts: { ...j.hop_ports } } : {}),
     })),
   };
 }
@@ -173,6 +175,8 @@ export function buildWorkload(v: WorkloadFormValue): Workload {
       const j: DeclaredJourney = {
         id: r.id.trim(), name: r.name.trim(), path, protocol: r.protocol.trim(), port, criticality: r.criticality.trim(),
       };
+      const hopPorts = Object.fromEntries(Object.entries(r.hopPorts ?? {}).filter(([destination]) => path.slice(1).includes(destination)));
+      if (Object.keys(hopPorts).length) j.hop_ports = hopPorts;
       const peak = Number(r.peakRPSText);
       if (r.peakRPSText.trim() !== "" && Number.isFinite(peak)) j.peak_rps = peak;
       const steady = Number(r.steadyRPSText);
@@ -204,9 +208,11 @@ export function WorkloadForm({
   pickingPathForRow = null,
   onStartPickPath,
   onStopPickPath,
+  nodeLabels = {},
 }: {
   value: WorkloadFormValue;
   onChange: (v: WorkloadFormValue) => void;
+  nodeLabels?: Record<string, string>;
   // pickingPathForRow/onStartPickPath/onStopPickPath (PC-124's own stated
   // acceptance criterion: "journey paths can be picked on the canvas by clicking
   // components in order") — App.tsx owns node-click handling, so path-picking mode
@@ -463,6 +469,22 @@ export function WorkloadForm({
                 </button>
               ))}
           </div>
+          {splitCommaList(row.pathText).length > 1 && <details className="journey-hop-ports">
+            <summary>Ports along this journey</summary>
+            <p className="setting-help">Set the destination port for each hop. Leave it blank to use the journey's default port ({row.port || "not set"}).</p>
+            {Array.from(new Set(splitCommaList(row.pathText).slice(1))).map((destination) => <label key={destination}>
+              <span>{destination.split("|").map((id) => nodeLabels[id] ?? id).join(" / ")}</span>
+              <input type="number" min={1} max={65535} aria-label={`Port to ${nodeLabels[destination] ?? destination}`} placeholder={row.port || "Default"}
+                value={row.hopPorts?.[destination] ?? ""} onChange={(e) => {
+                  const hopPorts = { ...row.hopPorts };
+                  if (e.target.value === "") delete hopPorts[destination];
+                  else hopPorts[destination] = Number(e.target.value);
+                  const rows = value.journeyRows.slice();
+                  rows[i] = { ...row, hopPorts };
+                  update({ journeyRows: rows });
+                }} />
+            </label>)}
+          </details>}
           {pickingPathForRow === i && (
             <p style={{ fontSize: 10, color: "#7c3aed", margin: "0 0 4px" }}>
               Click canvas nodes in order to append them to this path. Click "Done

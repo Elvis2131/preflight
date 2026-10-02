@@ -1032,3 +1032,4 @@ export default function App() {
     </ReactFlowProvider>
   );
 }
+            nodeLabels={Object.fromEntries(nodes.map((n) => [n.id, n.data.label]))}
