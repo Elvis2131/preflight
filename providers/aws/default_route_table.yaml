@@ -1,0 +1,17 @@
+# aws_default_route_table -> network_boundary. PC-151: the VPC's own main (default) route
+# table, adopted into Terraform so its routes can be declared. Per AWS VPC User Guide,
+# "Subnet route tables" (docs.aws.amazon.com/vpc/latest/userguide/subnet-route-tables.html,
+# verified 2026-10-02): a subnet with no explicit association uses the VPC's main route
+# table, and the main table's routes can be changed. Its default_route_table_id attribute
+# references the owning VPC (a contained_in edge, via aws_vpc's own mapping); ingest marks
+# the node RawAttributes["main_route_table"]=true and builds its inline route{} blocks the
+# same way as aws_route_table (ingest/routes.go).
+#
+# ingest_only: the canvas cannot yet author "this route table is the VPC's main one", so
+# the palette must not offer it.
+resource_type: aws_default_route_table
+node_type: network_boundary
+network_role: route_table
+ingest_only: true
+
+capability_level: NETWORK_BEHAVIOR

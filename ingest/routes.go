@@ -80,7 +80,7 @@ func buildRouteEdges(parsed []ParsedResource, byKey map[string]ParsedResource, r
 
 	for _, r := range parsed {
 		switch r.Type {
-		case "aws_route_table":
+		case "aws_route_table", "aws_default_route_table":
 			for i, nb := range r.NestedBlocks["route"] {
 				e, unsup, ok := buildOneRouteEdge(r.Key(), nb.Attributes, nb.References, inlineRouteCIDRAttr, i, byKey, registry, sourceRef(r))
 				if unsup != nil {

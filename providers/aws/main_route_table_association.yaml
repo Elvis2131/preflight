@@ -1,0 +1,13 @@
+# aws_main_route_table_association -> an edge, not a node. PC-151: it names which route
+# table is a VPC's MAIN route table (VPC User Guide, "Subnet route tables": "You can replace
+# the main route table by associating a custom route table with a subnet"... and
+# aws_main_route_table_association is Terraform's resource for exactly that). Edge: the
+# route table is contained_in the VPC, the same containment aws_route_table's own vpc_id
+# gives it. Ingest additionally stamps the referenced route table with
+# RawAttributes["main_route_table"]=true (ingest/mainroutetable.go) — the edge alone cannot
+# say "main".
+resource_type: aws_main_route_table_association
+edge:
+  type: contained_in
+  from_attribute: route_table_id
+  to_attribute: vpc_id

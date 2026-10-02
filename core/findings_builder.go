@@ -60,7 +60,7 @@ func BuildFindings(ir *IR, workload Workload) []Finding {
 
 	for _, node := range ir.Nodes {
 		if declaredPublicTier(node) {
-			findings = append(findings, publicSubnetRouteMismatchFinding(node, ir.Edges))
+			findings = append(findings, publicSubnetRouteMismatchFinding(node, ir))
 		}
 	}
 
@@ -95,16 +95,16 @@ func declaredPublicTier(node Node) bool {
 // label is a convenience; IsPublicSubnet's own real route-table lookup is the
 // authority — see that function's doc comment (core/routing.go) for the AWS VPC User
 // Guide citation this whole check is built on.
-func publicSubnetRouteMismatchFinding(node Node, edges []Edge) Finding {
+func publicSubnetRouteMismatchFinding(node Node, ir *IR) Finding {
 	prov := NewProvenance(KindDerived, "core/routing:public-subnet-check:"+node.ID)
-	isPublic, hasRouteTable := IsPublicSubnet(edges, node.ID)
+	isPublic, hasRouteTable := IsPublicSubnetIR(ir, node.ID)
 
 	nodeID := node.ID
 	var outcome AssessmentEnvelope
 	var evidenceDesc string
 	switch {
 	case !hasRouteTable:
-		outcome = NotAssessable[any]("subnet has no resolvable effective route table (no aws_route_table_association, and this codebase does not yet model AWS's own implicit main-route-table fallback)", prov).ToEnvelope()
+		outcome = NotAssessable[any]("subnet has no resolvable effective route table (no aws_route_table_association, and the design does not declare exactly one main route table for the subnet's VPC — AWS then uses the VPC's main route table, whose non-local routes this engine cannot know)", prov).ToEnvelope()
 		evidenceDesc = "no effective route table found for this subnet"
 	case isPublic:
 		outcome = Assessed[any]("consistent: declared public, and a real default route to an internet gateway confirms it", prov).ToEnvelope()

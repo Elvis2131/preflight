@@ -70,10 +70,10 @@ func routesByTable(edges []Edge) (routesByTableID map[string][]analyse.Route, ig
 // of "is a route table" this function uses (see routesByTable's own doc comment for
 // why NodeType alone can't answer this).
 //
-// ok is false when the subnet has no such edge — this codebase's ingest does not yet
-// model AWS's own "implicit main route table" fallback (there is no per-VPC "this is
-// the main table" concept in the IR at all), so an unassociated subnet is honestly
-// unresolved here, not assumed to be using some default table.
+// ok is false when the subnet has no such edge — this function only answers for an
+// EXPLICIT association. A subnet relying on the VPC's main route table is resolved by
+// ResolveSubnetRouteTable (PC-151), which uses a DECLARED main table and otherwise stays
+// honestly unresolved rather than assuming a default table.
 func EffectiveRouteTableID(edges []Edge, subnetID string) (string, bool) {
 	routeTableIDs := map[string]bool{}
 	for _, e := range edges {
@@ -185,4 +185,68 @@ func hasExplicitRouteTableAssociation(ir *IR, subnetID string) bool {
 		}
 	}
 	return false
+}
+
+// RouteTableSource says how a subnet's effective route table was determined (PC-151).
+type RouteTableSource string
+
+const (
+	// RouteTableExplicit: the subnet is associated with a route table in the design.
+	RouteTableExplicit RouteTableSource = "explicit"
+	// RouteTableDeclaredMain: no association, and the design declares the subnet's VPC main
+	// route table (aws_default_route_table, or aws_main_route_table_association).
+	RouteTableDeclaredMain RouteTableSource = "declared_main"
+)
+
+// ResolveSubnetRouteTable is the one place that answers "which route table does this subnet
+// use?" for routing questions beyond the local route (internet egress, NAT, public/private):
+//
+//  1. an explicit association -> that table (EffectiveRouteTableID, unchanged);
+//  2. none, and the design declares exactly one main route table for the subnet's VPC ->
+//     that table (AWS: a subnet with no explicit association uses the main route table);
+//  3. anything else -> ok=false, i.e. not_assessable. In particular a VPC whose main table
+//     is NOT declared stays unresolved here: AWS guarantees only the local route, which
+//     decides intra-VPC reachability (the trace's route_selection step) but says nothing
+//     about internet egress, and an undeclared main table is not assumed to be one.
+//
+// ok is also false when an explicit association cannot be ruled out, when the subnet's VPC is
+// unknown, or when more than one main route table is declared for the VPC (ambiguous).
+func ResolveSubnetRouteTable(ir *IR, subnetID string) (tableID string, source RouteTableSource, ok bool) {
+	if id, found := EffectiveRouteTableID(ir.Edges, subnetID); found {
+		return id, RouteTableExplicit, true
+	}
+	if hasExplicitRouteTableAssociation(ir, subnetID) {
+		return "", "", false
+	}
+	vpc, known := containingVPC(ir, subnetID)
+	if !known {
+		return "", "", false
+	}
+	var mains []string
+	for _, n := range ir.Nodes {
+		if n.RawAttributes["network_role"] != "route_table" || n.RawAttributes["main_route_table"] != true {
+			continue
+		}
+		for _, e := range ir.Edges {
+			if e.Type == EdgeTypeContainedIn && e.From == n.ID && e.To == vpc && e.Resolution == ResolutionKnown {
+				mains = append(mains, n.ID)
+				break
+			}
+		}
+	}
+	if len(mains) != 1 {
+		return "", "", false
+	}
+	return mains[0], RouteTableDeclaredMain, true
+}
+
+// IsPublicSubnetIR is IsPublicSubnet over a whole IR, so a subnet that relies on a declared
+// main route table is classified from that table's routes (PC-151).
+func IsPublicSubnetIR(ir *IR, subnetID string) (isPublic bool, hasRouteTable bool) {
+	tableID, _, ok := ResolveSubnetRouteTable(ir, subnetID)
+	if !ok {
+		return false, false
+	}
+	routesByTableID, igwTargetIDs := routesByTable(ir.Edges)
+	return analyse.IsPublicSubnetByRoutes(routesByTableID[tableID], igwTargetIDs), true
 }

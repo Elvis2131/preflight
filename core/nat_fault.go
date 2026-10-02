@@ -34,7 +34,7 @@ import (
 // fault passes an IR with that edge already removed, WithRouteRemoved/
 // WithNATGatewayLost below).
 func EvaluateEgressRoute(ir *IR, subnetID string) (allowed bool, targetKind string, reason string) {
-	routeTableID, ok := EffectiveRouteTableID(ir.Edges, subnetID)
+	routeTableID, _, ok := ResolveSubnetRouteTable(ir, subnetID)
 	if !ok {
 		return false, "", "subnet has no resolvable effective route table"
 	}

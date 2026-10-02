@@ -167,11 +167,13 @@ func Ingest(dir string, registry providers.Registry, versionNumber int) (Result,
 	edges = append(edges, routeEdges...)
 	mergeSecurityGroupRules(nodes, parsed)
 	mergeNetworkACLRules(nodes, parsed)
+	markMainRouteTables(nodes, parsed)
 	mergeEKSNodeGroupSizing(nodes, parsed)
 	mergeIAMPolicies(nodes, parsed)
 
 	sort.Slice(nodes, func(i, j int) bool { return nodes[i].ID < nodes[j].ID })
 	sort.Slice(edges, func(i, j int) bool { return edges[i].ID < edges[j].ID })
+	edges = dedupeIdenticalEdges(edges)
 
 	ir := &core.IR{
 		SchemaVersion: "1.4.0",
@@ -522,4 +524,23 @@ func contentHash(nodes []core.Node, edges []core.Edge) string {
 	}{nodes, edges})
 	sum := sha256.Sum256(buf)
 	return "sha256:" + hex.EncodeToString(sum[:])
+}
+
+// dedupeIdenticalEdges drops a second edge with the same type, endpoints and no per-edge
+// data (PC-151: aws_main_route_table_association restates the containment the route
+// table's own vpc_id already gave it). Edges that carry data (routes) are never merged.
+func dedupeIdenticalEdges(edges []core.Edge) []core.Edge {
+	seen := map[string]bool{}
+	out := edges[:0]
+	for _, e := range edges {
+		if len(e.RawAttributes) == 0 {
+			key := string(e.Type) + "\x00" + e.From + "\x00" + e.To
+			if seen[key] {
+				continue
+			}
+			seen[key] = true
+		}
+		out = append(out, e)
+	}
+	return out
 }

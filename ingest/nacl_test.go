@@ -118,3 +118,45 @@ func TestDefaultNetworkACL_IngestedAndResolvedAsDeclaredDefault(t *testing.T) {
 		t.Fatalf("got %+v ok=%v, want the declared default NACL for the unassociated subnet", res, ok)
 	}
 }
+
+// PC-151: both Terraform shapes that name a VPC's main route table are ingested and marked,
+// the default table's inline routes become real routes, the association adds no duplicate
+// containment edge, and core resolves an unassociated subnet to the declared table.
+func TestMainRouteTable_BothShapes_IngestedAndResolved(t *testing.T) {
+	reg := loadRegistry(t)
+	result, err := ingest.Ingest(filepath.Join("testdata", "main-route-table-fixture"), reg, 1)
+	if err != nil || result.IR == nil {
+		t.Fatalf("Ingest: %v / %+v", err, result.Insufficient)
+	}
+	ir := result.IR
+	mainOf := map[string]bool{}
+	for _, n := range ir.Nodes {
+		if n.RawAttributes["main_route_table"] == true {
+			mainOf[n.ID] = true
+		}
+	}
+	if !mainOf["aws_default_route_table.main"] || !mainOf["aws_route_table.custom_main"] || len(mainOf) != 2 {
+		t.Fatalf("main route tables = %v, want exactly the default table and the one made main by association", mainOf)
+	}
+	dup := 0
+	for _, e := range ir.Edges {
+		if e.Type == core.EdgeTypeContainedIn && e.From == "aws_route_table.custom_main" && e.To == "aws_vpc.w" {
+			dup++
+		}
+	}
+	if dup != 1 {
+		t.Errorf("got %d contained_in edges custom_main -> w, want 1 (de-duplicated)", dup)
+	}
+	if id, src, ok := core.ResolveSubnetRouteTable(ir, "aws_subnet.implicit"); !ok || id != "aws_default_route_table.main" || src != core.RouteTableDeclaredMain {
+		t.Fatalf("implicit subnet resolved to %q %q ok=%v", id, src, ok)
+	}
+	if pub, has := core.IsPublicSubnetIR(ir, "aws_subnet.implicit"); !has || !pub {
+		t.Errorf("the declared main table has a default route to an IGW, so the subnet is public: pub=%v has=%v", pub, has)
+	}
+	if id, _, ok := core.ResolveSubnetRouteTable(ir, "aws_subnet.other"); !ok || id != "aws_route_table.custom_main" {
+		t.Errorf("the second VPC's subnet should use the table made main by association, got %q ok=%v", id, ok)
+	}
+	if pub, has := core.IsPublicSubnetIR(ir, "aws_subnet.other"); !has || pub {
+		t.Errorf("that table has no routes: resolved and NOT public: pub=%v has=%v", pub, has)
+	}
+}

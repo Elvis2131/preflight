@@ -112,7 +112,7 @@ func databaseNotPubliclyRoutableResult(ir *IR, db Node, controlID string, framew
 			Rationale: "this resource has no resolvable subnet placement",
 		}
 	}
-	isPublic, hasRouteTable := IsPublicSubnet(ir.Edges, subnetID)
+	isPublic, hasRouteTable := IsPublicSubnetIR(ir, subnetID)
 	if !hasRouteTable {
 		return ComplianceControlResult{
 			ControlID: controlID, Framework: framework, RequirementID: requirementID, Title: title,

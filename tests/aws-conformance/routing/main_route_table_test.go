@@ -54,3 +54,46 @@ func TestRouteMain_001_ImplicitAssociationAndLocalRoute(t *testing.T) {
 		t.Errorf("%s: a subnet in a different VPC is not reached by the local route", spec.ID)
 	}
 }
+
+func TestRouteMain_002_DeclaredMainTableDecidesEgress(t *testing.T) {
+	spec := harness.Verify(t, harness.Spec{
+		ID:            "ROUTE-MAIN-002",
+		Rule:          "When a subnet has no explicit route table association, the VPC's main route table is used by default, and the main route table's routes can be added, removed and modified — so a declared main table's routes, not an assumed default, decide that subnet's internet egress.",
+		Source:        "https://docs.aws.amazon.com/vpc/latest/userguide/subnet-route-tables.html",
+		Scenario:      "A subnet with no association in a VPC whose main route table is declared with a default route to an internet gateway, and the same design with that table NOT declared as the main one.",
+		Configuration: "subnet contained in the VPC; route table (declared main / not main) with 0.0.0.0/0 -> internet gateway",
+		Request:       "Resolve the subnet's route table, classify it public/private, and evaluate its internet egress.",
+		Expected:      "Declared main: the subnet uses that table, is public, and egress resolves to the internet gateway. Not declared: unresolved (not_assessable) — AWS guarantees only the local route, which says nothing about egress.",
+	})
+	prov := core.NewProvenance(core.KindStated, "conformance")
+	build := func(declareMain bool) *core.IR {
+		mk := func(id string, raw map[string]any) core.Node {
+			return core.Node{ID: id, Type: core.NodeTypeNetworkBoundary, Resolution: core.ResolutionKnown, Provenance: prov, RawAttributes: raw}
+		}
+		e := func(id string, ty core.EdgeType, from, to string) core.Edge {
+			return core.Edge{ID: id, Type: ty, From: from, To: to, Resolution: core.ResolutionKnown, Provenance: prov}
+		}
+		route := e("r", core.EdgeTypeRoutesTo, "mainrt", "igw")
+		route.RawAttributes = map[string]any{"destination_cidr": "0.0.0.0/0", "target_kind": "internet_gateway"}
+		return &core.IR{SchemaVersion: "1.4.0", VersionNumber: 1, VersionHash: "h",
+			Nodes: []core.Node{
+				mk("vpc", map[string]any{"network_role": "vpc"}), mk("subnet", map[string]any{"network_role": "subnet"}), mk("igw", nil),
+				mk("mainrt", map[string]any{"network_role": "route_table", "main_route_table": declareMain}),
+			},
+			Edges: []core.Edge{e("1", core.EdgeTypeContainedIn, "subnet", "vpc"), e("2", core.EdgeTypeContainedIn, "mainrt", "vpc"), route}}
+	}
+	declared := build(true)
+	if pub, has := core.IsPublicSubnetIR(declared, "subnet"); !has || !pub {
+		t.Fatalf("%s (%s): declared main table must make the subnet public — see %s", spec.ID, spec.Rule, spec.Source)
+	}
+	if ok, kind, _ := core.EvaluateEgressRoute(declared, "subnet"); !ok || kind != "internet_gateway" {
+		t.Errorf("%s: egress must resolve via the declared main table, got ok=%v kind=%q", spec.ID, ok, kind)
+	}
+	undeclared := build(false)
+	if _, has := core.IsPublicSubnetIR(undeclared, "subnet"); has {
+		t.Errorf("%s: without a declared main table public/private must stay unknown", spec.ID)
+	}
+	if ok, _, _ := core.EvaluateEgressRoute(undeclared, "subnet"); ok {
+		t.Errorf("%s: without a declared main table egress must not be assumed", spec.ID)
+	}
+}

@@ -85,7 +85,7 @@ func DeriveSubnetFacts(ir *IR) []SubnetFact {
 		if r, ok := RegionOfAZ(az); ok {
 			f.Region = r
 		}
-		isPublic, hasRT := IsPublicSubnet(ir.Edges, n.ID)
+		isPublic, hasRT := IsPublicSubnetIR(ir, n.ID)
 		switch {
 		case !hasRT:
 			f.Visibility = SubnetVisibilityUnknown
