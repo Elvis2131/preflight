@@ -24,6 +24,9 @@ const (
 	PlaceALBTwoAZs              = "PLACE-ALB-TWO-AZS"
 	PlaceDBSubnetGroupTwoAZs    = "PLACE-DBSUBNETGROUP-TWO-AZS"
 	PlaceNATGatewayOneSubnet    = "PLACE-NAT-ONE-SUBNET"
+	PlaceDefaultNACLOneVPC      = "PLACE-DEFAULT-NACL-ONE-VPC"
+	PlaceDefaultNACLOnePerVPC   = "PLACE-DEFAULT-NACL-ONE-PER-VPC"
+	serviceIDDefaultNACL        = "aws_default_network_acl"
 	serviceIDVPC                = "aws_vpc"
 	serviceIDSubnet             = "aws_subnet"
 	serviceIDLB                 = "aws_lb"
@@ -96,6 +99,16 @@ func ValidateCanvasPlacement(doc CanvasDocument) []PlacementViolation {
 					"https://docs.aws.amazon.com/vpc/latest/userguide/configure-subnets.html")
 			}
 
+		case serviceIDDefaultNACL:
+			// PC-153: a default network ACL is a VPC's own ("Your virtual private cloud (VPC)
+			// automatically comes with a default network ACL"), so it is contained in exactly
+			// one VPC; the engine uses it for that VPC's subnets with no explicit association.
+			if vpcs := parentsOfService(n.ID, serviceIDVPC); len(vpcs) != 1 {
+				add(PlaceDefaultNACLOneVPC, n.ID,
+					fmt.Sprintf("a default network ACL belongs to exactly one VPC, but this one is in %d", len(vpcs)),
+					"https://docs.aws.amazon.com/vpc/latest/userguide/default-network-acl.html")
+			}
+
 		case serviceIDNATGateway:
 			// A (zonal) NAT gateway is created in exactly one subnet.
 			if subs := parentsOfService(n.ID, serviceIDSubnet); len(subs) != 1 {
@@ -120,6 +133,29 @@ func ValidateCanvasPlacement(doc CanvasDocument) []PlacementViolation {
 				add(PlaceDBSubnetGroupTwoAZs, n.ID, msg,
 					"https://docs.aws.amazon.com/AmazonRDS/latest/UserGuide/USER_VPC.WorkingWithRDSInstanceinaVPC.html")
 			}
+		}
+	}
+
+	// A VPC has one default network ACL: two declared for the same VPC leave the engine no
+	// way to know which rules the VPC's unassociated subnets use, so each extra one is named.
+	defaultsByVPC := map[string][]string{}
+	for _, n := range doc.Nodes {
+		if n.ServiceID != serviceIDDefaultNACL {
+			continue
+		}
+		for _, vpc := range parentsOfService(n.ID, serviceIDVPC) {
+			defaultsByVPC[vpc.ID] = append(defaultsByVPC[vpc.ID], n.ID)
+		}
+	}
+	for vpcID, ids := range defaultsByVPC {
+		if len(ids) < 2 {
+			continue
+		}
+		sort.Strings(ids)
+		for _, id := range ids {
+			add(PlaceDefaultNACLOnePerVPC, id,
+				fmt.Sprintf("a VPC has one default network ACL, but %s has %d (%v)", vpcID, len(ids), ids),
+				"https://docs.aws.amazon.com/vpc/latest/userguide/default-network-acl.html")
 		}
 	}
 

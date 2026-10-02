@@ -8,9 +8,12 @@
 # reference_edge_type: contained_in — the same way a subnet's VPC reference does.
 # Ingest marks the node RawAttributes["default_nacl"]=true and attaches its inline
 # ingress/egress blocks as nacl_rules (ingest/nacl.go).
-# ingest_only: the canvas cannot yet author "this NACL is the VPC default", so the
-# palette must not offer it (a node that silently drops that meaning would mislead).
+# PC-153: the canvas authors it too. The node's service_id is the marker; it is tied to its VPC by
+# a contained_in edge (core.ValidateCanvasPlacement enforces exactly one VPC), and default_nacl
+# makes canvas ingest stamp the same default_nacl attribute HCL ingest does. Authored rules REPLACE
+# the AWS default rules (as aws_default_network_acl's inline rules do); none authored leaves the
+# default assumed, tagged so (PC-149).
 resource_type: aws_default_network_acl
-ingest_only: true
+default_nacl: true
 node_type: network_boundary
 capability_level: NETWORK_BEHAVIOR

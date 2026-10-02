@@ -255,6 +255,9 @@ func resolveCanvasCapabilityLevel(raw map[string]any, registry providers.Registr
 	if mapping.NetworkRole != "" {
 		raw["network_role"] = mapping.NetworkRole
 	}
+	if mapping.DefaultNACL {
+		raw["default_nacl"] = true
+	}
 	return raw
 }
 

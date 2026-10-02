@@ -133,6 +133,12 @@ type ResourceMapping struct {
 	// implicit main route table was not recognised as a subnet at all.
 	NetworkRole string `yaml:"network_role,omitempty"`
 
+	// DefaultNACL marks a NACL mapping whose node is its VPC's DEFAULT network ACL (PC-153: the
+	// canvas has no resource-type name to key on, so the mapping says it). Ingest stamps
+	// RawAttributes["default_nacl"] = true on such a node, the same attribute HCL ingest sets for
+	// aws_default_network_acl, so core resolves both producers identically.
+	DefaultNACL bool `yaml:"default_nacl,omitempty"`
+
 	// PublicAddressModel says HOW a resource of this type comes to hold a public IPv4 address,
 	// so core can answer "can it use an internet gateway" without naming a provider (PC-156).
 	// "launch_attribute" means the address is assigned at launch: a launch-time setting on the
@@ -200,6 +206,9 @@ func (m ResourceMapping) validate() error {
 	}
 	if m.NetworkRole != "" && m.NetworkRole != "subnet" && m.NetworkRole != "vpc" && m.NetworkRole != "route_table" && m.NetworkRole != "elastic_ip" {
 		return fmt.Errorf("mapping %s: network_role %q must be \"subnet\", \"vpc\", \"route_table\" or \"elastic_ip\"", m.ResourceType, m.NetworkRole)
+	}
+	if m.DefaultNACL && m.NodeType != core.NodeTypeNetworkBoundary {
+		return fmt.Errorf("mapping %s: default_nacl is only meaningful on a network_boundary node", m.ResourceType)
 	}
 	if m.PublicAddressModel != "" && m.PublicAddressModel != "launch_attribute" {
 		return fmt.Errorf("mapping %s: public_address_model %q must be \"launch_attribute\"", m.ResourceType, m.PublicAddressModel)

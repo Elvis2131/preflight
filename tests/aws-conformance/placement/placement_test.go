@@ -160,3 +160,49 @@ func TestPlacement_ViolationsCiteSourceAndAreDeterministic(t *testing.T) {
 		}
 	}
 }
+
+const defaultNACLDoc = "https://docs.aws.amazon.com/vpc/latest/userguide/default-network-acl.html"
+
+func TestPlacement_DefaultNACLBelongsToOneVPC_001(t *testing.T) {
+	spec := harness.Verify(t, harness.Spec{
+		ID:            "PLACE-DEFAULT-NACL-ONE-VPC-001",
+		Rule:          "A VPC automatically comes with a default network ACL, so a default network ACL belongs to exactly one VPC.",
+		Source:        defaultNACLDoc,
+		Scenario:      "A default network ACL drawn inside no VPC, inside one VPC, and inside two VPCs.",
+		Configuration: "d-none (no contained_in), d-one (in vpc1), d-two (in vpc1 and vpc2)",
+		Request:       "ValidateCanvasPlacement over the document.",
+		Expected:      "Violations for d-none and d-two only.",
+	})
+	doc := core.CanvasDocument{
+		Nodes: []core.CanvasNode{node("vpc1", "aws_vpc"), node("vpc2", "aws_vpc"), node("d-none", "aws_default_network_acl"), node("d-one", "aws_default_network_acl"), node("d-two", "aws_default_network_acl")},
+		Edges: []core.CanvasEdge{in("e1", "d-one", "vpc1"), in("e2", "d-two", "vpc1"), in("e3", "d-two", "vpc2")},
+	}
+	got := rules(core.ValidateCanvasPlacement(doc))
+	for _, want := range []string{"PLACE-DEFAULT-NACL-ONE-VPC@d-none", "PLACE-DEFAULT-NACL-ONE-VPC@d-two"} {
+		if !strings.Contains(got, want) {
+			t.Errorf("%s (%s): missing %q in %q — see %s", spec.ID, spec.Rule, want, got, spec.Source)
+		}
+	}
+	if strings.Contains(got, "PLACE-DEFAULT-NACL-ONE-VPC@d-one") {
+		t.Errorf("%s: d-one is in exactly one VPC and must not be flagged: %q", spec.ID, got)
+	}
+}
+
+func TestPlacement_VPCHasOneDefaultNACL_001(t *testing.T) {
+	spec := harness.Verify(t, harness.Spec{
+		ID:            "PLACE-DEFAULT-NACL-ONE-PER-VPC-001",
+		Rule:          "A VPC automatically comes with a default network ACL (singular), so two default network ACLs declared for one VPC leave no way to know which one its unassociated subnets use.",
+		Source:        defaultNACLDoc,
+		Scenario:      "Two default network ACLs in one VPC, and one each in another.",
+		Configuration: "da and db in vpc1; dc in vpc2",
+		Request:       "ValidateCanvasPlacement over the document.",
+		Expected:      "Violations for da and db only; dc, the only default in its VPC, is fine.",
+	})
+	doc := core.CanvasDocument{
+		Nodes: []core.CanvasNode{node("vpc1", "aws_vpc"), node("vpc2", "aws_vpc"), node("da", "aws_default_network_acl"), node("db", "aws_default_network_acl"), node("dc", "aws_default_network_acl")},
+		Edges: []core.CanvasEdge{in("e1", "da", "vpc1"), in("e2", "db", "vpc1"), in("e3", "dc", "vpc2")},
+	}
+	if got, want := rules(core.ValidateCanvasPlacement(doc)), "PLACE-DEFAULT-NACL-ONE-PER-VPC@da,PLACE-DEFAULT-NACL-ONE-PER-VPC@db"; got != want {
+		t.Fatalf("%s (%s): got %q, want %q — see %s", spec.ID, spec.Rule, got, want, spec.Source)
+	}
+}

@@ -86,19 +86,25 @@ func TestListServiceCatalogHandler_ServesRealCatalogAsJSON(t *testing.T) {
 	}
 }
 
-// PC-149: an ingest-only mapping (aws_default_network_acl) is understood by HCL ingest
-// but must never reach the palette.
+// An ingest-only mapping (aws_instance, PC-156) is understood by HCL ingest but must never reach
+// the palette; aws_default_network_acl stopped being ingest-only once the canvas could author it
+// (PC-153) and must be offered.
 func TestListServiceCatalog_OmitsIngestOnlyMappings(t *testing.T) {
 	reg, err := awsprovider.Load()
 	if err != nil {
 		t.Fatalf("awsprovider.Load(): %v", err)
 	}
-	if _, ok := reg.Lookup("aws_default_network_acl"); !ok {
-		t.Fatal("aws_default_network_acl must stay in the registry so ingest keeps working")
+	if m, ok := reg.Lookup("aws_instance"); !ok || !m.IngestOnly {
+		t.Fatal("test premise: aws_instance must be an ingest-only mapping in the registry")
 	}
+	offered := map[string]bool{}
 	for _, e := range server.ListServiceCatalog(reg) {
-		if e.ResourceType == "aws_default_network_acl" {
-			t.Fatal("an ingest-only mapping must not be offered by the service catalog")
-		}
+		offered[e.ResourceType] = true
+	}
+	if offered["aws_instance"] {
+		t.Error("an ingest-only mapping must not be offered by the service catalog")
+	}
+	if !offered["aws_default_network_acl"] {
+		t.Error("aws_default_network_acl is canvas-authorable (PC-153) and must be offered")
 	}
 }
