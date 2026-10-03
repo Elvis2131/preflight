@@ -199,7 +199,7 @@ func TestNetworkTemplates_ModelledFlowsAndHonestLimits(t *testing.T) {
 					t.Errorf("production TLS app hop blocked: %s", flows["production_api"].BlockedReason)
 				}
 				if flows["production_data"].Flows || !strings.Contains(flows["production_data"].BlockedReason, "route_selection") {
-				t.Errorf("local-only data route must remain unknown until modelled, not be faked with a NAT route: %+v", flows["production_data"])
+					t.Errorf("local-only data route must remain unknown until modelled, not be faked with a NAT route: %+v", flows["production_data"])
 				}
 				trace := core.BuildTrace(res.IR, "aws_eks_cluster.nonproduction", "aws_ec2_transit_gateway.hub", "", "tcp", 443)
 				if trace.Allowed || trace.Steps[len(trace.Steps)-1].Decision != core.TraceNotAssessable {
