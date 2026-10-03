@@ -9,7 +9,6 @@ import (
 	"testing"
 
 	"preflight/core"
-	"preflight/render"
 )
 
 func buildGoldenReportForHTML(t *testing.T, sessionID string) core.Report {
@@ -19,14 +18,8 @@ func buildGoldenReportForHTML(t *testing.T, sessionID string) core.Report {
 	findings := core.BuildFindings(ir, workload)
 	scorecard := core.BuildScorecard(findings, 1)
 
-	// The real, live-rendered diagram — exactly what cmd/gen-golden-fixtures used to
-	// produce the committed fixture, so this test proves the SAME real SVG round-trips
-	// byte-identically through RenderReportHTML, not a stand-in string.
-	dot := core.RenderDOT(ir)
-	svg, err := render.SVG(dot)
-	if err != nil {
-		t.Fatalf("render diagram: %v", err)
-	}
+	// The same fixed placeholder diagram the generator embeds (see goldenReportGraphPlaceholder).
+	svg := goldenReportGraphSVG(t, ir)
 
 	return core.BuildReport(sessionID, 1, svg, ir, workload, findings, scorecard, nil, core.PriceTable{}, nil)
 }

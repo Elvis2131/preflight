@@ -31,9 +31,11 @@ import (
 // have passed silently, since render_golden_test.go only ever compared two
 // invocations within the same run against each other. render_fixture_test.go closes
 // that gap — it byte-compares live output against a CHECKED-IN fixture
-// (render/testdata/golden_aws.svg), so any drift, whatever its cause, fails CI
-// immediately rather than sitting undetected. See render/testdata/README.md for what
-// a failure there means and how to regenerate responsibly.
+// (render/testdata/golden_aws.svg), but ONLY in the environment that fixture was made in
+// (Graphviz 16.1.0 on macOS): node widths come from the machine's fonts, so another OS draws a
+// different diagram even with the same version (PC-6, first real CI run), and the test says
+// SKIPPED there. Everywhere, structure and same-environment determinism are checked instead. See
+// render/testdata/README.md.
 func SVG(dot string) (string, error) {
 	if _, err := exec.LookPath("dot"); err != nil {
 		return "", fmt.Errorf("render: graphviz's \"dot\" binary not found on PATH: %w", err)

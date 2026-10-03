@@ -37,6 +37,17 @@ apart before regenerating anything:
   "don't trust a regeneration silently, verify it" discipline `golden/fixtures/`
   already established for IR/findings.
 
+**Scope of the SVG fixture (PC-6, found by the first real CI run).** `golden_aws.svg` is only meaningful
+where it was made: Graphviz 16.1.0 on macOS. Graphviz sizes every node from the width of its text, which
+comes from the machine's fonts, so the same version draws a different diagram on Linux (a bare Linux
+container with 16.1.0 differed in every node's width; apt's older Graphviz on the CI runner differed by
+about 4,000 bytes). So `TestSVG_MatchesCheckedInGoldenFixture` runs only on that environment and reports
+**SKIPPED, not passed** elsewhere. What every environment checks instead
+(`TestSVG_StructureAndDeterminismInAnyEnvironment`): the SVG is well-formed XML, draws one node per IR node
+and one edge per IR edge, names every node, and is byte-identical when rendered twice. The DOT input stays
+byte-compared everywhere. The report fixtures (`golden/fixtures/aws.report.*`) embed a fixed placeholder
+diagram for the same reason. Not claimed: that two different environments produce the same SVG bytes.
+
 Generated against Graphviz **16.1.0** (Homebrew, macOS arm64), 2026-09-25 (PC-111: regenerated after golden/aws's IR gained aws_route_table/aws_internet_gateway nodes and their routes_to/depends_on edges — same Graphviz version as the prior regeneration, so this update is content-only, not a version bump).
 
 ## PC-122: the PDF renderer does NOT get a golden fixture here

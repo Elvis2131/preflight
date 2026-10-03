@@ -13,20 +13,20 @@ import (
 	"testing"
 
 	"preflight/core"
-	"preflight/render"
 )
 
-// goldenReportGraphSVG renders the real PC-81 diagram exactly as cmd/gen-golden-
-// fixtures does (PC-122: Report.Graph is now part of the byte-compared fixture, so
-// this test must feed it the same real, live-rendered SVG that generator used —
-// never a placeholder string, which would make this comparison meaningless).
-func goldenReportGraphSVG(t *testing.T, ir *core.IR) string {
+// goldenReportGraphSVG is the report diagram the golden fixtures use: a FIXED placeholder, the
+// same string cmd/gen-golden-fixtures embeds. Live Graphviz output is not used here because its
+// bytes depend on the installed Graphviz version and the machine's fonts, so a fixture that embedded
+// it would only be true on the machine that generated it (PC-6: the first real CI run failed exactly
+// that way, 4,000 bytes off with apt's Graphviz). The real diagram is checked in render/: its DOT
+// input byte-for-byte on any machine, and its SVG for structure and same-environment determinism
+// everywhere, plus byte-for-byte where the checked-in fixture applies.
+const goldenReportGraphPlaceholder = `<svg xmlns="http://www.w3.org/2000/svg"><title>golden report diagram placeholder: the real diagram is checked in render/ (structure and determinism in any environment, bytes where the fixture applies)</title></svg>`
+
+func goldenReportGraphSVG(t *testing.T, _ *core.IR) string {
 	t.Helper()
-	svg, err := render.SVG(core.RenderDOT(ir))
-	if err != nil {
-		t.Fatalf("render diagram: %v (is graphviz installed? \"dot -V\")", err)
-	}
-	return svg
+	return goldenReportGraphPlaceholder
 }
 
 func TestGoldenReport_ByteIdentical(t *testing.T) {

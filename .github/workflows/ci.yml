@@ -34,6 +34,12 @@ jobs:
       # comment). `dot -V` is printed so the ACTUAL version this run used is always
       # visible in the log, not silently unknown.
       #
+      # PC-6, found by this workflow's first real run: byte-comparing the SVG against a fixture made on
+      # macOS cannot pass on Linux (node widths come from the machine's fonts; apt's Graphviz also
+      # differs in version). So on this runner render's byte-for-byte SVG test reports SKIPPED, and the
+      # structure + same-environment determinism checks run instead; the DOT input and every other
+      # golden fixture are still byte-compared here. The report fixtures embed a fixed placeholder diagram.
+      #
       # Honest scope of the determinism guarantee (PC-81, NFR-1), stated precisely
       # rather than implied more broadly: core.RenderDOT's own output (pure Go, no
       # external dependency) is byte-identical on any machine, always. The SVG bytes

@@ -29,8 +29,10 @@ import (
 	"preflight/providers"
 	awsprovider "preflight/providers/aws"
 	azureprovider "preflight/providers/azure"
-	"preflight/render"
 )
+
+// goldenReportGraphPlaceholder must stay identical to the one in core/report_golden_test.go.
+const goldenReportGraphPlaceholder = `<svg xmlns="http://www.w3.org/2000/svg"><title>golden report diagram placeholder: the real diagram is checked in render/ (structure and determinism in any environment, bytes where the fixture applies)</title></svg>`
 
 func main() {
 	root, err := os.Getwd()
@@ -95,10 +97,11 @@ func main() {
 			// output here) — a real, honest "cost section unavailable" case, not a
 			// gap invented for test coverage.
 			scorecard := core.BuildScorecard(findings, 1)
-			graphSVG, err := render.SVG(core.RenderDOT(result.IR))
-			if err != nil {
-				fail(fmt.Errorf("render golden report's own diagram: %w", err))
-			}
+			// The report's diagram is a FIXED placeholder, not live Graphviz output: SVG bytes
+			// depend on the installed Graphviz version and the machine's fonts, so a report
+			// fixture that embedded them could only ever be true on the machine that made it
+			// (the first CI run failed exactly that way). The real diagram is covered in render/.
+			graphSVG := goldenReportGraphPlaceholder
 			report := core.BuildReport("golden", 1, graphSVG, result.IR, workload, findings, scorecard, nil, core.PriceTable{}, nil)
 			writeJSON(outDir, "aws.report.json", report)
 			fmt.Printf("wrote %s\n", filepath.Join("golden", "fixtures", "aws.report.json"))
