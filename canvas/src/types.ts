@@ -129,6 +129,12 @@ export interface CanvasNodeData extends Record<string, unknown> {
   capability: Record<string, string>;
   sizing?: Record<string, string>;
   serviceID?: string;
+  // View and layout metadata stay in the browser; the graph remains complete.
+  placedOnCanvas?: boolean;
+  servicePosition?: { x: number; y: number };
+  infrastructurePosition?: { x: number; y: number };
+  configurationSummary?: string[];
+  canResizeContainer?: boolean;
   securityGroupRules?: CanvasSecurityGroupRule[];
   availabilityZone?: string;
   cidrBlock?: string;
@@ -139,6 +145,9 @@ export interface CanvasNodeData extends Record<string, unknown> {
   subnetFact?: SubnetFact;
   simState?: SimState;
   journeyOnPath?: boolean;
+  trafficStep?: number;
+  trafficDimmed?: boolean;
+  trafficExternal?: boolean;
   utilization?: number | null;
   notAssessableLoad?: boolean;
 }
@@ -147,4 +156,13 @@ export interface CanvasEdgeData extends Record<string, unknown> {
   edgeType: EdgeType;
   severed?: boolean;
   journeyOnPath?: boolean;
+  traffic?: {
+    active: boolean;
+    allowed?: boolean;
+    kind?: "dns";
+    playing: boolean;
+    reducedMotion: boolean;
+    duration: number;
+    packetKey: string;
+  };
 }

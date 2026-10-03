@@ -20,7 +20,7 @@ export interface JourneyPanelProps {
 export function JourneyPanel({ journeys, flowDetail, load, latency, selectedJourneyID, onSelectJourney }: JourneyPanelProps) {
   if (journeys.length === 0) {
     return (
-      <div className="result-panel" style={{ padding: 16, fontSize: 12, color: "#697386" }}>
+      <div className="result-panel" style={{ padding: 16, fontSize: 12, color: "var(--muted)" }}>
         No journeys declared — add one in the Workload form to see traffic flow and
         utilization here.
       </div>
@@ -49,24 +49,24 @@ export function JourneyPanel({ journeys, flowDetail, load, latency, selectedJour
       </label>
 
       {!flow && (
-        <p style={{ color: "#94a3b8" }}>
+        <p style={{ color: "var(--subtle)" }}>
           Run a simulation (baseline or a fault) to see this journey's flow.
         </p>
       )}
 
       {flow && (
         <div style={{ marginBottom: 12 }}>
-          <div style={{ fontWeight: 600, color: flow.Flows ? "#16a34a" : flow.Degraded ? "#d97706" : "#dc2626" }}>
+          <div style={{ fontWeight: 600, color: flow.Flows ? "var(--success-ink)" : flow.Degraded ? "var(--warning-ink)" : "var(--danger-ink)" }}>
             {flow.Flows ? "Flows end-to-end" : `Blocked at ${flow.BlockedAt}: ${flow.BlockedReason}`}
           </div>
           {flow.Degraded && (
-            <div style={{ color: "#d97706", fontSize: 12 }}>
+            <div style={{ color: "var(--warning-ink)", fontSize: 12 }}>
               Degraded, not failed — the declared fallback flows: {flow.DegradedVia}
             </div>
           )}
           <table style={{ width: "100%", marginTop: 6, borderCollapse: "collapse" }}>
             <thead>
-              <tr style={{ textAlign: "left", color: "#64748b" }}>
+              <tr style={{ textAlign: "left", color: "var(--muted)" }}>
                 <th>hop</th>
                 <th>allowed</th>
                 <th>reason</th>
@@ -74,12 +74,12 @@ export function JourneyPanel({ journeys, flowDetail, load, latency, selectedJour
             </thead>
             <tbody>
               {flow.Hops.map((hop, i) => (
-                <tr key={i} style={{ borderTop: "1px solid #e2e8f0" }}>
+                <tr key={i} style={{ borderTop: "1px solid var(--line)" }}>
                   <td>
                     {hop.From} &rarr; {hop.To}
                   </td>
-                  <td style={{ color: hop.Allowed ? "#16a34a" : "#dc2626" }}>{hop.Allowed ? "yes" : "no"}</td>
-                  <td style={{ color: "#64748b" }}>{hop.Reason}</td>
+                  <td style={{ color: hop.Allowed ? "var(--success-ink)" : "var(--danger-ink)" }}>{hop.Allowed ? "yes" : "no"}</td>
+                  <td style={{ color: "var(--muted)" }}>{hop.Reason}</td>
                 </tr>
               ))}
             </tbody>
@@ -92,13 +92,13 @@ export function JourneyPanel({ journeys, flowDetail, load, latency, selectedJour
           {latEstimate ? (
             <>
               <div>{latEstimate.statement}</div>
-              <div style={{ color: "#64748b" }}>
+              <div style={{ color: "var(--muted)" }}>
                 Inputs: {latEstimate.inputs.map((i) => `${i.name} = ${i.value} (${i.source})`).join("; ")}
               </div>
-              <div style={{ color: "#64748b" }}>Assumed: {latEstimate.assumptions.join("; ")}</div>
+              <div style={{ color: "var(--muted)" }}>Assumed: {latEstimate.assumptions.join("; ")}</div>
             </>
           ) : (
-            <div style={{ color: "#94a3b8" }}>Not assessable: {lat.reason}</div>
+            <div style={{ color: "var(--subtle)" }}>Not assessable: {lat.reason}</div>
           )}
         </div>
       )}
@@ -106,11 +106,11 @@ export function JourneyPanel({ journeys, flowDetail, load, latency, selectedJour
 
       <h4 style={{ fontSize: 12, margin: "8px 0 4px" }}>Component load</h4>
       {load.length === 0 ? (
-        <p style={{ color: "#94a3b8" }}>No component currently carries any declared journey's load.</p>
+        <p style={{ color: "var(--subtle)" }}>No component currently carries any declared journey's load.</p>
       ) : (
         <table style={{ width: "100%", borderCollapse: "collapse" }}>
           <thead>
-            <tr style={{ textAlign: "left", color: "#64748b" }}>
+            <tr style={{ textAlign: "left", color: "var(--muted)" }}>
               <th>node</th>
               <th>offered rps</th>
               <th>utilization</th>
@@ -118,12 +118,12 @@ export function JourneyPanel({ journeys, flowDetail, load, latency, selectedJour
           </thead>
           <tbody>
             {load.map((l) => (
-              <tr key={l.NodeID} style={{ borderTop: "1px solid #e2e8f0" }}>
+              <tr key={l.NodeID} style={{ borderTop: "1px solid var(--line)" }}>
                 <td>{l.NodeID}</td>
                 <td>{l.OfferedRPS}</td>
                 <td>
                   {l.Utilization === null ? (
-                    <span style={{ color: "#94a3b8" }}>not_assessable{l.NotAssessableReason ? ` (${l.NotAssessableReason})` : ""}</span>
+                    <span style={{ color: "var(--subtle)" }}>not_assessable{l.NotAssessableReason ? ` (${l.NotAssessableReason})` : ""}</span>
                   ) : (
                     `${Math.round(l.Utilization * 100)}%`
                   )}

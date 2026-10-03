@@ -1,0 +1,86 @@
+// Service view is a projection of the full design. Inline settings must author
+// the same nodes, rules and relationships that the real backend evaluates.
+import { open, check, done, loadTemplate, select, mode, baseline, flowOf } from "./lib.mjs";
+
+const { page, close } = await open();
+const document = async () => {
+  await page.getByTestId("canvas-json-toggle").click();
+  const result = JSON.parse(await page.locator("pre").innerText());
+  await page.getByTestId("canvas-json-toggle").click();
+  return result;
+};
+await loadTemplate(page, "three-tier-vpc");
+check("the sample shows five core services and four traffic connections", await page.locator(".react-flow__node-golden").count() === 5 && await page.locator(".react-flow__edge").count() === 4);
+check("network configuration does not crowd the service view", await page.locator('.react-flow__node[data-id="aws_vpc.main"]').count() === 0 && await page.locator('.react-flow__node[data-id="aws_security_group.app"]').count() === 0);
+const original = await document();
+check("the full backend graph is retained", original.nodes.length === 23 && original.edges.length > 35);
+check("the removed Infrastructure view is unavailable", await page.getByTestId("infrastructure-toggle").count() === 0);
+await select(page, "aws_eks_cluster.app");
+check("selecting a service focuses its settings and leaves room for the canvas", await page.locator(".inspector-panel").count() === 1 && await page.locator(".workload-panel").count() === 0);
+const groups = page.getByTestId("configuration-security_groups");
+const subnets = page.getByTestId("configuration-subnets");
+check("existing security groups and both subnets appear as service attributes", (await groups.innerText()).includes("App security group") && (await subnets.innerText()).includes("Private A") && (await subnets.innerText()).includes("Private B"));
+await groups.getByRole("button", { name: "Edit App security group", exact: true }).click();
+let rules = groups.getByTestId("security-group-rules-editor");
+check("security-group sources are chosen by resource name", await rules.getByRole("combobox", { name: "Source security group" }).first().locator("option:checked").innerText() === "LB security group");
+await rules.getByRole("spinbutton", { name: "From port", exact: true }).first().fill("8081");
+await rules.getByRole("spinbutton", { name: "To port", exact: true }).first().fill("8081");
+await mode(page, "simulate");
+await baseline(page);
+const blocked = await flowOf(page, "api");
+check("editing an inline rule changes the real simulation at the SG step", /Blocked at/.test(blocked) && /sg_dest_ingress/.test(blocked) && /no rule matched/.test(blocked), blocked);
+check("an unaffected journey still flows", await flowOf(page, "web") === "Flows end-to-end");
+await mode(page, "design");
+await select(page, "aws_eks_cluster.app");
+await groups.getByRole("button", { name: "Edit App security group", exact: true }).click();
+rules = groups.getByTestId("security-group-rules-editor");
+await rules.getByRole("spinbutton", { name: "From port", exact: true }).first().fill("8080");
+await rules.getByRole("spinbutton", { name: "To port", exact: true }).first().fill("8080");
+await subnets.getByRole("button", { name: "Edit Private A", exact: true }).click();
+await subnets.getByTestId("configuration-route_table").getByRole("button", { name: "Edit Private route table", exact: true }).click();
+check("subnet routing can be edited from the service without exposing infrastructure", await subnets.getByTestId("routes-editor").isVisible() && await page.getByTestId("infrastructure-toggle").count() === 0);
+check("shared resources explain the effect of editing them", (await subnets.innerText()).includes("Changes apply to each."));
+await page.getByTestId("arrange-canvas").click();
+check("arranging the canvas keeps all service configuration intact", JSON.stringify(await document()) === JSON.stringify(original));
+await mode(page, "simulate");
+await baseline(page);
+check("restoring the inline rule restores end-to-end traffic", await flowOf(page, "api") === "Flows end-to-end");
+await mode(page, "design");
+
+await page.locator(".canvas-stage").evaluate((stage) => {
+  const rect = stage.getBoundingClientRect();
+  const dataTransfer = new DataTransfer();
+  dataTransfer.setData("application/preflight-node-type", "compute");
+  dataTransfer.setData("application/preflight-service-id", "aws_instance");
+  stage.dispatchEvent(new DragEvent("drop", { bubbles: true, cancelable: true, dataTransfer, clientX: rect.x + 180, clientY: rect.y + 180 }));
+});
+const inspector = page.locator(".inspector-panel");
+await inspector.getByLabel("Name", { exact: true }).fill("Worker EC2");
+const create = async (setting, name) => {
+  const section = inspector.getByTestId(`configuration-${setting}`);
+  await section.getByRole("button", { name: /^Create / }).click();
+  await section.getByLabel("Name", { exact: true }).fill(name);
+  await section.getByRole("button", { name: "Create & assign", exact: true }).click();
+};
+await create("security_groups", "Worker traffic");
+await create("iam_role", "Worker role");
+await inspector.getByRole("combobox", { name: "Assign Subnets", exact: true }).selectOption("aws_subnet.private_a");
+const configured = await document();
+const worker = configured.nodes.find((n) => n.label === "Worker EC2");
+const sg = configured.nodes.find((n) => n.label === "Worker traffic");
+const role = configured.nodes.find((n) => n.label === "Worker role");
+check("EC2 attributes create real SG, IAM role and subnet relationships", configured.edges.some((e) => e.from === worker.id && e.to === sg.id && e.type === "depends_on") && configured.edges.some((e) => e.from === worker.id && e.to === role.id && e.type === "authenticates_via") && configured.edges.some((e) => e.from === worker.id && e.to === "aws_subnet.private_a" && e.type === "contained_in"));
+check("inline-created resources stay off the clean canvas", await page.locator(".react-flow__node-golden").count() === 6);
+check("cards summarize their configuration", (await page.locator(`.react-flow__node[data-id="${worker.id}"]`).innerText()).includes("1 subnet · 1 security group · IAM role"));
+check("layout and view metadata never enter the API document", configured.nodes.every((n) => !n.placedOnCanvas && !n.position && !n.infrastructurePosition && !n.servicePosition && !n.configurationSummary));
+await inspector.getByTestId("configuration-security_groups").getByRole("button", { name: "Unassign Worker traffic", exact: true }).click();
+const detached = await document();
+check("removing an assignment retains the resource and other settings", detached.nodes.some((n) => n.id === sg.id) && !detached.edges.some((e) => e.from === worker.id && e.to === sg.id) && detached.edges.some((e) => e.from === worker.id && e.to === role.id));
+await page.setViewportSize({ width: 1024, height: 800 });
+check("the canvas retains usable width with service settings open", (await page.locator(".canvas-stage").boundingBox()).width >= 400);
+await page.locator(`.react-flow__node[data-id="${worker.id}"]`).dispatchEvent("click");
+await page.keyboard.press("Backspace");
+const deleted = await document();
+check("deleting a service removes its hidden relationships without orphan edges", !deleted.nodes.some((n) => n.id === worker.id) && deleted.edges.every((e) => e.from !== worker.id && e.to !== worker.id));
+await close();
+done("07-service-settings");

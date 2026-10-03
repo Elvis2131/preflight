@@ -1,0 +1,215 @@
+{
+  "journeys": [
+    {
+      "entry_point": "aws_lb.simple",
+      "target": "aws_db_instance.simple",
+      "survives": false
+    },
+    {
+      "entry_point": "aws_route53_record.simple",
+      "target": "aws_db_instance.simple",
+      "survives": false
+    }
+  ],
+  "capacity": {
+    "state": "not_assessable",
+    "reason": "capacity_unknown: \"app_node_rps\" was not declared in workload.yaml — surviving instance count alone is never treated as a capacity value (CLAUDE.md §9)",
+    "provenance": {
+      "kind": "derived",
+      "source": "template-fixture"
+    }
+  },
+  "severed_paths": [
+    "aws_db_instance.simple"
+  ],
+  "cascade": [
+    "aws_instance.simple",
+    "aws_db_instance.simple",
+    "aws_iam_role.simple_app",
+    "aws_security_group.simple_app",
+    "aws_subnet.simple_app_a",
+    "aws_db_subnet_group.simple",
+    "aws_route_table.simple_app",
+    "aws_security_group.simple_data",
+    "aws_nat_gateway.simple_a",
+    "aws_subnet.simple_data_a",
+    "aws_subnet.simple_data_b",
+    "aws_route_table.simple_data"
+  ],
+  "verdict": {
+    "state": "assessed",
+    "value": "total_outage",
+    "provenance": {
+      "kind": "derived",
+      "source": "template-fixture"
+    }
+  },
+  "flow_detail": [
+    {
+      "JourneyID": "simple_request",
+      "Flows": false,
+      "Hops": [
+        {
+          "From": "internet",
+          "To": "aws_lb.simple",
+          "Allowed": true,
+          "Reason": "Allowed: internet -\u003e aws_lb.simple:443/tcp reaches its destination.",
+          "GroupIndex": 1
+        },
+        {
+          "From": "aws_lb.simple",
+          "To": "aws_instance.simple",
+          "Allowed": false,
+          "Reason": "component aws_instance.simple is unreachable under the declared fault",
+          "GroupIndex": 2
+        }
+      ],
+      "ReachedByGroup": [
+        [
+          "internet"
+        ],
+        [
+          "aws_lb.simple"
+        ],
+        []
+      ],
+      "BlockedAt": "aws_instance.simple",
+      "BlockedReason": "component aws_instance.simple is unreachable under the declared fault"
+    },
+    {
+      "JourneyID": "simple_web",
+      "Flows": true,
+      "Hops": [
+        {
+          "From": "internet",
+          "To": "aws_lb.simple",
+          "Allowed": true,
+          "Reason": "Allowed: internet -\u003e aws_lb.simple:443/tcp reaches its destination.",
+          "GroupIndex": 1
+        }
+      ],
+      "ReachedByGroup": [
+        [
+          "internet"
+        ],
+        [
+          "aws_lb.simple"
+        ]
+      ],
+      "BlockedAt": "",
+      "BlockedReason": ""
+    },
+    {
+      "JourneyID": "simple_app",
+      "Flows": false,
+      "Hops": [
+        {
+          "From": "aws_lb.simple",
+          "To": "aws_instance.simple",
+          "Allowed": false,
+          "Reason": "component aws_instance.simple is unreachable under the declared fault",
+          "GroupIndex": 1
+        }
+      ],
+      "ReachedByGroup": [
+        [
+          "aws_lb.simple"
+        ],
+        []
+      ],
+      "BlockedAt": "aws_instance.simple",
+      "BlockedReason": "component aws_instance.simple is unreachable under the declared fault"
+    },
+    {
+      "JourneyID": "simple_data",
+      "Flows": false,
+      "Hops": null,
+      "ReachedByGroup": [
+        []
+      ],
+      "BlockedAt": "aws_instance.simple",
+      "BlockedReason": "component aws_instance.simple is unreachable under the declared fault"
+    }
+  ],
+  "load": null,
+  "latency": [
+    {
+      "journey_id": "simple_request",
+      "result": {
+        "state": "not_assessable",
+        "reason": "journey \"simple_request\" has no declared peak_rps",
+        "provenance": {
+          "kind": "derived",
+          "source": "template-fixture"
+        }
+      }
+    },
+    {
+      "journey_id": "simple_web",
+      "result": {
+        "state": "not_assessable",
+        "reason": "journey \"simple_web\" has no declared peak_rps",
+        "provenance": {
+          "kind": "derived",
+          "source": "template-fixture"
+        }
+      }
+    },
+    {
+      "journey_id": "simple_app",
+      "result": {
+        "state": "not_assessable",
+        "reason": "journey \"simple_app\" has no declared peak_rps",
+        "provenance": {
+          "kind": "derived",
+          "source": "template-fixture"
+        }
+      }
+    },
+    {
+      "journey_id": "simple_data",
+      "result": {
+        "state": "not_assessable",
+        "reason": "journey \"simple_data\" has no declared peak_rps",
+        "provenance": {
+          "kind": "derived",
+          "source": "template-fixture"
+        }
+      }
+    }
+  ],
+  "baseline": {
+    "summary": {
+      "state": "not_assessable",
+      "reason": "the baseline of 3 declared journey(s) could not be decided: [simple_request (Blocked at aws_instance.simple (capability_check): service aws_instance.simple (capability_level \u003cnil\u003e) does not reach REQUEST_SIMULATION) simple_app (Blocked at aws_instance.simple (capability_check): service aws_instance.simple (capability_level \u003cnil\u003e) does not reach REQUEST_SIMULATION) simple_data (Blocked at aws_instance.simple (capability_check): service aws_instance.simple (capability_level \u003cnil\u003e) does not reach REQUEST_SIMULATION)]",
+      "provenance": {
+        "kind": "derived",
+        "source": "template-fixture"
+      }
+    },
+    "journeys": [
+      {
+        "journey_id": "simple_request",
+        "status": "not_assessable",
+        "baseline_blocked_at": "aws_instance.simple",
+        "baseline_reason": "Blocked at aws_instance.simple (capability_check): service aws_instance.simple (capability_level \u003cnil\u003e) does not reach REQUEST_SIMULATION"
+      },
+      {
+        "journey_id": "simple_web",
+        "status": "flows_before_and_after"
+      },
+      {
+        "journey_id": "simple_app",
+        "status": "not_assessable",
+        "baseline_blocked_at": "aws_instance.simple",
+        "baseline_reason": "Blocked at aws_instance.simple (capability_check): service aws_instance.simple (capability_level \u003cnil\u003e) does not reach REQUEST_SIMULATION"
+      },
+      {
+        "journey_id": "simple_data",
+        "status": "not_assessable",
+        "baseline_blocked_at": "aws_db_instance.simple",
+        "baseline_reason": "Blocked at aws_instance.simple (capability_check): service aws_instance.simple (capability_level \u003cnil\u003e) does not reach REQUEST_SIMULATION"
+      }
+    ]
+  }
+}

@@ -1,0 +1,899 @@
+{
+  "schema_version": "1.4.0",
+  "version_number": 1,
+  "version_hash": "sha256:284ff091ce658b24bc60c88a7908171a33e772e1420c962c998dc1f0b1b5186c",
+  "nodes": [
+    {
+      "id": "aws_vpc.simple",
+      "type": "network_boundary",
+      "resolution": "known",
+      "capability": {},
+      "raw_attributes": {
+        "capability_level": "NETWORK_BEHAVIOR",
+        "cidr_block": "10.20.0.0/16",
+        "enable_dns_hostnames": "true",
+        "enable_dns_support": "true",
+        "network_role": "vpc"
+      },
+      "provenance": {
+        "kind": "stated",
+        "source": "canvas"
+      }
+    },
+    {
+      "id": "aws_subnet.simple_public_a",
+      "type": "network_boundary",
+      "resolution": "known",
+      "capability": {},
+      "raw_attributes": {
+        "availability_zone": "eu-west-1a",
+        "capability_level": "NETWORK_BEHAVIOR",
+        "cidr_block": "10.20.0.0/24",
+        "map_public_ip_on_launch": "false",
+        "network_role": "subnet"
+      },
+      "provenance": {
+        "kind": "stated",
+        "source": "canvas"
+      }
+    },
+    {
+      "id": "aws_subnet.simple_public_b",
+      "type": "network_boundary",
+      "resolution": "known",
+      "capability": {},
+      "raw_attributes": {
+        "availability_zone": "eu-west-1b",
+        "capability_level": "NETWORK_BEHAVIOR",
+        "cidr_block": "10.20.1.0/24",
+        "map_public_ip_on_launch": "false",
+        "network_role": "subnet"
+      },
+      "provenance": {
+        "kind": "stated",
+        "source": "canvas"
+      }
+    },
+    {
+      "id": "aws_subnet.simple_app_a",
+      "type": "network_boundary",
+      "resolution": "known",
+      "capability": {},
+      "raw_attributes": {
+        "availability_zone": "eu-west-1a",
+        "capability_level": "NETWORK_BEHAVIOR",
+        "cidr_block": "10.20.10.0/24",
+        "map_public_ip_on_launch": "false",
+        "network_role": "subnet"
+      },
+      "provenance": {
+        "kind": "stated",
+        "source": "canvas"
+      }
+    },
+    {
+      "id": "aws_subnet.simple_app_b",
+      "type": "network_boundary",
+      "resolution": "known",
+      "capability": {},
+      "raw_attributes": {
+        "availability_zone": "eu-west-1b",
+        "capability_level": "NETWORK_BEHAVIOR",
+        "cidr_block": "10.20.11.0/24",
+        "map_public_ip_on_launch": "false",
+        "network_role": "subnet"
+      },
+      "provenance": {
+        "kind": "stated",
+        "source": "canvas"
+      }
+    },
+    {
+      "id": "aws_subnet.simple_data_a",
+      "type": "network_boundary",
+      "resolution": "known",
+      "capability": {},
+      "raw_attributes": {
+        "availability_zone": "eu-west-1a",
+        "capability_level": "NETWORK_BEHAVIOR",
+        "cidr_block": "10.20.20.0/24",
+        "map_public_ip_on_launch": "false",
+        "network_role": "subnet"
+      },
+      "provenance": {
+        "kind": "stated",
+        "source": "canvas"
+      }
+    },
+    {
+      "id": "aws_subnet.simple_data_b",
+      "type": "network_boundary",
+      "resolution": "known",
+      "capability": {},
+      "raw_attributes": {
+        "availability_zone": "eu-west-1b",
+        "capability_level": "NETWORK_BEHAVIOR",
+        "cidr_block": "10.20.21.0/24",
+        "map_public_ip_on_launch": "false",
+        "network_role": "subnet"
+      },
+      "provenance": {
+        "kind": "stated",
+        "source": "canvas"
+      }
+    },
+    {
+      "id": "aws_internet_gateway.simple",
+      "type": "network_boundary",
+      "resolution": "known",
+      "raw_attributes": {
+        "capability_level": "NETWORK_BEHAVIOR"
+      },
+      "provenance": {
+        "kind": "stated",
+        "source": "canvas"
+      }
+    },
+    {
+      "id": "aws_route_table.simple_public",
+      "type": "network_boundary",
+      "resolution": "known",
+      "capability": {},
+      "raw_attributes": {
+        "capability_level": "NETWORK_BEHAVIOR",
+        "design_local_route": "10.20.0.0/16 -\u003e local (AWS-created)",
+        "network_role": "route_table"
+      },
+      "provenance": {
+        "kind": "stated",
+        "source": "canvas"
+      }
+    },
+    {
+      "id": "aws_nat_gateway.simple_a",
+      "type": "network_boundary",
+      "resolution": "known",
+      "capability": {},
+      "raw_attributes": {
+        "capability_level": "NETWORK_BEHAVIOR",
+        "connectivity_type": "public",
+        "design_elastic_ip": "Allocate an Elastic IP at deployment"
+      },
+      "provenance": {
+        "kind": "stated",
+        "source": "canvas"
+      }
+    },
+    {
+      "id": "aws_route_table.simple_app",
+      "type": "network_boundary",
+      "resolution": "known",
+      "capability": {},
+      "raw_attributes": {
+        "capability_level": "NETWORK_BEHAVIOR",
+        "design_local_route": "10.20.0.0/16 -\u003e local (AWS-created)",
+        "network_role": "route_table"
+      },
+      "provenance": {
+        "kind": "stated",
+        "source": "canvas"
+      }
+    },
+    {
+      "id": "aws_route_table.simple_data",
+      "type": "network_boundary",
+      "resolution": "known",
+      "capability": {},
+      "raw_attributes": {
+        "capability_level": "NETWORK_BEHAVIOR",
+        "design_local_route": "10.20.0.0/16 -\u003e local (AWS-created)",
+        "network_role": "route_table"
+      },
+      "provenance": {
+        "kind": "stated",
+        "source": "canvas"
+      }
+    },
+    {
+      "id": "aws_route53_record.simple",
+      "type": "dns",
+      "resolution": "known",
+      "capability": {},
+      "raw_attributes": {
+        "capability_level": "REQUEST_SIMULATION",
+        "design_alias": "aws_lb.simple",
+        "design_dns_client": "internet",
+        "name": "app.example.com",
+        "type": "A"
+      },
+      "provenance": {
+        "kind": "stated",
+        "source": "canvas"
+      }
+    },
+    {
+      "id": "aws_lb.simple",
+      "type": "load_balancer",
+      "resolution": "known",
+      "capability": {},
+      "sizing": {
+        "load_balancer_type": "application",
+        "region": "eu-west-1"
+      },
+      "raw_attributes": {
+        "capability_level": "REQUEST_SIMULATION",
+        "deletion_protection": "true",
+        "design_listener": "HTTPS 443; attach an ACM certificate for app.example.com",
+        "internal": "false"
+      },
+      "provenance": {
+        "kind": "stated",
+        "source": "canvas"
+      }
+    },
+    {
+      "id": "aws_instance.simple",
+      "type": "compute",
+      "resolution": "known",
+      "capability": {},
+      "sizing": {
+        "count": 1,
+        "region": "eu-west-1"
+      },
+      "raw_attributes": {
+        "associate_public_ip_address": "false",
+        "design_administration": "Systems Manager through outbound HTTPS; no inbound SSH",
+        "metadata_http_tokens": "required"
+      },
+      "provenance": {
+        "kind": "stated",
+        "source": "canvas"
+      }
+    },
+    {
+      "id": "aws_db_subnet_group.simple",
+      "type": "network_boundary",
+      "resolution": "known",
+      "raw_attributes": {
+        "capability_level": "CONNECTIVITY"
+      },
+      "provenance": {
+        "kind": "stated",
+        "source": "canvas"
+      }
+    },
+    {
+      "id": "aws_db_instance.simple",
+      "type": "managed_database",
+      "resolution": "known",
+      "capability": {
+        "backup_semantics": "7",
+        "encryption_mechanism": "true",
+        "multi_az_implementation": "false"
+      },
+      "sizing": {
+        "region": "eu-west-1"
+      },
+      "raw_attributes": {
+        "backup_retention_period_days": "7",
+        "capability_level": "FAILURE_SIMULATION",
+        "deletion_protection": "true",
+        "design_engine": "PostgreSQL; port 5432",
+        "multi_az": "false",
+        "publicly_accessible": "false",
+        "storage_encrypted": "true"
+      },
+      "provenance": {
+        "kind": "stated",
+        "source": "canvas"
+      }
+    },
+    {
+      "id": "aws_security_group.simple_entry",
+      "type": "network_boundary",
+      "resolution": "known",
+      "raw_attributes": {
+        "capability_level": "NETWORK_BEHAVIOR",
+        "security_group_rules": [
+          {
+            "cidr_blocks": [
+              "0.0.0.0/0"
+            ],
+            "direction": "ingress",
+            "from_port": 443,
+            "protocol": "tcp",
+            "to_port": 443
+          },
+          {
+            "cidr_blocks": [
+              "10.20.10.0/24"
+            ],
+            "direction": "egress",
+            "from_port": 8080,
+            "protocol": "tcp",
+            "to_port": 8080
+          }
+        ]
+      },
+      "provenance": {
+        "kind": "stated",
+        "source": "canvas"
+      }
+    },
+    {
+      "id": "aws_security_group.simple_app",
+      "type": "network_boundary",
+      "resolution": "known",
+      "raw_attributes": {
+        "capability_level": "NETWORK_BEHAVIOR",
+        "security_group_rules": [
+          {
+            "direction": "ingress",
+            "from_port": 8080,
+            "protocol": "tcp",
+            "source_security_group": "aws_security_group.simple_entry",
+            "to_port": 8080
+          },
+          {
+            "cidr_blocks": [
+              "10.20.20.0/23"
+            ],
+            "direction": "egress",
+            "from_port": 5432,
+            "protocol": "tcp",
+            "to_port": 5432
+          },
+          {
+            "cidr_blocks": [
+              "0.0.0.0/0"
+            ],
+            "direction": "egress",
+            "from_port": 443,
+            "protocol": "tcp",
+            "to_port": 443
+          }
+        ]
+      },
+      "provenance": {
+        "kind": "stated",
+        "source": "canvas"
+      }
+    },
+    {
+      "id": "aws_security_group.simple_data",
+      "type": "network_boundary",
+      "resolution": "known",
+      "raw_attributes": {
+        "capability_level": "NETWORK_BEHAVIOR",
+        "security_group_rules": [
+          {
+            "direction": "ingress",
+            "from_port": 5432,
+            "protocol": "tcp",
+            "source_security_group": "aws_security_group.simple_app",
+            "to_port": 5432
+          }
+        ]
+      },
+      "provenance": {
+        "kind": "stated",
+        "source": "canvas"
+      }
+    },
+    {
+      "id": "aws_iam_role.simple_app",
+      "type": "identity",
+      "resolution": "known",
+      "capability": {},
+      "raw_attributes": {
+        "assume_role_policy": "{\"Version\":\"2012-10-17\",\"Statement\":[{\"Effect\":\"Allow\",\"Principal\":{\"Service\":\"ec2.amazonaws.com\"},\"Action\":\"sts:AssumeRole\"}]}",
+        "capability_level": "CONFIGURATION",
+        "design_permissions": "Attach only the workload-specific permissions required at deployment; no wildcard policy supplied."
+      },
+      "provenance": {
+        "kind": "stated",
+        "source": "canvas"
+      }
+    },
+    {
+      "id": "aws_network_acl.simple_baseline",
+      "type": "network_boundary",
+      "resolution": "known",
+      "raw_attributes": {
+        "capability_level": "NETWORK_BEHAVIOR",
+        "nacl_rules": [
+          {
+            "allow": true,
+            "cidr": "0.0.0.0/0",
+            "direction": "ingress",
+            "number": 100,
+            "protocol": "-1"
+          },
+          {
+            "allow": true,
+            "cidr": "0.0.0.0/0",
+            "direction": "egress",
+            "number": 100,
+            "protocol": "-1"
+          }
+        ]
+      },
+      "provenance": {
+        "kind": "stated",
+        "source": "canvas"
+      }
+    }
+  ],
+  "edges": [
+    {
+      "id": "contained_in:aws_subnet.simple_public_a:aws_vpc.simple",
+      "type": "contained_in",
+      "from": "aws_subnet.simple_public_a",
+      "to": "aws_vpc.simple",
+      "resolution": "known",
+      "provenance": {
+        "kind": "stated",
+        "source": "canvas"
+      }
+    },
+    {
+      "id": "contained_in:aws_subnet.simple_public_b:aws_vpc.simple",
+      "type": "contained_in",
+      "from": "aws_subnet.simple_public_b",
+      "to": "aws_vpc.simple",
+      "resolution": "known",
+      "provenance": {
+        "kind": "stated",
+        "source": "canvas"
+      }
+    },
+    {
+      "id": "contained_in:aws_subnet.simple_app_a:aws_vpc.simple",
+      "type": "contained_in",
+      "from": "aws_subnet.simple_app_a",
+      "to": "aws_vpc.simple",
+      "resolution": "known",
+      "provenance": {
+        "kind": "stated",
+        "source": "canvas"
+      }
+    },
+    {
+      "id": "contained_in:aws_subnet.simple_app_b:aws_vpc.simple",
+      "type": "contained_in",
+      "from": "aws_subnet.simple_app_b",
+      "to": "aws_vpc.simple",
+      "resolution": "known",
+      "provenance": {
+        "kind": "stated",
+        "source": "canvas"
+      }
+    },
+    {
+      "id": "contained_in:aws_subnet.simple_data_a:aws_vpc.simple",
+      "type": "contained_in",
+      "from": "aws_subnet.simple_data_a",
+      "to": "aws_vpc.simple",
+      "resolution": "known",
+      "provenance": {
+        "kind": "stated",
+        "source": "canvas"
+      }
+    },
+    {
+      "id": "contained_in:aws_subnet.simple_data_b:aws_vpc.simple",
+      "type": "contained_in",
+      "from": "aws_subnet.simple_data_b",
+      "to": "aws_vpc.simple",
+      "resolution": "known",
+      "provenance": {
+        "kind": "stated",
+        "source": "canvas"
+      }
+    },
+    {
+      "id": "contained_in:aws_internet_gateway.simple:aws_vpc.simple",
+      "type": "contained_in",
+      "from": "aws_internet_gateway.simple",
+      "to": "aws_vpc.simple",
+      "resolution": "known",
+      "provenance": {
+        "kind": "stated",
+        "source": "canvas"
+      }
+    },
+    {
+      "id": "contained_in:aws_route_table.simple_public:aws_vpc.simple",
+      "type": "contained_in",
+      "from": "aws_route_table.simple_public",
+      "to": "aws_vpc.simple",
+      "resolution": "known",
+      "provenance": {
+        "kind": "stated",
+        "source": "canvas"
+      }
+    },
+    {
+      "id": "depends_on:aws_subnet.simple_public_a:aws_route_table.simple_public",
+      "type": "depends_on",
+      "from": "aws_subnet.simple_public_a",
+      "to": "aws_route_table.simple_public",
+      "resolution": "known",
+      "provenance": {
+        "kind": "stated",
+        "source": "canvas"
+      }
+    },
+    {
+      "id": "depends_on:aws_subnet.simple_public_b:aws_route_table.simple_public",
+      "type": "depends_on",
+      "from": "aws_subnet.simple_public_b",
+      "to": "aws_route_table.simple_public",
+      "resolution": "known",
+      "provenance": {
+        "kind": "stated",
+        "source": "canvas"
+      }
+    },
+    {
+      "id": "contained_in:aws_nat_gateway.simple_a:aws_subnet.simple_public_a",
+      "type": "contained_in",
+      "from": "aws_nat_gateway.simple_a",
+      "to": "aws_subnet.simple_public_a",
+      "resolution": "known",
+      "provenance": {
+        "kind": "stated",
+        "source": "canvas"
+      }
+    },
+    {
+      "id": "contained_in:aws_route_table.simple_app:aws_vpc.simple",
+      "type": "contained_in",
+      "from": "aws_route_table.simple_app",
+      "to": "aws_vpc.simple",
+      "resolution": "known",
+      "provenance": {
+        "kind": "stated",
+        "source": "canvas"
+      }
+    },
+    {
+      "id": "depends_on:aws_subnet.simple_app_a:aws_route_table.simple_app",
+      "type": "depends_on",
+      "from": "aws_subnet.simple_app_a",
+      "to": "aws_route_table.simple_app",
+      "resolution": "known",
+      "provenance": {
+        "kind": "stated",
+        "source": "canvas"
+      }
+    },
+    {
+      "id": "depends_on:aws_subnet.simple_app_b:aws_route_table.simple_app",
+      "type": "depends_on",
+      "from": "aws_subnet.simple_app_b",
+      "to": "aws_route_table.simple_app",
+      "resolution": "known",
+      "provenance": {
+        "kind": "stated",
+        "source": "canvas"
+      }
+    },
+    {
+      "id": "contained_in:aws_route_table.simple_data:aws_vpc.simple",
+      "type": "contained_in",
+      "from": "aws_route_table.simple_data",
+      "to": "aws_vpc.simple",
+      "resolution": "known",
+      "provenance": {
+        "kind": "stated",
+        "source": "canvas"
+      }
+    },
+    {
+      "id": "depends_on:aws_subnet.simple_data_a:aws_route_table.simple_data",
+      "type": "depends_on",
+      "from": "aws_subnet.simple_data_a",
+      "to": "aws_route_table.simple_data",
+      "resolution": "known",
+      "provenance": {
+        "kind": "stated",
+        "source": "canvas"
+      }
+    },
+    {
+      "id": "depends_on:aws_subnet.simple_data_b:aws_route_table.simple_data",
+      "type": "depends_on",
+      "from": "aws_subnet.simple_data_b",
+      "to": "aws_route_table.simple_data",
+      "resolution": "known",
+      "provenance": {
+        "kind": "stated",
+        "source": "canvas"
+      }
+    },
+    {
+      "id": "contained_in:aws_lb.simple:aws_subnet.simple_public_a",
+      "type": "contained_in",
+      "from": "aws_lb.simple",
+      "to": "aws_subnet.simple_public_a",
+      "resolution": "known",
+      "provenance": {
+        "kind": "stated",
+        "source": "canvas"
+      }
+    },
+    {
+      "id": "contained_in:aws_lb.simple:aws_subnet.simple_public_b",
+      "type": "contained_in",
+      "from": "aws_lb.simple",
+      "to": "aws_subnet.simple_public_b",
+      "resolution": "known",
+      "provenance": {
+        "kind": "stated",
+        "source": "canvas"
+      }
+    },
+    {
+      "id": "contained_in:aws_instance.simple:aws_subnet.simple_app_a",
+      "type": "contained_in",
+      "from": "aws_instance.simple",
+      "to": "aws_subnet.simple_app_a",
+      "resolution": "known",
+      "provenance": {
+        "kind": "stated",
+        "source": "canvas"
+      }
+    },
+    {
+      "id": "contained_in:aws_db_subnet_group.simple:aws_subnet.simple_data_a",
+      "type": "contained_in",
+      "from": "aws_db_subnet_group.simple",
+      "to": "aws_subnet.simple_data_a",
+      "resolution": "known",
+      "provenance": {
+        "kind": "stated",
+        "source": "canvas"
+      }
+    },
+    {
+      "id": "contained_in:aws_db_subnet_group.simple:aws_subnet.simple_data_b",
+      "type": "contained_in",
+      "from": "aws_db_subnet_group.simple",
+      "to": "aws_subnet.simple_data_b",
+      "resolution": "known",
+      "provenance": {
+        "kind": "stated",
+        "source": "canvas"
+      }
+    },
+    {
+      "id": "contained_in:aws_db_instance.simple:aws_db_subnet_group.simple",
+      "type": "contained_in",
+      "from": "aws_db_instance.simple",
+      "to": "aws_db_subnet_group.simple",
+      "resolution": "known",
+      "provenance": {
+        "kind": "stated",
+        "source": "canvas"
+      }
+    },
+    {
+      "id": "contained_in:aws_security_group.simple_entry:aws_vpc.simple",
+      "type": "contained_in",
+      "from": "aws_security_group.simple_entry",
+      "to": "aws_vpc.simple",
+      "resolution": "known",
+      "provenance": {
+        "kind": "stated",
+        "source": "canvas"
+      }
+    },
+    {
+      "id": "contained_in:aws_security_group.simple_app:aws_vpc.simple",
+      "type": "contained_in",
+      "from": "aws_security_group.simple_app",
+      "to": "aws_vpc.simple",
+      "resolution": "known",
+      "provenance": {
+        "kind": "stated",
+        "source": "canvas"
+      }
+    },
+    {
+      "id": "contained_in:aws_security_group.simple_data:aws_vpc.simple",
+      "type": "contained_in",
+      "from": "aws_security_group.simple_data",
+      "to": "aws_vpc.simple",
+      "resolution": "known",
+      "provenance": {
+        "kind": "stated",
+        "source": "canvas"
+      }
+    },
+    {
+      "id": "depends_on:aws_lb.simple:aws_security_group.simple_entry",
+      "type": "depends_on",
+      "from": "aws_lb.simple",
+      "to": "aws_security_group.simple_entry",
+      "resolution": "known",
+      "provenance": {
+        "kind": "stated",
+        "source": "canvas"
+      }
+    },
+    {
+      "id": "depends_on:aws_instance.simple:aws_security_group.simple_app",
+      "type": "depends_on",
+      "from": "aws_instance.simple",
+      "to": "aws_security_group.simple_app",
+      "resolution": "known",
+      "provenance": {
+        "kind": "stated",
+        "source": "canvas"
+      }
+    },
+    {
+      "id": "depends_on:aws_db_instance.simple:aws_security_group.simple_data",
+      "type": "depends_on",
+      "from": "aws_db_instance.simple",
+      "to": "aws_security_group.simple_data",
+      "resolution": "known",
+      "provenance": {
+        "kind": "stated",
+        "source": "canvas"
+      }
+    },
+    {
+      "id": "authenticates_via:aws_instance.simple:aws_iam_role.simple_app",
+      "type": "authenticates_via",
+      "from": "aws_instance.simple",
+      "to": "aws_iam_role.simple_app",
+      "resolution": "known",
+      "provenance": {
+        "kind": "stated",
+        "source": "canvas"
+      }
+    },
+    {
+      "id": "contained_in:aws_network_acl.simple_baseline:aws_vpc.simple",
+      "type": "contained_in",
+      "from": "aws_network_acl.simple_baseline",
+      "to": "aws_vpc.simple",
+      "resolution": "known",
+      "provenance": {
+        "kind": "stated",
+        "source": "canvas"
+      }
+    },
+    {
+      "id": "depends_on:aws_subnet.simple_public_a:aws_network_acl.simple_baseline",
+      "type": "depends_on",
+      "from": "aws_subnet.simple_public_a",
+      "to": "aws_network_acl.simple_baseline",
+      "resolution": "known",
+      "provenance": {
+        "kind": "stated",
+        "source": "canvas"
+      }
+    },
+    {
+      "id": "depends_on:aws_subnet.simple_public_b:aws_network_acl.simple_baseline",
+      "type": "depends_on",
+      "from": "aws_subnet.simple_public_b",
+      "to": "aws_network_acl.simple_baseline",
+      "resolution": "known",
+      "provenance": {
+        "kind": "stated",
+        "source": "canvas"
+      }
+    },
+    {
+      "id": "depends_on:aws_subnet.simple_app_a:aws_network_acl.simple_baseline",
+      "type": "depends_on",
+      "from": "aws_subnet.simple_app_a",
+      "to": "aws_network_acl.simple_baseline",
+      "resolution": "known",
+      "provenance": {
+        "kind": "stated",
+        "source": "canvas"
+      }
+    },
+    {
+      "id": "depends_on:aws_subnet.simple_app_b:aws_network_acl.simple_baseline",
+      "type": "depends_on",
+      "from": "aws_subnet.simple_app_b",
+      "to": "aws_network_acl.simple_baseline",
+      "resolution": "known",
+      "provenance": {
+        "kind": "stated",
+        "source": "canvas"
+      }
+    },
+    {
+      "id": "depends_on:aws_subnet.simple_data_a:aws_network_acl.simple_baseline",
+      "type": "depends_on",
+      "from": "aws_subnet.simple_data_a",
+      "to": "aws_network_acl.simple_baseline",
+      "resolution": "known",
+      "provenance": {
+        "kind": "stated",
+        "source": "canvas"
+      }
+    },
+    {
+      "id": "depends_on:aws_subnet.simple_data_b:aws_network_acl.simple_baseline",
+      "type": "depends_on",
+      "from": "aws_subnet.simple_data_b",
+      "to": "aws_network_acl.simple_baseline",
+      "resolution": "known",
+      "provenance": {
+        "kind": "stated",
+        "source": "canvas"
+      }
+    },
+    {
+      "id": "routes_to:aws_route53_record.simple:aws_lb.simple",
+      "type": "routes_to",
+      "from": "aws_route53_record.simple",
+      "to": "aws_lb.simple",
+      "resolution": "known",
+      "provenance": {
+        "kind": "stated",
+        "source": "canvas"
+      }
+    },
+    {
+      "id": "routes_to:aws_lb.simple:aws_instance.simple",
+      "type": "routes_to",
+      "from": "aws_lb.simple",
+      "to": "aws_instance.simple",
+      "resolution": "known",
+      "provenance": {
+        "kind": "stated",
+        "source": "canvas"
+      }
+    },
+    {
+      "id": "reads/writes:aws_instance.simple:aws_db_instance.simple",
+      "type": "reads/writes",
+      "from": "aws_instance.simple",
+      "to": "aws_db_instance.simple",
+      "resolution": "known",
+      "provenance": {
+        "kind": "stated",
+        "source": "canvas"
+      }
+    },
+    {
+      "id": "aws_route_table.simple_public-route[0]-\u003eaws_internet_gateway.simple",
+      "type": "routes_to",
+      "from": "aws_route_table.simple_public",
+      "to": "aws_internet_gateway.simple",
+      "resolution": "known",
+      "provenance": {
+        "kind": "stated",
+        "source": "canvas"
+      },
+      "raw_attributes": {
+        "destination_cidr": "0.0.0.0/0",
+        "target_kind": "internet_gateway"
+      }
+    },
+    {
+      "id": "aws_route_table.simple_app-route[0]-\u003eaws_nat_gateway.simple_a",
+      "type": "routes_to",
+      "from": "aws_route_table.simple_app",
+      "to": "aws_nat_gateway.simple_a",
+      "resolution": "known",
+      "provenance": {
+        "kind": "stated",
+        "source": "canvas"
+      },
+      "raw_attributes": {
+        "destination_cidr": "0.0.0.0/0",
+        "target_kind": "nat_gateway"
+      }
+    }
+  ]
+}

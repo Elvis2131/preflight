@@ -1,10 +1,61 @@
 # Canvas (PC-85)
 
+## Local development and appearance
+
+Start the current backend from the repository root with `go run ./cmd/assessd`,
+then run `npm run dev` in `canvas/`. The frontend defaults to port 8080 for the
+backend. For a different port, put `VITE_ASSESSD_URL=http://localhost:8091` in
+`canvas/.env.local` and start the backend with `PREFLIGHT_ASSESSD_PORT=8091`.
+Restart Vite after changing its environment. Use the current backend source:
+older running binaries can answer `/healthz` while returning 404 for `/templates`
+and `/catalog/services`. Template failures now show an explanation and a retry.
+
+The moon/sun button at the bottom of the navigation rail switches appearance.
+The first visit follows the system theme; an explicit choice persists in local
+storage. Theme changes preserve the active canvas, form values and simulation.
+
 Drag-and-drop architecture authoring canvas — PC-84's epic, PC-85's own shell-only
 scope. React + TypeScript + Vite + `@xyflow/react` 12 (the confirmed library choice
 per PC-85's own Card, validated earlier against the aws-resilience-simulator reference
 implementation — studied for design, never vendored, per ADR-004's own vendor-vs-port
 reasoning).
+
+## Connections
+
+Drag from a service's output port to another service's input port. A popup at the
+destination names both services and asks for the connection type. Selecting a type
+creates the connection; Escape, Cancel or clicking outside discards it. Pending
+connections never enter the saved architecture document. Click a connection or its
+label to change its type while retaining its ID and endpoints. Drawing the same
+connection again opens its editor instead of adding a duplicate. Editing remains
+available only in Design. Connections use rounded paths and larger hit areas.
+
+## Service view and attributes
+
+Templates open in a service view that arranges the main services along their traffic
+paths. Network and access resources remain in the design and are configured from the
+selected service's **Service settings** panel. **Arrange** restores the service-flow
+layout. The expanded Infrastructure view and its toggle have been removed.
+
+Select an EC2 or container service to assign an IAM role, security groups and subnets.
+Choose an existing resource or use **+ New** to create and assign one. Click an assigned
+resource's name to edit its details. Security group rules use named source groups;
+subnet settings expose VPC, route-table, ACL and gateway configuration. Database and
+cache services keep their subnet-group relationships. Shared-resource edits apply to
+every attached service; unassigning a resource retains it for other services.
+
+Selecting a service focuses its settings and closes the Workload panel. **Workload**
+reopens workload requirements and capacity without losing their values. Moving cards
+in service view changes only layout, leaving subnet membership intact. Resources
+explicitly dragged from the library remain visible, including configuration resources.
+
+`serviceConfiguration.ts` authors ordinary resource nodes and graph edges; there is
+no second attribute store or new API contract. Assessment, simulation and JSON export
+always receive the complete document. IAM role assignments use the existing identity
+relationship; this editor does not author IAM policy documents. Layout positions,
+view state and card summaries stay in the browser. Browser coverage in
+`e2e/07-service-settings.mjs` verifies inline edits against the real backend, including
+blocking and restoring a journey by changing a security group rule.
 
 ## What exists
 
@@ -89,6 +140,43 @@ The server's own `AssessCanvasRequest` gained a `workload` field (an inline
 way to hand the server a server-filesystem path — validated with the identical
 `Workload.Validate()` call the file-based path already used (`server/canvas.go`).
 
+## Follow traffic
+
+Click **Follow traffic** in Design to assess the current architecture and replay a
+declared journey on the canvas. In Simulate or Failure Lab it replays the current
+assessment, including faults. Pick a journey, play/pause, change playback speed,
+replay, or use **Next hop** and the numbered steps. The viewport focuses on the chosen
+path; **Focus path** restores it after panning or zooming. Internet entry points are visible;
+packets follow arrows from source to destination and the current services carry hop
+badges. Parallel branches play together. A rejected hop has a stationary stop marker
+and the backend's reason; an unmodelled hop never receives a successful packet.
+
+Traffic checks project `/simulate`'s returned `Hops`/`GroupIndex`/`Allowed` fields.
+It computes no reachability, capacity, security decision or latency. Display-only
+entry cards and hop edges never enter the authored document or assessment input.
+Changing the design or workload invalidates the old replay. Reduced-motion users
+can step through the same results without moving packets. Playback speed is visual
+pacing, not network timing.
+
+The simple and enterprise network templates show Internet clients connected to Route 53
+for DNS, then separately to the ALB for HTTPS. Saved `design_dns_client` / `design_alias`
+values describe this lookup. The blue DNS replay step illustrates declared architecture
+and explicitly says DNS resolution is unassessed; it never creates an `Allowed` result
+or sends HTTPS through Route 53. The client and DNS connection also remain visible in
+Design, using the declared internet origin without adding a resource to the backend graph.
+The following traffic checks use the declared per-hop ports and stop at the current
+backend's modelling limits.
+Existing single-hop checks remain individually selectable.
+**Ports along this journey** in Workload preserves the template's per-hop ports and
+lets you edit them, with a blank field using the journey's declared default port.
+
+Simulation status uses plain-language labels for the engine's structural verdict,
+disconnected destinations and failure cascade. An unaffected structural result does
+not mean every traffic or capacity check passed. Missing capacity is shown as unset,
+with **Set capacity** opening Workload; instance counts never substitute for tested
+throughput. **Technical details** retains the original server values and reasons.
+Editing the design or workload hides the previous inputs' status until reassessment.
+
 ## Failure/cascade animation (PC-89)
 
 A real gap found before writing any animation code, worth recording since it changed
@@ -164,3 +252,5 @@ npm test           # vitest
 Requires a working Node.js — if your system `node`/`npm` are broken (a common cause:
 a Homebrew library version mismatch), point PATH at a working install explicitly
 rather than assuming the default resolves correctly.
+
+In Design, **Clear design** clears all services and connections, resets the template workload, and removes assessment results. Selecting a sample over an existing design opens an in-app confirmation naming the sample and explaining what will be replaced. **Keep current design** or Escape cancels; **Switch sample** loads it. An empty canvas loads a sample directly.

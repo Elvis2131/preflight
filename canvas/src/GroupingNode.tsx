@@ -20,13 +20,13 @@ export function GroupingNode({ data }: NodeProps<GroupingNodeType>) {
         height: "100%",
         boxSizing: "border-box",
         borderRadius: 10,
-        border: isRegion ? "2px solid #7c3aed" : "1.5px dashed #0369a1",
+        border: isRegion ? "2px solid var(--purple-ink)" : "1.5px dashed var(--cyan-ink)",
         background: isRegion ? "rgba(124,58,237,0.04)" : "rgba(3,105,161,0.04)",
         pointerEvents: "none",
         fontSize: 11,
       }}
     >
-      <div style={{ position: "absolute", ...(isRegion ? { top: 4 } : { bottom: 4 }), left: 10, color: isRegion ? "#6d28d9" : "#0369a1", fontWeight: 700 }}>
+      <div style={{ position: "absolute", ...(isRegion ? { top: 4 } : { bottom: 4 }), left: 10, color: isRegion ? "var(--purple-ink)" : "var(--cyan-ink)", fontWeight: 700 }}>
         {isRegion && <span style={{ display: "inline-block", verticalAlign: "middle", marginRight: 4 }}><AwsIcon src={groupIcon("region")} size={16} /></span>}
         {isRegion ? "Region" : "AZ"} · {data.label}
         <span style={{ fontWeight: 400, opacity: 0.7 }}> (derived)</span>

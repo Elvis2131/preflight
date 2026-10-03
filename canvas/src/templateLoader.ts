@@ -27,6 +27,7 @@ export function templateToCanvasState(t: Template): { nodes: Node<CanvasNodeData
         nodeType: n.type,
         label: n.label || NODE_TYPE_LABELS[n.type],
         capability: n.capability ?? {},
+        ...(typeof pos.service_x === "number" && typeof pos.service_y === "number" ? { servicePosition: { x: pos.service_x, y: pos.service_y } } : {}),
         ...(n.sizing ? { sizing: n.sizing } : {}),
         ...(n.service_id ? { serviceID: n.service_id } : {}),
         ...(n.security_group_rules ? { securityGroupRules: n.security_group_rules } : {}),

@@ -55,20 +55,21 @@ check("real provider identities are preserved", document.nodes.some((n) => n.ser
 check("catalogue-only products keep their labels without invented provider IDs", document.nodes.some((n) => n.label === "Amazon Bedrock" && n.type === "external_dependency" && !n.service_id));
 await page.getByTestId("canvas-json-toggle").click();
 
-await page.getByTestId("connection-type").selectOption("routes_to");
-check("connection controls have friendly labels and contextual guidance", await page.getByTestId("connection-type").locator("option:checked").innerText() === "Routes traffic to" && (await page.locator("#connection-guide").innerText()).includes("sending traffic"));
+check("connection type is chosen after drawing, without a global preset", await page.getByTestId("connection-type").count() === 0 && (await page.locator("#connection-guide").innerText()).includes("then choose a connection type"));
 const toolbar = page.getByRole("toolbar", { name: "Architecture tools" });
+check("the expanded Infrastructure view is removed", await page.getByTestId("infrastructure-toggle").count() === 0);
+if (await toolbar.getByRole("button", { name: "Workload", exact: true }).getAttribute("aria-pressed") === "false") await toolbar.getByRole("button", { name: "Workload", exact: true }).click();
 await toolbar.getByRole("button", { name: "Workload", exact: true }).click();
 check("Workload toggles the requirements panel", await page.locator(".workload-panel").count() === 0);
 await toolbar.getByRole("button", { name: "Workload", exact: true }).click();
 check("Workload can be reopened", await page.locator(".workload-panel").count() === 1);
 
 await loadTemplate(page, "three-tier-vpc");
-check("the template picker still loads a real architecture", await page.locator('.react-flow__node[data-id="aws_vpc.main"]').count() === 1);
+check("the template picker loads the main services in a clean architecture view", await page.locator('.react-flow__node-golden').count() === 5 && await page.locator('.react-flow__node[data-id="aws_lb.web"]').count() === 1, JSON.stringify(await page.locator('.react-flow__node-golden').evaluateAll((els) => els.map((el) => el.getAttribute("data-id")))));
 await page.setViewportSize({ width: 1024, height: 800 });
 check("the toolbar fits the smallest supported desktop width", await toolbar.evaluate((el) => el.scrollWidth <= el.clientWidth));
 await toolbar.getByRole("button", { name: "Test design" }).click();
-check("Test design opens Simulate with the design preserved", await page.locator('[data-mode="simulate"]').evaluate((e) => e.classList.contains("active")) && await page.locator('.react-flow__node[data-id="aws_vpc.main"]').count() === 1);
+check("Test design opens Simulate with the design preserved", await page.locator('[data-mode="simulate"]').evaluate((e) => e.classList.contains("active")) && await page.locator('.react-flow__node-golden').count() === 5);
 check("authoring controls are hidden during simulation", await page.getByTestId("connection-type").count() === 0);
 
 await close();

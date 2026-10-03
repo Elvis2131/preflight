@@ -1,0 +1,112 @@
+{
+  "aws_vpc.simple": {
+    "x": 0,
+    "y": 0,
+    "width": 780,
+    "height": 810
+  },
+  "aws_subnet.simple_public_a": {
+    "x": 30,
+    "y": 65,
+    "width": 350,
+    "height": 195
+  },
+  "aws_subnet.simple_public_b": {
+    "x": 410,
+    "y": 65,
+    "width": 350,
+    "height": 195
+  },
+  "aws_subnet.simple_app_a": {
+    "x": 30,
+    "y": 285,
+    "width": 350,
+    "height": 195
+  },
+  "aws_subnet.simple_app_b": {
+    "x": 410,
+    "y": 285,
+    "width": 350,
+    "height": 195
+  },
+  "aws_subnet.simple_data_a": {
+    "x": 30,
+    "y": 505,
+    "width": 350,
+    "height": 195
+  },
+  "aws_subnet.simple_data_b": {
+    "x": 410,
+    "y": 505,
+    "width": 350,
+    "height": 195
+  },
+  "aws_internet_gateway.simple": {
+    "x": 0,
+    "y": -100
+  },
+  "aws_route_table.simple_public": {
+    "x": 820,
+    "y": 80
+  },
+  "aws_nat_gateway.simple_a": {
+    "x": 45,
+    "y": 175
+  },
+  "aws_route_table.simple_app": {
+    "x": 820,
+    "y": 185
+  },
+  "aws_route_table.simple_data": {
+    "x": 820,
+    "y": 290
+  },
+  "aws_route53_record.simple": {
+    "x": -260,
+    "y": -150,
+    "service_x": 320,
+    "service_y": 0
+  },
+  "aws_lb.simple": {
+    "x": 45,
+    "y": 95,
+    "service_x": 0,
+    "service_y": 190
+  },
+  "aws_instance.simple": {
+    "x": 45,
+    "y": 335,
+    "service_x": 0,
+    "service_y": 380
+  },
+  "aws_db_subnet_group.simple": {
+    "x": 425,
+    "y": 700
+  },
+  "aws_db_instance.simple": {
+    "x": 45,
+    "y": 565,
+    "service_x": 0,
+    "service_y": 570
+  },
+  "aws_security_group.simple_entry": {
+    "x": -265,
+    "y": 300
+  },
+  "aws_security_group.simple_app": {
+    "x": -265,
+    "y": 410
+  },
+  "aws_security_group.simple_data": {
+    "x": -265,
+    "y": 520
+  },
+  "aws_iam_role.simple_app": {
+    "x": -260,
+    "y": 820
+  },
+  "aws_network_acl.simple_baseline": {
+    "x": -265,
+    "y": 680
+  }
+}

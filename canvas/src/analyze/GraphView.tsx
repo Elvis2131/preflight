@@ -23,21 +23,21 @@ export function GraphView({ version }: { version: AssessResponse }) {
       <h2 style={{ fontSize: 14, margin: "0 0 8px" }}>V{version.version_number} — architecture graph</h2>
       {hasSVG ? (
         <div
-          style={{ border: "1px solid #e2e8f0", overflow: "auto", maxHeight: 520, background: "#fff" }}
+          style={{ border: "1px solid var(--line)", overflow: "auto", maxHeight: 520, background: "var(--surface)" }}
           // eslint-disable-next-line react/no-danger -- see file header: trusted, server-generated SVG, rendered verbatim per this ticket's own "without modification" criterion.
           dangerouslySetInnerHTML={{ __html: version.graph ?? "" }}
         />
       ) : (
-        <p style={{ color: "#b91c1c", fontSize: 12 }}>{version.graph ?? "no graph available"}</p>
+        <p style={{ color: "var(--danger-ink)", fontSize: 12 }}>{version.graph ?? "no graph available"}</p>
       )}
 
       <h3 style={{ fontSize: 13, margin: "16px 0 6px" }}>
         Diff vs. V{version.version_number - 1}
       </h3>
       {version.version_number <= 1 ? (
-        <p style={{ color: "#64748b", fontSize: 12 }}>No prior version to diff against.</p>
+        <p style={{ color: "var(--muted)", fontSize: 12 }}>No prior version to diff against.</p>
       ) : delta.length === 0 ? (
-        <p style={{ color: "#64748b", fontSize: 12 }}>No changes.</p>
+        <p style={{ color: "var(--muted)", fontSize: 12 }}>No changes.</p>
       ) : (
         <ul style={{ fontSize: 12, paddingLeft: 18 }}>
           {delta.map((d) => (

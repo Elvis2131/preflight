@@ -17,10 +17,10 @@ import {
 // (see readme note in App.tsx's own Report-mode wiring for the grep/test that proves
 // this).
 
-const cardStyle: React.CSSProperties = { border: "1px solid #e2e8f0", borderRadius: 6, padding: 12, marginBottom: 12 };
-const notAssessableStyle: React.CSSProperties = { color: "#92400e", fontStyle: "italic" };
+const cardStyle: React.CSSProperties = { border: "1px solid var(--line)", borderRadius: 6, padding: 12, marginBottom: 12 };
+const notAssessableStyle: React.CSSProperties = { color: "var(--warning-ink)", fontStyle: "italic" };
 const tableStyle: React.CSSProperties = { width: "100%", fontSize: 11, borderCollapse: "collapse" };
-const thtdStyle: React.CSSProperties = { border: "1px solid #e2e8f0", padding: "3px 6px", textAlign: "left" };
+const thtdStyle: React.CSSProperties = { border: "1px solid var(--line)", padding: "3px 6px", textAlign: "left" };
 
 function ReportSummary({ report, onRepriced }: { report: Report; onRepriced?: () => void }) {
   const [snapshot, setSnapshot] = useState<PricingSnapshot | null>(null);
@@ -116,9 +116,9 @@ function ReportSummary({ report, onRepriced }: { report: Report; onRepriced?: ()
       </div>
 
       {(report as WithNarratives<typeof report>).narratives && (
-        <div style={{ ...cardStyle, border: "1px dashed #7c3aed", background: "#faf5ff" }} data-testid="report-narratives">
-          <strong>Narratives</strong> <span style={{ fontSize: 10, fontWeight: 700, color: "#6d28d9" }}>(LLM-written)</span>
-          <p style={{ fontSize: 10, color: "#5b21b6", margin: "4px 0" }}>{(report as WithNarratives<typeof report>).narratives!.notice || LLM_NOTICE}</p>
+        <div style={{ ...cardStyle, border: "1px dashed var(--purple-ink)", background: "var(--purple-soft)" }} data-testid="report-narratives">
+          <strong>Narratives</strong> <span style={{ fontSize: 10, fontWeight: 700, color: "var(--purple-ink)" }}>(LLM-written)</span>
+          <p style={{ fontSize: 10, color: "var(--purple-ink)", margin: "4px 0" }}>{(report as WithNarratives<typeof report>).narratives!.notice || LLM_NOTICE}</p>
           {(report as WithNarratives<typeof report>).narratives!.status === "degraded" && (
             <p style={{ fontSize: 11, ...notAssessableStyle }}>
               Narratives are incomplete: {(report as WithNarratives<typeof report>).narratives!.reason}. The findings above are unaffected.
@@ -126,7 +126,7 @@ function ReportSummary({ report, onRepriced }: { report: Report; onRepriced?: ()
           )}
           <ul style={{ listStyle: "none", padding: 0, margin: 0 }}>
             {(report as WithNarratives<typeof report>).narratives!.annotations.map((a) => (
-              <li key={a.finding_id} style={{ padding: "6px 0", borderTop: "1px solid #e9d5ff" }}>
+              <li key={a.finding_id} style={{ padding: "6px 0", borderTop: "1px solid var(--purple-line)" }}>
                 <div style={{ fontSize: 10, fontFamily: "monospace" }}>{a.finding_id}</div>
                 <div style={{ fontSize: 12 }}>{a.narrative}</div>
               </li>
@@ -138,7 +138,7 @@ function ReportSummary({ report, onRepriced }: { report: Report; onRepriced?: ()
       {(report.scenarios ?? []).length > 0 && (
         <div style={cardStyle} data-testid="report-scenarios">
           <strong>Saved failure scenarios</strong>
-          <p style={{ fontSize: 10, color: "#64748b", margin: "4px 0" }}>
+          <p style={{ fontSize: 10, color: "var(--muted)", margin: "4px 0" }}>
             Each is re-run against this version by the server — never carried over from an earlier result.
           </p>
           <table style={tableStyle}>
@@ -168,7 +168,7 @@ function ReportSummary({ report, onRepriced }: { report: Report; onRepriced?: ()
 
       <div style={cardStyle}>
         <strong>Cost</strong>
-        <p style={{ fontSize: 10, background: "#fef3c7", border: "1px solid #d97706", padding: 6, margin: "6px 0" }}>
+        <p style={{ fontSize: 10, background: "var(--warning-soft)", border: "1px solid var(--warning-ink)", padding: 6, margin: "6px 0" }}>
           {report.cost.disclaimer}
         </p>
         {report.cost.available && report.cost.report ? (
@@ -234,7 +234,7 @@ function ReportSummary({ report, onRepriced }: { report: Report; onRepriced?: ()
             </tbody>
           </table>
         ) : (
-          <div style={{ fontSize: 11, color: "#64748b" }}>No previous version to compare against, or nothing changed.</div>
+          <div style={{ fontSize: 11, color: "var(--muted)" }}>No previous version to compare against, or nothing changed.</div>
         )}
       </div>
 
@@ -244,12 +244,12 @@ function ReportSummary({ report, onRepriced }: { report: Report; onRepriced?: ()
           <ul style={{ fontSize: 11, margin: "6px 0 0", paddingLeft: 18 }}>
             {report.assumptions.map((a, i) => (
               <li key={i}>
-                <strong>{a.kind}</strong>: {a.source} {a.reason && <span style={{ color: "#64748b" }}>— {a.reason}</span>}
+                <strong>{a.kind}</strong>: {a.source} {a.reason && <span style={{ color: "var(--muted)" }}>— {a.reason}</span>}
               </li>
             ))}
           </ul>
         ) : (
-          <div style={{ fontSize: 11, color: "#64748b", marginTop: 4 }}>
+          <div style={{ fontSize: 11, color: "var(--muted)", marginTop: 4 }}>
             No assumed or stated values are present in this report's own computed sections.
           </div>
         )}
@@ -362,7 +362,7 @@ export function ReportView({
         </button>
       </div>
 
-      {error && <p className="mode-error" style={{ color: "#a83c3c", fontSize: 11 }}>Error: {error}</p>}
+      {error && <p className="mode-error" style={{ color: "var(--danger-ink)", fontSize: 11 }}>Error: {error}</p>}
 
       {reportA && !reportB && <ReportSummary report={reportA} onRepriced={reprice} />}
 

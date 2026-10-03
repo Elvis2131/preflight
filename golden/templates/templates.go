@@ -6,8 +6,9 @@
 // derived from a real run by cmd/gen-template-fixtures (never hand-written, same rule as
 // PC-15's golden fixtures) and byte-compared by this package's test.
 //
-// Each template stays within services the capability registry actually models, and says
-// so: the serverless template has no API Gateway because the registry has none.
+// Templates may include explicit architecture intent for services the registry does
+// not yet model. Those identities stay unresolved for capability checks; their metadata
+// and design guide distinguish the blueprint from simulated behaviour.
 package templates
 
 import (
@@ -39,6 +40,10 @@ type Layout map[string]struct {
 	// workspace's default container size.
 	Width  float64 `json:"width,omitempty"`
 	Height float64 `json:"height,omitempty"`
+	// Optional positions for the clean service view. The full infrastructure layout
+	// and this service layout are presentation only, never assessment inputs.
+	ServiceX *float64 `json:"service_x,omitempty"`
+	ServiceY *float64 `json:"service_y,omitempty"`
 }
 
 // Template is one loadable template: what the workspace needs to put it on the canvas.

@@ -200,7 +200,7 @@ export function buildWorkload(v: WorkloadFormValue): Workload {
 
 const inputStyle: React.CSSProperties = { fontSize: 12, width: "100%", boxSizing: "border-box" };
 const rowStyle: React.CSSProperties = { display: "flex", gap: 6, alignItems: "center", marginBottom: 4 };
-const labelStyle: React.CSSProperties = { fontSize: 11, color: "#475569", display: "block", marginBottom: 2 };
+const labelStyle: React.CSSProperties = { fontSize: 11, color: "var(--ink-secondary)", display: "block", marginBottom: 2 };
 
 export function WorkloadForm({
   value,
@@ -278,7 +278,7 @@ export function WorkloadForm({
       />
 
       <label style={{ ...labelStyle, marginTop: 8 }}>compliance_profiles</label>
-      <p style={{ fontSize: 10, color: "#94a3b8", margin: "0 0 4px" }}>
+      <p style={{ fontSize: 10, color: "var(--subtle)", margin: "0 0 4px" }}>
         Only frameworks with an implemented control catalog are selectable — never
         offer one this engine cannot actually assess.
       </p>
@@ -291,7 +291,7 @@ export function WorkloadForm({
             gap: 6,
             fontSize: 11,
             marginBottom: 2,
-            color: fw.comingSoon ? "#94a3b8" : "#0f172a",
+            color: fw.comingSoon ? "var(--subtle)" : "var(--ink)",
             cursor: fw.comingSoon ? "not-allowed" : "pointer",
           }}
         >
@@ -315,8 +315,9 @@ export function WorkloadForm({
       <h4 style={{ fontSize: 12, margin: "14px 0 4px" }}>Capacity</h4>
       <div className="guide-card compact">
         Capacity is the amount of traffic the remaining healthy components can handle.
-        Example: <strong>app_node_rps = 800</strong> means the app tier can carry 800
-        requests per second. Leave it blank when you do not know yet.
+        Example: <strong>app_node_rps = 800</strong> declares 800 requests per second
+        for each application workload instance, based on testing. The engine checks
+        what survives. Instance count alone is not capacity. Leave it blank when unknown.
       </div>
       {value.capacityRows.map((row, i) => (
         <div key={i} style={rowStyle}>
@@ -367,8 +368,8 @@ export function WorkloadForm({
       )}
 
       <div style={{ display: "flex", gap: 10 }}>
-        <div style={{ flex: 1, border: "1px solid #fca5a5", borderRadius: 4, padding: 6, background: "#fef2f2" }}>
-          <div style={{ fontSize: 11, fontWeight: 700, color: "#b91c1c", marginBottom: 4 }}>
+        <div style={{ flex: 1, border: "1px solid var(--danger-line)", borderRadius: 4, padding: 6, background: "var(--danger-soft)" }}>
+          <div style={{ fontSize: 11, fontWeight: 700, color: "var(--danger-ink)", marginBottom: 4 }}>
             Constraints
           </div>
           {hardReqs.map(({ r, i }) => (
@@ -378,8 +379,8 @@ export function WorkloadForm({
             + constraint
           </button>
         </div>
-        <div style={{ flex: 1, border: "1px solid #93c5fd", borderRadius: 4, padding: 6, background: "#eff6ff" }}>
-          <div style={{ fontSize: 11, fontWeight: 700, color: "#1d4ed8", marginBottom: 4 }}>
+        <div style={{ flex: 1, border: "1px solid var(--accent-line)", borderRadius: 4, padding: 6, background: "var(--accent-soft)" }}>
+          <div style={{ fontSize: 11, fontWeight: 700, color: "var(--accent)", marginBottom: 4 }}>
             Preferences
           </div>
           {preferenceReqs.map(({ r, i }) => (
@@ -402,7 +403,7 @@ export function WorkloadForm({
         peak traffic if you know it.
       </div>
       {value.journeyRows.map((row, i) => (
-        <div key={i} style={{ marginBottom: 6, paddingBottom: 6, borderBottom: "1px dashed #cbd5e1" }}>
+        <div key={i} style={{ marginBottom: 6, paddingBottom: 6, borderBottom: "1px dashed var(--line-strong)" }}>
           <div style={rowStyle}>
             <input
               style={{ ...inputStyle, flex: 1 }}
@@ -455,7 +456,7 @@ export function WorkloadForm({
               (pickingPathForRow === i ? (
                 <button
                   onClick={onStopPickPath}
-                  style={{ fontSize: 11, background: "#dcfce7", border: "1px solid #16a34a", whiteSpace: "nowrap" }}
+                  style={{ fontSize: 11, background: "var(--success-soft)", border: "1px solid var(--success-ink)", whiteSpace: "nowrap" }}
                 >
                   Done picking
                 </button>
@@ -486,7 +487,7 @@ export function WorkloadForm({
             </label>)}
           </details>}
           {pickingPathForRow === i && (
-            <p style={{ fontSize: 10, color: "#7c3aed", margin: "0 0 4px" }}>
+            <p style={{ fontSize: 10, color: "var(--purple-ink)", margin: "0 0 4px" }}>
               Click canvas nodes in order to append them to this path. Click "Done
               picking" when finished.
             </p>
@@ -560,7 +561,7 @@ function RequirementRowEditor({
   onRemove: () => void;
 }) {
   return (
-    <div style={{ marginBottom: 6, paddingBottom: 6, borderBottom: "1px dashed #cbd5e1" }}>
+    <div style={{ marginBottom: 6, paddingBottom: 6, borderBottom: "1px dashed var(--line-strong)" }}>
       <div style={rowStyle}>
         <input
           style={{ ...inputStyle, flex: 1 }}

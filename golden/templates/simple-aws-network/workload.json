@@ -1,0 +1,62 @@
+{
+  "schema_version": "1.0.0",
+  "name": "simple-aws-network",
+  "criticality": "tier2",
+  "data_classification": "internal",
+  "regions": [
+    "eu-west-1"
+  ],
+  "requirements": [],
+  "journeys": [
+    {
+      "id": "simple_request",
+      "name": "Full application request",
+      "path": [
+        "internet",
+        "aws_lb.simple",
+        "aws_instance.simple",
+        "aws_db_instance.simple"
+      ],
+      "protocol": "tcp",
+      "port": 443,
+      "hop_ports": {
+        "aws_instance.simple": 8080,
+        "aws_db_instance.simple": 5432
+      },
+      "criticality": "tier2"
+    },
+    {
+      "id": "simple_web",
+      "name": "Internet to HTTPS entry",
+      "path": [
+        "internet",
+        "aws_lb.simple"
+      ],
+      "protocol": "tcp",
+      "port": 443,
+      "criticality": "tier2"
+    },
+    {
+      "id": "simple_app",
+      "name": "Entry to private application",
+      "path": [
+        "aws_lb.simple",
+        "aws_instance.simple"
+      ],
+      "protocol": "tcp",
+      "port": 8080,
+      "criticality": "tier2"
+    },
+    {
+      "id": "simple_data",
+      "name": "Application to private database",
+      "path": [
+        "aws_instance.simple",
+        "aws_db_instance.simple"
+      ],
+      "protocol": "tcp",
+      "port": 5432,
+      "criticality": "tier2"
+    }
+  ]
+}

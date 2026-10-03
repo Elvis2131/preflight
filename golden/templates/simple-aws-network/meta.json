@@ -1,0 +1,5 @@
+{
+  "id": "simple-aws-network",
+  "name": "Simple AWS network",
+  "description": "A small web application in one VPC: two public subnets, one private EC2 application, isolated database subnets, an internet gateway and one NAT gateway. HTTPS-only ingress and tier-specific security groups. EC2 request simulation and local-only database routing remain unmodelled; one app, one NAT and a Single-AZ database are deliberate failure points."
+}

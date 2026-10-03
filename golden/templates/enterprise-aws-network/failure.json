@@ -1,0 +1,348 @@
+{
+  "journeys": [
+    {
+      "entry_point": "aws_lb.production",
+      "target": "aws_db_instance.production",
+      "survives": false
+    },
+    {
+      "entry_point": "aws_route53_record.production",
+      "target": "aws_db_instance.production",
+      "survives": false
+    },
+    {
+      "entry_point": "aws_route53_resolver_endpoint.inbound",
+      "target": "aws_db_instance.production",
+      "survives": false
+    },
+    {
+      "entry_point": "aws_route53_resolver_endpoint.outbound",
+      "target": "aws_db_instance.production",
+      "survives": false
+    },
+    {
+      "entry_point": "aws_route53_zone.private",
+      "target": "aws_db_instance.production",
+      "survives": false
+    },
+    {
+      "entry_point": "aws_lb.production",
+      "target": "aws_s3_bucket.network_logs",
+      "survives": true
+    },
+    {
+      "entry_point": "aws_route53_record.production",
+      "target": "aws_s3_bucket.network_logs",
+      "survives": true
+    },
+    {
+      "entry_point": "aws_route53_resolver_endpoint.inbound",
+      "target": "aws_s3_bucket.network_logs",
+      "survives": true
+    },
+    {
+      "entry_point": "aws_route53_resolver_endpoint.outbound",
+      "target": "aws_s3_bucket.network_logs",
+      "survives": true
+    },
+    {
+      "entry_point": "aws_route53_zone.private",
+      "target": "aws_s3_bucket.network_logs",
+      "survives": true
+    }
+  ],
+  "capacity": {
+    "state": "not_assessable",
+    "reason": "capacity_unknown: \"app_node_rps\" was not declared in workload.yaml — surviving instance count alone is never treated as a capacity value (CLAUDE.md §9)",
+    "provenance": {
+      "kind": "derived",
+      "source": "template-fixture"
+    }
+  },
+  "severed_paths": [
+    "aws_db_instance.production"
+  ],
+  "cascade": [
+    "aws_eks_cluster.production",
+    "aws_db_instance.production",
+    "aws_iam_role.production_cluster",
+    "aws_security_group.prod_app",
+    "aws_subnet.prod_app_a",
+    "aws_subnet.prod_app_b",
+    "aws_db_subnet_group.production",
+    "aws_network_acl.prod_app",
+    "aws_route_table.prod_app_a",
+    "aws_route_table.prod_app_b",
+    "aws_security_group.prod_data",
+    "aws_nat_gateway.prod_a",
+    "aws_nat_gateway.prod_b",
+    "aws_subnet.prod_data_a",
+    "aws_subnet.prod_data_b",
+    "aws_network_acl.prod_data",
+    "aws_route_table.prod_data"
+  ],
+  "verdict": {
+    "state": "assessed",
+    "value": "degraded",
+    "provenance": {
+      "kind": "derived",
+      "source": "template-fixture"
+    }
+  },
+  "flow_detail": [
+    {
+      "JourneyID": "production_request",
+      "Flows": false,
+      "Hops": [
+        {
+          "From": "internet",
+          "To": "aws_lb.production",
+          "Allowed": true,
+          "Reason": "Allowed: internet -\u003e aws_lb.production:443/tcp reaches its destination.",
+          "GroupIndex": 1
+        },
+        {
+          "From": "aws_lb.production",
+          "To": "aws_eks_cluster.production",
+          "Allowed": false,
+          "Reason": "component aws_eks_cluster.production is unreachable under the declared fault",
+          "GroupIndex": 2
+        }
+      ],
+      "ReachedByGroup": [
+        [
+          "internet"
+        ],
+        [
+          "aws_lb.production"
+        ],
+        []
+      ],
+      "BlockedAt": "aws_eks_cluster.production",
+      "BlockedReason": "component aws_eks_cluster.production is unreachable under the declared fault"
+    },
+    {
+      "JourneyID": "production_web",
+      "Flows": true,
+      "Hops": [
+        {
+          "From": "internet",
+          "To": "aws_lb.production",
+          "Allowed": true,
+          "Reason": "Allowed: internet -\u003e aws_lb.production:443/tcp reaches its destination.",
+          "GroupIndex": 1
+        }
+      ],
+      "ReachedByGroup": [
+        [
+          "internet"
+        ],
+        [
+          "aws_lb.production"
+        ]
+      ],
+      "BlockedAt": "",
+      "BlockedReason": ""
+    },
+    {
+      "JourneyID": "production_api",
+      "Flows": false,
+      "Hops": [
+        {
+          "From": "aws_lb.production",
+          "To": "aws_eks_cluster.production",
+          "Allowed": false,
+          "Reason": "component aws_eks_cluster.production is unreachable under the declared fault",
+          "GroupIndex": 1
+        }
+      ],
+      "ReachedByGroup": [
+        [
+          "aws_lb.production"
+        ],
+        []
+      ],
+      "BlockedAt": "aws_eks_cluster.production",
+      "BlockedReason": "component aws_eks_cluster.production is unreachable under the declared fault"
+    },
+    {
+      "JourneyID": "production_data",
+      "Flows": false,
+      "Hops": null,
+      "ReachedByGroup": [
+        []
+      ],
+      "BlockedAt": "aws_eks_cluster.production",
+      "BlockedReason": "component aws_eks_cluster.production is unreachable under the declared fault"
+    },
+    {
+      "JourneyID": "hybrid_dns",
+      "Flows": false,
+      "Hops": [
+        {
+          "From": "external.corporate_network",
+          "To": "aws_vpn_connection.hybrid_a",
+          "Allowed": false,
+          "Reason": "Blocked at aws_vpn_connection.hybrid_a (capability_check): service aws_vpn_connection.hybrid_a (capability_level \u003cnil\u003e) does not reach REQUEST_SIMULATION",
+          "GroupIndex": 1,
+          "NotAssessable": true
+        },
+        {
+          "From": "external.corporate_network",
+          "To": "aws_vpn_connection.hybrid_b",
+          "Allowed": false,
+          "Reason": "Blocked at aws_vpn_connection.hybrid_b (capability_check): service aws_vpn_connection.hybrid_b (capability_level \u003cnil\u003e) does not reach REQUEST_SIMULATION",
+          "GroupIndex": 1,
+          "NotAssessable": true
+        }
+      ],
+      "ReachedByGroup": [
+        [
+          "external.corporate_network"
+        ],
+        []
+      ],
+      "BlockedAt": "aws_vpn_connection.hybrid_a",
+      "BlockedReason": "Blocked at aws_vpn_connection.hybrid_a (capability_check): service aws_vpn_connection.hybrid_a (capability_level \u003cnil\u003e) does not reach REQUEST_SIMULATION",
+      "NotAssessable": true
+    },
+    {
+      "JourneyID": "nonproduction_shared",
+      "Flows": false,
+      "Hops": [
+        {
+          "From": "aws_eks_cluster.nonproduction",
+          "To": "aws_ec2_transit_gateway.hub",
+          "Allowed": false,
+          "Reason": "Blocked at aws_ec2_transit_gateway.hub (capability_check): service aws_ec2_transit_gateway.hub (capability_level \u003cnil\u003e) does not reach REQUEST_SIMULATION",
+          "GroupIndex": 1,
+          "NotAssessable": true
+        }
+      ],
+      "ReachedByGroup": [
+        [
+          "aws_eks_cluster.nonproduction"
+        ],
+        []
+      ],
+      "BlockedAt": "aws_ec2_transit_gateway.hub",
+      "BlockedReason": "Blocked at aws_ec2_transit_gateway.hub (capability_check): service aws_ec2_transit_gateway.hub (capability_level \u003cnil\u003e) does not reach REQUEST_SIMULATION",
+      "NotAssessable": true
+    }
+  ],
+  "load": null,
+  "latency": [
+    {
+      "journey_id": "production_request",
+      "result": {
+        "state": "not_assessable",
+        "reason": "journey \"production_request\" has no declared peak_rps",
+        "provenance": {
+          "kind": "derived",
+          "source": "template-fixture"
+        }
+      }
+    },
+    {
+      "journey_id": "production_web",
+      "result": {
+        "state": "not_assessable",
+        "reason": "journey \"production_web\" has no declared peak_rps",
+        "provenance": {
+          "kind": "derived",
+          "source": "template-fixture"
+        }
+      }
+    },
+    {
+      "journey_id": "production_api",
+      "result": {
+        "state": "not_assessable",
+        "reason": "journey \"production_api\" has no declared peak_rps",
+        "provenance": {
+          "kind": "derived",
+          "source": "template-fixture"
+        }
+      }
+    },
+    {
+      "journey_id": "production_data",
+      "result": {
+        "state": "not_assessable",
+        "reason": "journey \"production_data\" has no declared peak_rps",
+        "provenance": {
+          "kind": "derived",
+          "source": "template-fixture"
+        }
+      }
+    },
+    {
+      "journey_id": "hybrid_dns",
+      "result": {
+        "state": "not_assessable",
+        "reason": "journey \"hybrid_dns\" has no declared peak_rps",
+        "provenance": {
+          "kind": "derived",
+          "source": "template-fixture"
+        }
+      }
+    },
+    {
+      "journey_id": "nonproduction_shared",
+      "result": {
+        "state": "not_assessable",
+        "reason": "journey \"nonproduction_shared\" has no declared peak_rps",
+        "provenance": {
+          "kind": "derived",
+          "source": "template-fixture"
+        }
+      }
+    }
+  ],
+  "baseline": {
+    "summary": {
+      "state": "not_assessable",
+      "reason": "the baseline of 4 declared journey(s) could not be decided: [production_request (Blocked at aws_db_instance.production (route_selection): destination has no resolvable effective route table) production_data (Blocked at aws_db_instance.production (route_selection): destination has no resolvable effective route table) hybrid_dns (Blocked at aws_vpn_connection.hybrid_a (capability_check): service aws_vpn_connection.hybrid_a (capability_level \u003cnil\u003e) does not reach REQUEST_SIMULATION) nonproduction_shared (Blocked at aws_ec2_transit_gateway.hub (capability_check): service aws_ec2_transit_gateway.hub (capability_level \u003cnil\u003e) does not reach REQUEST_SIMULATION)]",
+      "provenance": {
+        "kind": "derived",
+        "source": "template-fixture"
+      }
+    },
+    "journeys": [
+      {
+        "journey_id": "production_request",
+        "status": "not_assessable",
+        "baseline_blocked_at": "aws_db_instance.production",
+        "baseline_reason": "Blocked at aws_db_instance.production (route_selection): destination has no resolvable effective route table"
+      },
+      {
+        "journey_id": "production_web",
+        "status": "flows_before_and_after"
+      },
+      {
+        "journey_id": "production_api",
+        "status": "broken_by_fault",
+        "after_fault_blocked_at": "aws_eks_cluster.production",
+        "after_fault_reason": "component aws_eks_cluster.production is unreachable under the declared fault"
+      },
+      {
+        "journey_id": "production_data",
+        "status": "not_assessable",
+        "baseline_blocked_at": "aws_db_instance.production",
+        "baseline_reason": "Blocked at aws_db_instance.production (route_selection): destination has no resolvable effective route table"
+      },
+      {
+        "journey_id": "hybrid_dns",
+        "status": "not_assessable",
+        "baseline_blocked_at": "aws_vpn_connection.hybrid_a",
+        "baseline_reason": "Blocked at aws_vpn_connection.hybrid_a (capability_check): service aws_vpn_connection.hybrid_a (capability_level \u003cnil\u003e) does not reach REQUEST_SIMULATION"
+      },
+      {
+        "journey_id": "nonproduction_shared",
+        "status": "not_assessable",
+        "baseline_blocked_at": "aws_ec2_transit_gateway.hub",
+        "baseline_reason": "Blocked at aws_ec2_transit_gateway.hub (capability_check): service aws_ec2_transit_gateway.hub (capability_level \u003cnil\u003e) does not reach REQUEST_SIMULATION"
+      }
+    ]
+  }
+}

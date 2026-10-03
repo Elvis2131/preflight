@@ -10,7 +10,9 @@ await baseline(page);
 for (const j of ["web", "api", "data"]) check(`baseline: journey ${j} flows end to end`, (await flowOf(page, j)) === "Flows end-to-end");
 
 await mode(page, "design");
-await select(page, "aws_route_table.private");
+await select(page, "aws_eks_cluster.app");
+await page.getByTestId("configuration-subnets").getByRole("button", { name: "Edit Private A", exact: true }).click();
+await page.getByTestId("configuration-route_table").getByRole("button", { name: "Edit Private route table", exact: true }).click();
 const targets = await page.locator('[data-testid="routes-editor"] select option').allInnerTexts();
 check("the routes editor offers only IGW/NAT targets", targets.every((t) => t.startsWith("—") || /aws_(nat_gateway|internet_gateway)/.test(t)), targets.join(" | "));
 await page.locator('[data-testid="routes-editor"] button:has-text("×")').first().click();
@@ -20,11 +22,16 @@ const noRoute = await flowOf(page, "api");
 check("removing the private route blocks api at route_selection", /route_selection/.test(noRoute), noRoute);
 
 await mode(page, "design");
-await select(page, "aws_route_table.private");
+await select(page, "aws_eks_cluster.app");
+await page.getByTestId("configuration-subnets").getByRole("button", { name: "Edit Private A", exact: true }).click();
+await page.getByTestId("configuration-route_table").getByRole("button", { name: "Edit Private route table", exact: true }).click();
 await page.locator('[data-testid="routes-editor"] button:has-text("+ route")').click();
 await page.locator('[data-testid="routes-editor"] input').first().fill("0.0.0.0/0");
 await page.locator('[data-testid="routes-editor"] select').first().selectOption("aws_nat_gateway.nat_a");
-await select(page, "aws_network_acl.default");
+await select(page, "aws_eks_cluster.app");
+var privateSubnet = page.getByTestId("configuration-subnets").getByRole("button", { name: "Edit Private A", exact: true });
+if (!await page.getByTestId("configuration-network_acl").count()) await privateSubnet.click();
+await page.getByTestId("configuration-network_acl").locator(".resource-name").click();
 check("the NACL editor shows the engine-owned catch-all as read-only", (await page.locator('[data-testid="nacl-catchall"]').innerText()).includes("deny all"));
 await page.locator('[data-testid="nacl-editor"] select').nth(1).selectOption("deny");
 await mode(page, "simulate");
@@ -34,7 +41,10 @@ check("restoring the route and denying the NACL blocks api at the NACL step, rul
 
 // out-of-range rule number is flagged in the editor (the server decides, and has its own test)
 await mode(page, "design");
-await select(page, "aws_network_acl.default");
+await select(page, "aws_eks_cluster.app");
+var privateSubnet = page.getByTestId("configuration-subnets").getByRole("button", { name: "Edit Private A", exact: true });
+if (!await page.getByTestId("configuration-network_acl").count()) await privateSubnet.click();
+await page.getByTestId("configuration-network_acl").locator(".resource-name").click();
 await page.locator('[data-testid="nacl-editor"] input[type=number]').first().fill("40000");
 check("an out-of-range NACL rule number is flagged", (await page.locator('[data-testid="nacl-editor"]').innerText()).includes("32767-65535"));
 await close();

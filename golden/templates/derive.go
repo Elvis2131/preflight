@@ -18,9 +18,11 @@ type FailureFault = core.Fault
 // expose. A template with no entry here has no failure fixture and the test fails — a
 // template without at least one failure-mode result is not shippable (the Card's rule).
 var failureTargets = map[string]string{
-	"three-tier-vpc": "aws_db_instance.db",
-	"serverless-api": "aws_lambda_function.handler",
-	"event-driven":   "aws_lambda_function.consumer",
+	"three-tier-vpc":         "aws_db_instance.db",
+	"serverless-api":         "aws_lambda_function.handler",
+	"event-driven":           "aws_lambda_function.consumer",
+	"simple-aws-network":     "aws_instance.simple",
+	"enterprise-aws-network": "aws_eks_cluster.production",
 }
 
 // Derived is everything generated from a template's inputs by the real pipeline.

@@ -1,0 +1,86 @@
+{
+  "schema_version": "1.0.0",
+  "name": "enterprise-aws-network",
+  "criticality": "tier1",
+  "data_classification": "confidential",
+  "regions": [
+    "eu-west-1"
+  ],
+  "requirements": [],
+  "journeys": [
+    {
+      "id": "production_request",
+      "name": "Full production application request",
+      "path": [
+        "internet",
+        "aws_lb.production",
+        "aws_eks_cluster.production",
+        "aws_db_instance.production"
+      ],
+      "protocol": "tcp",
+      "port": 443,
+      "hop_ports": {
+        "aws_eks_cluster.production": 8443,
+        "aws_db_instance.production": 5432
+      },
+      "criticality": "tier1"
+    },
+    {
+      "id": "production_web",
+      "name": "Internet to production HTTPS",
+      "path": [
+        "internet",
+        "aws_lb.production"
+      ],
+      "protocol": "tcp",
+      "port": 443,
+      "criticality": "tier1"
+    },
+    {
+      "id": "production_api",
+      "name": "Production entry to private app",
+      "path": [
+        "aws_lb.production",
+        "aws_eks_cluster.production"
+      ],
+      "protocol": "tcp",
+      "port": 8443,
+      "criticality": "tier1"
+    },
+    {
+      "id": "production_data",
+      "name": "Production app to isolated database",
+      "path": [
+        "aws_eks_cluster.production",
+        "aws_db_instance.production"
+      ],
+      "protocol": "tcp",
+      "port": 5432,
+      "criticality": "tier1"
+    },
+    {
+      "id": "hybrid_dns",
+      "name": "Corporate DNS through redundant VPNs",
+      "path": [
+        "external.corporate_network",
+        "aws_vpn_connection.hybrid_a|aws_vpn_connection.hybrid_b",
+        "aws_ec2_transit_gateway.hub",
+        "aws_route53_resolver_endpoint.inbound"
+      ],
+      "protocol": "udp",
+      "port": 53,
+      "criticality": "tier1"
+    },
+    {
+      "id": "nonproduction_shared",
+      "name": "Non-production to shared network hub",
+      "path": [
+        "aws_eks_cluster.nonproduction",
+        "aws_ec2_transit_gateway.hub"
+      ],
+      "protocol": "tcp",
+      "port": 443,
+      "criticality": "tier2"
+    }
+  ]
+}

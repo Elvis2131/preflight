@@ -1,9 +1,9 @@
-import { Handle, Position, type NodeProps, type Node } from "@xyflow/react";
+import { Handle, NodeResizer, Position, type NodeProps, type Node } from "@xyflow/react";
 import type { CanvasNodeData } from "./types";
 import { NODE_TYPE_LABELS } from "./goldenVocabulary";
 import { containerRank } from "./containment";
 import { AwsIcon } from "./AwsIcon";
-import { groupIcon } from "./awsIcons";
+import { groupIcon, labelForService } from "./awsIcons";
 import { ServiceMark } from "./ServiceMark";
 
 // GoldenNode is the ONE custom node component every golden vocabulary type renders
@@ -24,13 +24,13 @@ export type GoldenNodeType = Node<CanvasNodeData, "golden">;
 function simStateStyle(simState: string | undefined, selected: boolean | undefined) {
   switch (simState) {
     case "killed":
-      return { border: "3px solid #dc2626", background: "#fef2f2" };
+      return { border: "3px solid var(--danger-ink)", background: "var(--danger-soft)" };
     case "severed":
-      return { border: "2px dashed #64748b", background: "#e2e8f0", opacity: 0.7 };
+      return { border: "2px dashed var(--muted)", background: "var(--line)", opacity: 0.7 };
     case "cascaded":
-      return { border: "1px dashed #94a3b8", background: "#f1f5f9", opacity: 0.85 };
+      return { border: "1px dashed var(--subtle)", background: "var(--surface-soft)", opacity: 0.85 };
     default:
-      return { border: selected ? "2px solid #2563eb" : "1px solid #94a3b8", background: "#fff" };
+      return { border: selected ? "2px solid var(--accent)" : "1px solid var(--line)", background: "var(--surface)" };
   }
 }
 
@@ -40,9 +40,9 @@ function simStateStyle(simState: string | undefined, selected: boolean | undefin
 // green under 70%, amber up to 100%, red once a component is offered more load than
 // its declared capacity.
 function utilizationColor(utilization: number): string {
-  if (utilization > 1) return "#dc2626";
-  if (utilization >= 0.7) return "#d97706";
-  return "#16a34a";
+  if (utilization > 1) return "var(--danger-ink)";
+  if (utilization >= 0.7) return "var(--warning-ink)";
+  return "var(--success-ink)";
 }
 
 export function GoldenNode({ data, selected }: NodeProps<GoldenNodeType>) {
@@ -54,28 +54,33 @@ export function GoldenNode({ data, selected }: NodeProps<GoldenNodeType>) {
     return (
       <div
         data-container={data.serviceID}
+        data-service-id={data.serviceID}
         style={{
           width: "100%",
           height: "100%",
           boxSizing: "border-box",
           borderRadius: 8,
-          border: `2px dashed ${selected ? "#2563eb" : rank === 1 ? "#0f766e" : "#64748b"}`,
+          border: `2px dashed ${selected ? "var(--accent)" : rank === 1 ? "#0f766e" : "var(--muted)"}`,
           background: rank === 1 ? "rgba(20,184,166,0.06)" : "rgba(100,116,139,0.08)",
           padding: "6px 10px",
           fontSize: 12,
           position: "relative",
         }}
       >
+        <NodeResizer isVisible={!!selected && !!data.canResizeContainer} color={rank === 1 ? "#0f766e" : "var(--accent)"}
+          minWidth={rank === 1 ? 320 : 240} minHeight={rank === 1 ? 200 : 140}
+          handleClassName="container-resize-handle" lineClassName="container-resize-line" />
         <Handle type="target" position={Position.Top} />
         <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
           {containerIcon(rank, data) && <AwsIcon src={containerIcon(rank, data)!} size={20} />}
           <div style={{ fontWeight: 600 }}>{data.label}</div>
         </div>
-        <div style={{ color: "#64748b", fontSize: 11 }}>
+        <div style={{ color: "var(--muted)", fontSize: 11 }}>
           {rank === 1 ? "VPC" : `Subnet${data.availabilityZone ? ` · ${data.availabilityZone}` : ""}`}
           {data.cidrBlock ? ` · ${data.cidrBlock}` : ""}
         </div>
         {rank === 2 && data.subnetFact && <SubnetBadge fact={data.subnetFact} />}
+        {selected && data.canResizeContainer && <span className="container-resize-hint">Drag a corner or border to resize</span>}
         <Handle type="source" position={Position.Bottom} />
       </div>
     );
@@ -84,46 +89,56 @@ export function GoldenNode({ data, selected }: NodeProps<GoldenNodeType>) {
   // override: PC-88/89's own killed/severed/cascaded border colors are the one true
   // fault signal (see simStateStyle's own doc comment on why they must stay
   // legible) — a journey highlight must never mask that a node is also killed.
-  const journeyRing = data.journeyOnPath ? "0 0 0 3px #7c3aed" : undefined;
-  const baseShadow = journeyRing ?? "0 1px 2px rgba(0,0,0,0.08)";
+  const journeyRing = data.journeyOnPath ? "0 0 0 3px var(--purple-ink)" : undefined;
+  const baseShadow = journeyRing ?? "0 2px 0 var(--line), 0 3px 5px rgba(24,32,51,0.04)";
   // notAssessableLoad (PC-127): a diagonal hatch, distinct from any simState color,
   // for a component core.ComponentLoad itself marked not_assessable (no declared
   // capacity) — never silently shown as 0% utilized.
   const hatch = data.notAssessableLoad
     ? {
         backgroundImage:
-          "repeating-linear-gradient(45deg, #e2e8f0, #e2e8f0 4px, #f8fafc 4px, #f8fafc 8px)",
+          "repeating-linear-gradient(45deg, var(--line), var(--line) 4px, var(--surface-soft) 4px, var(--surface-soft) 8px)",
       }
     : {};
   return (
     <div
+      data-service-id={data.serviceID}
+      className={`service-node${data.trafficStep ? " traffic-active-node" : ""}`}
+      data-traffic-step={data.trafficStep}
       style={{
-        padding: "8px 12px",
-        borderRadius: 6,
+        padding: "0",
+        borderRadius: 10,
         border,
         background,
-        opacity,
-        minWidth: 140,
+        opacity: data.trafficDimmed && (!data.simState || data.simState === "normal") ? 0.4 : opacity,
+        width: 220,
+        boxSizing: "border-box",
         fontSize: 13,
         boxShadow: baseShadow,
+        position: "relative",
         ...hatch,
       }}
     >
       <Handle type="target" position={Position.Top} />
-      <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+      {data.trafficStep && <span className="traffic-node-step" aria-label={`Traffic hop ${data.trafficStep}`}>{data.trafficStep}</span>}
+      <div className="service-node-type">{NODE_TYPE_LABELS[data.nodeType]}</div>
+      <div className="service-node-body" style={{ display: "flex", alignItems: "center", gap: 10 }}>
         {data.serviceID && <ServiceMark serviceID={data.serviceID} />}
         <div>
-          <div style={{ fontWeight: 600 }}>{data.label}</div>
-          <div style={{ color: "#64748b", fontSize: 11 }}>{NODE_TYPE_LABELS[data.nodeType]}</div>
+          <div style={{ fontWeight: 600, overflowWrap: "anywhere", lineHeight: 1.4 }}>{data.label}</div>
+          <div style={{ color: "var(--muted)", fontSize: 11, marginTop: 2 }}>{data.serviceID ? labelForService(data.serviceID) : NODE_TYPE_LABELS[data.nodeType]}</div>
         </div>
       </div>
+      {!!data.configurationSummary?.length && (
+        <div className="node-configuration-summary" title="Edit these settings in the service inspector">{data.configurationSummary.join(" · ")}</div>
+      )}
       {data.simState && data.simState !== "normal" && (
-        <div style={{ fontSize: 10, fontWeight: 600, marginTop: 2, color: "#dc2626" }}>
+        <div style={{ fontSize: 10, fontWeight: 600, marginTop: 2, color: "var(--danger-ink)" }}>
           {data.simState.toUpperCase()}
         </div>
       )}
       {typeof data.utilization === "number" && (
-        <div style={{ marginTop: 4, height: 4, borderRadius: 2, background: "#e2e8f0" }}>
+        <div style={{ marginTop: 4, height: 4, borderRadius: 2, background: "var(--line)" }}>
           <div
             style={{
               width: `${Math.min(data.utilization, 1) * 100}%`,
@@ -135,9 +150,11 @@ export function GoldenNode({ data, selected }: NodeProps<GoldenNodeType>) {
         </div>
       )}
       {data.notAssessableLoad && (
-        <div style={{ fontSize: 9, color: "#94a3b8", marginTop: 2 }}>utilization not_assessable</div>
+        <div style={{ fontSize: 9, color: "var(--subtle)", marginTop: 2 }}>utilization not_assessable</div>
       )}
       <Handle type="source" position={Position.Bottom} />
+      {data.trafficExternal && <Handle type="source" position={Position.Right} id="dns-query" />}
+      {data.serviceID === "aws_route53_record" && <Handle type="target" position={Position.Left} id="dns-query" />}
     </div>
   );
 }
@@ -150,10 +167,10 @@ export function GoldenNode({ data, selected }: NodeProps<GoldenNodeType>) {
 function SubnetBadge({ fact }: { fact: NonNullable<CanvasNodeData["subnetFact"]> }) {
   const style =
     fact.visibility === "public"
-      ? { background: "#dcfce7", color: "#166534", border: "1px solid #86efac" }
+      ? { background: "var(--success-soft)", color: "var(--success-ink)", border: "1px solid var(--success-ink)" }
       : fact.visibility === "private"
-        ? { background: "#e0e7ff", color: "#3730a3", border: "1px solid #a5b4fc" }
-        : { background: "#f1f5f9", color: "#64748b", border: "1px dashed #94a3b8" };
+        ? { background: "var(--accent-soft)", color: "var(--accent)", border: "1px solid var(--accent-line)" }
+        : { background: "var(--surface-soft)", color: "var(--muted)", border: "1px dashed var(--subtle)" };
   return (
     <span
       data-testid="subnet-badge"

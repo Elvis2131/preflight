@@ -4,6 +4,7 @@
 import { open, check, done, flowOf } from "./lib.mjs";
 
 const { page, close } = await open();
+await page.getByRole("toolbar", { name: "Architecture tools" }).getByRole("button", { name: "Workload", exact: true }).click();
 const byLabel = (t) => page.locator(`xpath=//label[text()='${t}']/following-sibling::input[1]`);
 await byLabel("name").fill("checkout-svc");
 await byLabel("criticality (e.g. tier1)").fill("tier1");
@@ -23,13 +24,16 @@ async function drag(serviceID, group, x, y) {
 await drag("aws_lb", "load_balancer", 300, 100);
 await drag("aws_db_instance", "managed_database", 300, 300);
 await drag("aws_security_group", "network_boundary", 300, 500);
+const services = { "Elastic Load Balancing": "aws_lb", "Amazon RDS": "aws_db_instance", "Security group": "aws_security_group" };
+const node = (label) => page.locator(`.react-flow__node:has([data-service-id="${services[label]}"])`).first();
 const connect = async (from, to) => {
-  const a = await page.locator(`.react-flow__node:has-text("${from}")`).first().boundingBox();
-  const b = await page.locator(`.react-flow__node:has-text("${to}")`).first().boundingBox();
+  const a = await node(from).boundingBox();
+  const b = await node(to).boundingBox();
   await page.mouse.move(a.x + a.width / 2, a.y + a.height);
   await page.mouse.down();
   await page.mouse.move(b.x + b.width / 2, b.y, { steps: 10 });
   await page.mouse.up();
+  await page.getByRole("dialog").getByRole("button", { name: "Depends on", exact: false }).click();
   await page.waitForTimeout(200);
 };
 await connect("Elastic Load Balancing", "Amazon RDS");
@@ -41,15 +45,14 @@ const doc = JSON.parse(await page.locator("pre").innerText());
 await page.getByTestId("canvas-json-toggle").click();
 const lbID = doc.nodes.find((n) => n.type === "load_balancer").id;
 
-const node = (label) => page.locator(`.react-flow__node:has-text("${label}")`).first();
-const inspector = page.locator("aside", { hasText: "Inspector" });
+const inspector = page.locator(".inspector-panel");
 await node("Elastic Load Balancing").click({ force: true, position: { x: 10, y: 10 } });
 await inspector.locator("select").first().selectOption("aws_lb");
 await node("Security group").click({ force: true, position: { x: 10, y: 10 } });
 await page.waitForTimeout(300);
 const rule = async (port) => {
   await page.click("text=+ rule");
-  const a = page.locator("aside", { hasText: "Inspector" });
+  const a = page.locator(".inspector-panel");
   await a.locator('input[placeholder="protocol"]').last().fill("tcp");
   await a.locator('input[placeholder="from"]').last().fill(String(port));
   await a.locator('input[placeholder="to"]').last().fill(String(port));
@@ -57,6 +60,8 @@ const rule = async (port) => {
 };
 await rule(5432); // the allowing rule
 await rule(443); // an unrelated one, so removing the first leaves a real SG with no match
+
+await page.getByRole("toolbar", { name: "Architecture tools" }).getByRole("button", { name: "Workload", exact: true }).click();
 
 const jf = (ph) => page.locator(`xpath=//input[@placeholder="${ph}" and not(ancestor::aside)]`).last();
 await page.click("text=+ journey");
@@ -76,7 +81,7 @@ check("with the allowing rule, the journey passes the SG step", (await flowOf(pa
 await page.click("[data-mode=design]");
 await page.waitForTimeout(500);
 await node("Security group").click({ force: true, position: { x: 10, y: 10 } });
-await page.locator("aside", { hasText: "Inspector" }).locator("text=×").first().click(); // remove the 5432 rule
+await page.getByTestId("security-group-rules-editor").getByRole("button", { name: "Remove rule 1", exact: true }).click(); // remove the 5432 rule
 await page.click("[data-mode=simulate]");
 await page.waitForTimeout(500);
 await page.click("text=Run baseline (no fault)");

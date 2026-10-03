@@ -5,6 +5,7 @@ import { open, check, done, mode, select, loadTemplate, sessionLabel } from "./l
 
 const { page, close } = await open();
 await loadTemplate(page, "event-driven");
+await page.getByRole("toolbar", { name: "Architecture tools" }).getByRole("button", { name: "Workload", exact: true }).click();
 const jf = (ph) => page.locator(`xpath=//input[@placeholder="${ph}" and not(ancestor::aside)]`).last();
 await page.click("text=+ journey");
 await jf("id").fill("ingest");
@@ -29,7 +30,7 @@ await lab.locator('[data-testid="fault-kind"]').selectOption("node_loss");
 await lab.locator('[data-testid="run-scenario"]').click();
 await page.waitForTimeout(2200);
 check("running it assesses the design (a version appears)", /latest v\d/.test(await sessionLabel(page)));
-check("the server's verdict is shown", (await page.locator("text=/verdict:/").first().innerText()).includes("severed_paths"));
+check("the server's structural result is shown in plain language", (await page.getByTestId("simulation-status").innerText()).includes("Disconnected destinations:") && (await page.getByTestId("simulation-status").innerText()).includes("Fault simulation"));
 
 await lab.locator('[data-testid="scenario-name"]').fill("lose both lambdas");
 await lab.locator('[data-testid="save-scenario"]').click();

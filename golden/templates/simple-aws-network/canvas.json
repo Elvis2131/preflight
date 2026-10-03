@@ -1,0 +1,559 @@
+{
+  "nodes": [
+    {
+      "id": "aws_vpc.simple",
+      "type": "network_boundary",
+      "label": "Simple VPC",
+      "capability": {
+        "enable_dns_support": "true",
+        "enable_dns_hostnames": "true"
+      },
+      "service_id": "aws_vpc",
+      "cidr_block": "10.20.0.0/16"
+    },
+    {
+      "id": "aws_subnet.simple_public_a",
+      "type": "network_boundary",
+      "label": "Simple VPC · public A",
+      "capability": {
+        "map_public_ip_on_launch": "false"
+      },
+      "service_id": "aws_subnet",
+      "availability_zone": "eu-west-1a",
+      "cidr_block": "10.20.0.0/24"
+    },
+    {
+      "id": "aws_subnet.simple_public_b",
+      "type": "network_boundary",
+      "label": "Simple VPC · public B",
+      "capability": {
+        "map_public_ip_on_launch": "false"
+      },
+      "service_id": "aws_subnet",
+      "availability_zone": "eu-west-1b",
+      "cidr_block": "10.20.1.0/24"
+    },
+    {
+      "id": "aws_subnet.simple_app_a",
+      "type": "network_boundary",
+      "label": "Simple VPC · app A",
+      "capability": {
+        "map_public_ip_on_launch": "false"
+      },
+      "service_id": "aws_subnet",
+      "availability_zone": "eu-west-1a",
+      "cidr_block": "10.20.10.0/24"
+    },
+    {
+      "id": "aws_subnet.simple_app_b",
+      "type": "network_boundary",
+      "label": "Simple VPC · app B",
+      "capability": {
+        "map_public_ip_on_launch": "false"
+      },
+      "service_id": "aws_subnet",
+      "availability_zone": "eu-west-1b",
+      "cidr_block": "10.20.11.0/24"
+    },
+    {
+      "id": "aws_subnet.simple_data_a",
+      "type": "network_boundary",
+      "label": "Simple VPC · data A",
+      "capability": {
+        "map_public_ip_on_launch": "false"
+      },
+      "service_id": "aws_subnet",
+      "availability_zone": "eu-west-1a",
+      "cidr_block": "10.20.20.0/24"
+    },
+    {
+      "id": "aws_subnet.simple_data_b",
+      "type": "network_boundary",
+      "label": "Simple VPC · data B",
+      "capability": {
+        "map_public_ip_on_launch": "false"
+      },
+      "service_id": "aws_subnet",
+      "availability_zone": "eu-west-1b",
+      "cidr_block": "10.20.21.0/24"
+    },
+    {
+      "id": "aws_internet_gateway.simple",
+      "type": "network_boundary",
+      "label": "simple internet gateway",
+      "capability": {},
+      "service_id": "aws_internet_gateway"
+    },
+    {
+      "id": "aws_route_table.simple_public",
+      "type": "network_boundary",
+      "label": "Public · internet access",
+      "capability": {
+        "design_local_route": "10.20.0.0/16 -> local (AWS-created)"
+      },
+      "service_id": "aws_route_table",
+      "routes": [
+        {
+          "destination_cidr": "0.0.0.0/0",
+          "target": "aws_internet_gateway.simple"
+        }
+      ]
+    },
+    {
+      "id": "aws_nat_gateway.simple_a",
+      "type": "network_boundary",
+      "label": "simple NAT A",
+      "capability": {
+        "connectivity_type": "public",
+        "design_elastic_ip": "Allocate an Elastic IP at deployment"
+      },
+      "service_id": "aws_nat_gateway"
+    },
+    {
+      "id": "aws_route_table.simple_app",
+      "type": "network_boundary",
+      "label": "Private application · NAT A",
+      "capability": {
+        "design_local_route": "10.20.0.0/16 -> local (AWS-created)"
+      },
+      "service_id": "aws_route_table",
+      "routes": [
+        {
+          "destination_cidr": "0.0.0.0/0",
+          "target": "aws_nat_gateway.simple_a"
+        }
+      ]
+    },
+    {
+      "id": "aws_route_table.simple_data",
+      "type": "network_boundary",
+      "label": "Database · local routes only",
+      "capability": {
+        "design_local_route": "10.20.0.0/16 -> local (AWS-created)"
+      },
+      "service_id": "aws_route_table"
+    },
+    {
+      "id": "aws_route53_record.simple",
+      "type": "dns",
+      "label": "Public application DNS",
+      "capability": {
+        "name": "app.example.com",
+        "type": "A",
+        "design_alias": "aws_lb.simple",
+        "design_dns_client": "internet"
+      },
+      "service_id": "aws_route53_record"
+    },
+    {
+      "id": "aws_lb.simple",
+      "type": "load_balancer",
+      "label": "HTTPS entry point",
+      "capability": {
+        "internal": "false",
+        "deletion_protection": "true",
+        "design_listener": "HTTPS 443; attach an ACM certificate for app.example.com"
+      },
+      "service_id": "aws_lb",
+      "sizing": {
+        "load_balancer_type": "application",
+        "region": "eu-west-1"
+      }
+    },
+    {
+      "id": "aws_instance.simple",
+      "type": "compute",
+      "label": "Private application (EC2)",
+      "capability": {
+        "associate_public_ip_address": "false",
+        "metadata_http_tokens": "required",
+        "design_administration": "Systems Manager through outbound HTTPS; no inbound SSH"
+      },
+      "service_id": "aws_instance",
+      "sizing": {
+        "region": "eu-west-1",
+        "count": "1"
+      }
+    },
+    {
+      "id": "aws_db_subnet_group.simple",
+      "type": "network_boundary",
+      "label": "Isolated database subnets",
+      "capability": {},
+      "service_id": "aws_db_subnet_group"
+    },
+    {
+      "id": "aws_db_instance.simple",
+      "type": "managed_database",
+      "label": "Private PostgreSQL database",
+      "capability": {
+        "storage_encrypted": "true",
+        "multi_az": "false",
+        "publicly_accessible": "false",
+        "deletion_protection": "true",
+        "backup_retention_period_days": "7",
+        "design_engine": "PostgreSQL; port 5432"
+      },
+      "service_id": "aws_db_instance",
+      "sizing": {
+        "region": "eu-west-1"
+      }
+    },
+    {
+      "id": "aws_security_group.simple_entry",
+      "type": "network_boundary",
+      "label": "Entry · HTTPS from internet",
+      "capability": {},
+      "service_id": "aws_security_group",
+      "security_group_rules": [
+        {
+          "direction": "ingress",
+          "protocol": "tcp",
+          "from_port": 443,
+          "to_port": 443,
+          "cidr_blocks": [
+            "0.0.0.0/0"
+          ]
+        },
+        {
+          "direction": "egress",
+          "protocol": "tcp",
+          "from_port": 8080,
+          "to_port": 8080,
+          "cidr_blocks": [
+            "10.20.10.0/24"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "aws_security_group.simple_app",
+      "type": "network_boundary",
+      "label": "App · only from entry",
+      "capability": {},
+      "service_id": "aws_security_group",
+      "security_group_rules": [
+        {
+          "direction": "ingress",
+          "protocol": "tcp",
+          "from_port": 8080,
+          "to_port": 8080,
+          "source_security_group": "aws_security_group.simple_entry"
+        },
+        {
+          "direction": "egress",
+          "protocol": "tcp",
+          "from_port": 5432,
+          "to_port": 5432,
+          "cidr_blocks": [
+            "10.20.20.0/23"
+          ]
+        },
+        {
+          "direction": "egress",
+          "protocol": "tcp",
+          "from_port": 443,
+          "to_port": 443,
+          "cidr_blocks": [
+            "0.0.0.0/0"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "aws_security_group.simple_data",
+      "type": "network_boundary",
+      "label": "Database · only from app",
+      "capability": {},
+      "service_id": "aws_security_group",
+      "security_group_rules": [
+        {
+          "direction": "ingress",
+          "protocol": "tcp",
+          "from_port": 5432,
+          "to_port": 5432,
+          "source_security_group": "aws_security_group.simple_app"
+        }
+      ]
+    },
+    {
+      "id": "aws_iam_role.simple_app",
+      "type": "identity",
+      "label": "EC2 application role",
+      "capability": {
+        "assume_role_policy": "{\"Version\":\"2012-10-17\",\"Statement\":[{\"Effect\":\"Allow\",\"Principal\":{\"Service\":\"ec2.amazonaws.com\"},\"Action\":\"sts:AssumeRole\"}]}",
+        "design_permissions": "Attach only the workload-specific permissions required at deployment; no wildcard policy supplied."
+      },
+      "service_id": "aws_iam_role"
+    },
+    {
+      "id": "aws_network_acl.simple_baseline",
+      "type": "network_boundary",
+      "label": "simple baseline subnet rules",
+      "capability": {},
+      "service_id": "aws_network_acl",
+      "nacl_rules": [
+        {
+          "number": 100,
+          "direction": "ingress",
+          "protocol": "-1",
+          "from_port": 0,
+          "to_port": 0,
+          "cidr_block": "0.0.0.0/0",
+          "action": "allow"
+        },
+        {
+          "number": 100,
+          "direction": "egress",
+          "protocol": "-1",
+          "from_port": 0,
+          "to_port": 0,
+          "cidr_block": "0.0.0.0/0",
+          "action": "allow"
+        }
+      ]
+    }
+  ],
+  "edges": [
+    {
+      "id": "contained_in:aws_subnet.simple_public_a:aws_vpc.simple",
+      "type": "contained_in",
+      "from": "aws_subnet.simple_public_a",
+      "to": "aws_vpc.simple"
+    },
+    {
+      "id": "contained_in:aws_subnet.simple_public_b:aws_vpc.simple",
+      "type": "contained_in",
+      "from": "aws_subnet.simple_public_b",
+      "to": "aws_vpc.simple"
+    },
+    {
+      "id": "contained_in:aws_subnet.simple_app_a:aws_vpc.simple",
+      "type": "contained_in",
+      "from": "aws_subnet.simple_app_a",
+      "to": "aws_vpc.simple"
+    },
+    {
+      "id": "contained_in:aws_subnet.simple_app_b:aws_vpc.simple",
+      "type": "contained_in",
+      "from": "aws_subnet.simple_app_b",
+      "to": "aws_vpc.simple"
+    },
+    {
+      "id": "contained_in:aws_subnet.simple_data_a:aws_vpc.simple",
+      "type": "contained_in",
+      "from": "aws_subnet.simple_data_a",
+      "to": "aws_vpc.simple"
+    },
+    {
+      "id": "contained_in:aws_subnet.simple_data_b:aws_vpc.simple",
+      "type": "contained_in",
+      "from": "aws_subnet.simple_data_b",
+      "to": "aws_vpc.simple"
+    },
+    {
+      "id": "contained_in:aws_internet_gateway.simple:aws_vpc.simple",
+      "type": "contained_in",
+      "from": "aws_internet_gateway.simple",
+      "to": "aws_vpc.simple"
+    },
+    {
+      "id": "contained_in:aws_route_table.simple_public:aws_vpc.simple",
+      "type": "contained_in",
+      "from": "aws_route_table.simple_public",
+      "to": "aws_vpc.simple"
+    },
+    {
+      "id": "depends_on:aws_subnet.simple_public_a:aws_route_table.simple_public",
+      "type": "depends_on",
+      "from": "aws_subnet.simple_public_a",
+      "to": "aws_route_table.simple_public"
+    },
+    {
+      "id": "depends_on:aws_subnet.simple_public_b:aws_route_table.simple_public",
+      "type": "depends_on",
+      "from": "aws_subnet.simple_public_b",
+      "to": "aws_route_table.simple_public"
+    },
+    {
+      "id": "contained_in:aws_nat_gateway.simple_a:aws_subnet.simple_public_a",
+      "type": "contained_in",
+      "from": "aws_nat_gateway.simple_a",
+      "to": "aws_subnet.simple_public_a"
+    },
+    {
+      "id": "contained_in:aws_route_table.simple_app:aws_vpc.simple",
+      "type": "contained_in",
+      "from": "aws_route_table.simple_app",
+      "to": "aws_vpc.simple"
+    },
+    {
+      "id": "depends_on:aws_subnet.simple_app_a:aws_route_table.simple_app",
+      "type": "depends_on",
+      "from": "aws_subnet.simple_app_a",
+      "to": "aws_route_table.simple_app"
+    },
+    {
+      "id": "depends_on:aws_subnet.simple_app_b:aws_route_table.simple_app",
+      "type": "depends_on",
+      "from": "aws_subnet.simple_app_b",
+      "to": "aws_route_table.simple_app"
+    },
+    {
+      "id": "contained_in:aws_route_table.simple_data:aws_vpc.simple",
+      "type": "contained_in",
+      "from": "aws_route_table.simple_data",
+      "to": "aws_vpc.simple"
+    },
+    {
+      "id": "depends_on:aws_subnet.simple_data_a:aws_route_table.simple_data",
+      "type": "depends_on",
+      "from": "aws_subnet.simple_data_a",
+      "to": "aws_route_table.simple_data"
+    },
+    {
+      "id": "depends_on:aws_subnet.simple_data_b:aws_route_table.simple_data",
+      "type": "depends_on",
+      "from": "aws_subnet.simple_data_b",
+      "to": "aws_route_table.simple_data"
+    },
+    {
+      "id": "contained_in:aws_lb.simple:aws_subnet.simple_public_a",
+      "type": "contained_in",
+      "from": "aws_lb.simple",
+      "to": "aws_subnet.simple_public_a"
+    },
+    {
+      "id": "contained_in:aws_lb.simple:aws_subnet.simple_public_b",
+      "type": "contained_in",
+      "from": "aws_lb.simple",
+      "to": "aws_subnet.simple_public_b"
+    },
+    {
+      "id": "contained_in:aws_instance.simple:aws_subnet.simple_app_a",
+      "type": "contained_in",
+      "from": "aws_instance.simple",
+      "to": "aws_subnet.simple_app_a"
+    },
+    {
+      "id": "contained_in:aws_db_subnet_group.simple:aws_subnet.simple_data_a",
+      "type": "contained_in",
+      "from": "aws_db_subnet_group.simple",
+      "to": "aws_subnet.simple_data_a"
+    },
+    {
+      "id": "contained_in:aws_db_subnet_group.simple:aws_subnet.simple_data_b",
+      "type": "contained_in",
+      "from": "aws_db_subnet_group.simple",
+      "to": "aws_subnet.simple_data_b"
+    },
+    {
+      "id": "contained_in:aws_db_instance.simple:aws_db_subnet_group.simple",
+      "type": "contained_in",
+      "from": "aws_db_instance.simple",
+      "to": "aws_db_subnet_group.simple"
+    },
+    {
+      "id": "contained_in:aws_security_group.simple_entry:aws_vpc.simple",
+      "type": "contained_in",
+      "from": "aws_security_group.simple_entry",
+      "to": "aws_vpc.simple"
+    },
+    {
+      "id": "contained_in:aws_security_group.simple_app:aws_vpc.simple",
+      "type": "contained_in",
+      "from": "aws_security_group.simple_app",
+      "to": "aws_vpc.simple"
+    },
+    {
+      "id": "contained_in:aws_security_group.simple_data:aws_vpc.simple",
+      "type": "contained_in",
+      "from": "aws_security_group.simple_data",
+      "to": "aws_vpc.simple"
+    },
+    {
+      "id": "depends_on:aws_lb.simple:aws_security_group.simple_entry",
+      "type": "depends_on",
+      "from": "aws_lb.simple",
+      "to": "aws_security_group.simple_entry"
+    },
+    {
+      "id": "depends_on:aws_instance.simple:aws_security_group.simple_app",
+      "type": "depends_on",
+      "from": "aws_instance.simple",
+      "to": "aws_security_group.simple_app"
+    },
+    {
+      "id": "depends_on:aws_db_instance.simple:aws_security_group.simple_data",
+      "type": "depends_on",
+      "from": "aws_db_instance.simple",
+      "to": "aws_security_group.simple_data"
+    },
+    {
+      "id": "authenticates_via:aws_instance.simple:aws_iam_role.simple_app",
+      "type": "authenticates_via",
+      "from": "aws_instance.simple",
+      "to": "aws_iam_role.simple_app"
+    },
+    {
+      "id": "contained_in:aws_network_acl.simple_baseline:aws_vpc.simple",
+      "type": "contained_in",
+      "from": "aws_network_acl.simple_baseline",
+      "to": "aws_vpc.simple"
+    },
+    {
+      "id": "depends_on:aws_subnet.simple_public_a:aws_network_acl.simple_baseline",
+      "type": "depends_on",
+      "from": "aws_subnet.simple_public_a",
+      "to": "aws_network_acl.simple_baseline"
+    },
+    {
+      "id": "depends_on:aws_subnet.simple_public_b:aws_network_acl.simple_baseline",
+      "type": "depends_on",
+      "from": "aws_subnet.simple_public_b",
+      "to": "aws_network_acl.simple_baseline"
+    },
+    {
+      "id": "depends_on:aws_subnet.simple_app_a:aws_network_acl.simple_baseline",
+      "type": "depends_on",
+      "from": "aws_subnet.simple_app_a",
+      "to": "aws_network_acl.simple_baseline"
+    },
+    {
+      "id": "depends_on:aws_subnet.simple_app_b:aws_network_acl.simple_baseline",
+      "type": "depends_on",
+      "from": "aws_subnet.simple_app_b",
+      "to": "aws_network_acl.simple_baseline"
+    },
+    {
+      "id": "depends_on:aws_subnet.simple_data_a:aws_network_acl.simple_baseline",
+      "type": "depends_on",
+      "from": "aws_subnet.simple_data_a",
+      "to": "aws_network_acl.simple_baseline"
+    },
+    {
+      "id": "depends_on:aws_subnet.simple_data_b:aws_network_acl.simple_baseline",
+      "type": "depends_on",
+      "from": "aws_subnet.simple_data_b",
+      "to": "aws_network_acl.simple_baseline"
+    },
+    {
+      "id": "routes_to:aws_route53_record.simple:aws_lb.simple",
+      "type": "routes_to",
+      "from": "aws_route53_record.simple",
+      "to": "aws_lb.simple"
+    },
+    {
+      "id": "routes_to:aws_lb.simple:aws_instance.simple",
+      "type": "routes_to",
+      "from": "aws_lb.simple",
+      "to": "aws_instance.simple"
+    },
+    {
+      "id": "reads/writes:aws_instance.simple:aws_db_instance.simple",
+      "type": "reads/writes",
+      "from": "aws_instance.simple",
+      "to": "aws_db_instance.simple"
+    }
+  ]
+}

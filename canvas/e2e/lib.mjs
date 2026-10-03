@@ -22,7 +22,7 @@ export function done(spec) {
 
 export async function open() {
   const browser = await chromium.launch();
-  const page = await browser.newPage({ viewport: { width: 1800, height: 1050 } });
+  const page = await browser.newPage({ viewport: { width: 1800, height: 1050 }, colorScheme: process.env.E2E_THEME === "dark" ? "dark" : "light" });
   page.on("pageerror", (e) => check("no uncaught page error", false, e.message));
   page.on("dialog", (d) => d.accept());
   await page.goto(UI);
@@ -43,6 +43,8 @@ export const select = async (page, id) => {
 };
 export const loadTemplate = async (page, id) => {
   await page.locator('[data-testid="template-picker"]').selectOption(id);
+  const confirmation = page.getByRole("dialog", { name: "Switch architecture sample?" });
+  if (await confirmation.count()) await confirmation.getByRole("button", { name: "Switch sample", exact: true }).click();
   await page.waitForTimeout(1200);
 };
 export const fit = async (page) => {

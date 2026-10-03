@@ -1,0 +1,5 @@
+{
+  "id": "enterprise-aws-network",
+  "name": "Enterprise AWS network",
+  "description": "A two-AZ enterprise hub-and-spoke design with production, non-production and shared-services VPCs in separate account roles. Includes segmented Transit Gateway routing, two VPN connections, hybrid DNS, AZ-local NAT egress, isolated database subnets and VPC flow-log intent. Transit Gateway, VPN, Resolver, isolation and local-only database routing are design intent, not simulated guarantees."
+}

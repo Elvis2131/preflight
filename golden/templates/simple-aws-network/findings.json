@@ -1,0 +1,762 @@
+[
+  {
+    "id": "finding.zone-kill.public-a",
+    "title": "AZ loss: eu-west-1a public subnet",
+    "dimensions": {
+      "trigger": "availability zone loss",
+      "affected_components": [
+        "aws_subnet.public_a"
+      ],
+      "detection": "modeled",
+      "existing_mitigation": "none stated",
+      "impact": {
+        "state": "not_assessable",
+        "reason": "blast radius is empty — either the failure is fully contained/redundant, or blast radius could not be computed",
+        "provenance": {
+          "kind": "derived",
+          "source": "core/analyse:zone-kill:aws_subnet.public_a"
+        }
+      },
+      "likelihood": {
+        "state": "not_assessable",
+        "reason": "likelihood is not assessable from structural analysis alone — no frequency/probability data exists to assume from; an assumed guess here would be exactly the fabrication CLAUDE.md §10 warns against",
+        "provenance": {
+          "kind": "derived",
+          "source": "core/analyse:zone-kill:aws_subnet.public_a"
+        }
+      },
+      "detectability": {
+        "state": "assessed",
+        "value": "high — this simulator models the failure directly",
+        "provenance": {
+          "kind": "derived",
+          "source": "core/analyse:zone-kill:aws_subnet.public_a"
+        }
+      },
+      "recoverability": {
+        "failover_path_exists": {
+          "state": "not_assessable",
+          "reason": "recoverability is evaluated per affected resource, not at the zone-kill level — see per-resource RTO/RPO findings",
+          "provenance": {
+            "kind": "derived",
+            "source": "core/analyse:zone-kill:aws_subnet.public_a"
+          }
+        },
+        "rpo_feasible": {
+          "state": "not_assessable",
+          "reason": "recoverability is evaluated per affected resource, not at the zone-kill level",
+          "provenance": {
+            "kind": "derived",
+            "source": "core/analyse:zone-kill:aws_subnet.public_a"
+          }
+        }
+      }
+    },
+    "evidence": [
+      {
+        "node_id": "aws_subnet.public_a",
+        "description": "core.ContainmentBlastRadius over this bundle's real contained_in edges"
+      }
+    ],
+    "outcome": {
+      "state": "not_assessable",
+      "reason": "zone-kill impact could not be determined — either the failure is fully contained/redundant, or the affected substrate is not yet mapped (see golden/fixtures/README.md)",
+      "provenance": {
+        "kind": "derived",
+        "source": "core/analyse:zone-kill:aws_subnet.public_a"
+      }
+    }
+  },
+  {
+    "id": "finding.zone-kill.data-a",
+    "title": "AZ loss: eu-west-1a data subnet",
+    "dimensions": {
+      "trigger": "availability zone loss",
+      "affected_components": [
+        "aws_subnet.data_a"
+      ],
+      "detection": "modeled",
+      "existing_mitigation": "none stated",
+      "impact": {
+        "state": "not_assessable",
+        "reason": "blast radius is empty — either the failure is fully contained/redundant, or blast radius could not be computed",
+        "provenance": {
+          "kind": "derived",
+          "source": "core/analyse:zone-kill:aws_subnet.data_a"
+        }
+      },
+      "likelihood": {
+        "state": "not_assessable",
+        "reason": "likelihood is not assessable from structural analysis alone — no frequency/probability data exists to assume from; an assumed guess here would be exactly the fabrication CLAUDE.md §10 warns against",
+        "provenance": {
+          "kind": "derived",
+          "source": "core/analyse:zone-kill:aws_subnet.data_a"
+        }
+      },
+      "detectability": {
+        "state": "assessed",
+        "value": "high — this simulator models the failure directly",
+        "provenance": {
+          "kind": "derived",
+          "source": "core/analyse:zone-kill:aws_subnet.data_a"
+        }
+      },
+      "recoverability": {
+        "failover_path_exists": {
+          "state": "not_assessable",
+          "reason": "recoverability is evaluated per affected resource, not at the zone-kill level — see per-resource RTO/RPO findings",
+          "provenance": {
+            "kind": "derived",
+            "source": "core/analyse:zone-kill:aws_subnet.data_a"
+          }
+        },
+        "rpo_feasible": {
+          "state": "not_assessable",
+          "reason": "recoverability is evaluated per affected resource, not at the zone-kill level",
+          "provenance": {
+            "kind": "derived",
+            "source": "core/analyse:zone-kill:aws_subnet.data_a"
+          }
+        }
+      }
+    },
+    "evidence": [
+      {
+        "node_id": "aws_subnet.data_a",
+        "description": "core.ContainmentBlastRadius over this bundle's real contained_in edges"
+      }
+    ],
+    "outcome": {
+      "state": "not_assessable",
+      "reason": "zone-kill impact could not be determined — either the failure is fully contained/redundant, or the affected substrate is not yet mapped (see golden/fixtures/README.md)",
+      "provenance": {
+        "kind": "derived",
+        "source": "core/analyse:zone-kill:aws_subnet.data_a"
+      }
+    }
+  },
+  {
+    "id": "finding.compliance.nat-gateway-redundancy",
+    "title": "NAT gateway redundancy across public subnets",
+    "dimensions": {
+      "trigger": "a single NAT gateway's AZ is lost, or the gateway itself fails",
+      "affected_components": [
+        "aws_subnet.public_a",
+        "aws_subnet.public_b",
+        "aws_subnet.public_c"
+      ],
+      "detection": "modeled",
+      "impact": {
+        "state": "not_assessable",
+        "reason": "impact dimension not evaluated by this compliance check",
+        "provenance": {
+          "kind": "derived",
+          "source": "core/analyse:nat-gateway-redundancy"
+        }
+      },
+      "likelihood": {
+        "state": "not_assessable",
+        "reason": "likelihood is not assessable from structural analysis alone — no frequency/probability data exists to assume from; an assumed guess here would be exactly the fabrication CLAUDE.md §10 warns against",
+        "provenance": {
+          "kind": "derived",
+          "source": "core/analyse:nat-gateway-redundancy"
+        }
+      },
+      "detectability": {
+        "state": "assessed",
+        "value": "high — this simulator models the failure directly",
+        "provenance": {
+          "kind": "derived",
+          "source": "core/analyse:nat-gateway-redundancy"
+        }
+      },
+      "recoverability": {
+        "failover_path_exists": {
+          "state": "not_assessable",
+          "reason": "recoverability not evaluated by this compliance check",
+          "provenance": {
+            "kind": "derived",
+            "source": "core/analyse:nat-gateway-redundancy"
+          }
+        },
+        "rpo_feasible": {
+          "state": "not_assessable",
+          "reason": "recoverability not evaluated by this compliance check",
+          "provenance": {
+            "kind": "derived",
+            "source": "core/analyse:nat-gateway-redundancy"
+          }
+        }
+      }
+    },
+    "evidence": [
+      {
+        "description": "no public subnets were found to check NAT gateway coverage against"
+      }
+    ],
+    "outcome": {
+      "state": "not_assessable",
+      "reason": "no public subnets were found to check NAT gateway coverage against",
+      "provenance": {
+        "kind": "derived",
+        "source": "core/analyse:nat-gateway-redundancy"
+      }
+    }
+  },
+  {
+    "id": "finding.compliance.rds-storage-encryption.aws_db_instance.simple",
+    "title": "RDS storage encryption at rest",
+    "dimensions": {
+      "trigger": "unencrypted storage exposed via snapshot, backup, or storage compromise",
+      "affected_components": [
+        "aws_db_instance.simple"
+      ],
+      "detection": "modeled",
+      "impact": {
+        "state": "not_assessable",
+        "reason": "impact dimension not evaluated by this compliance check",
+        "provenance": {
+          "kind": "derived",
+          "source": "core/analyse:storage-encryption-check:aws_db_instance.simple"
+        }
+      },
+      "likelihood": {
+        "state": "not_assessable",
+        "reason": "likelihood is not assessable from structural analysis alone — no frequency/probability data exists to assume from; an assumed guess here would be exactly the fabrication CLAUDE.md §10 warns against",
+        "provenance": {
+          "kind": "derived",
+          "source": "core/analyse:storage-encryption-check:aws_db_instance.simple"
+        }
+      },
+      "detectability": {
+        "state": "assessed",
+        "value": "high — this simulator models the failure directly",
+        "provenance": {
+          "kind": "derived",
+          "source": "core/analyse:storage-encryption-check:aws_db_instance.simple"
+        }
+      },
+      "recoverability": {
+        "failover_path_exists": {
+          "state": "not_assessable",
+          "reason": "recoverability not evaluated by this compliance check",
+          "provenance": {
+            "kind": "derived",
+            "source": "core/analyse:storage-encryption-check:aws_db_instance.simple"
+          }
+        },
+        "rpo_feasible": {
+          "state": "not_assessable",
+          "reason": "recoverability not evaluated by this compliance check",
+          "provenance": {
+            "kind": "derived",
+            "source": "core/analyse:storage-encryption-check:aws_db_instance.simple"
+          }
+        }
+      }
+    },
+    "evidence": [
+      {
+        "node_id": "aws_db_instance.simple",
+        "description": "storage encryption is enabled — data at rest, snapshots, and automated backups are protected",
+        "attribute": "storage_encrypted"
+      }
+    ],
+    "outcome": {
+      "state": "assessed",
+      "value": "satisfied",
+      "provenance": {
+        "kind": "derived",
+        "source": "core/analyse:storage-encryption-check:aws_db_instance.simple"
+      }
+    }
+  },
+  {
+    "id": "finding.compliance.rds-rpo-feasibility.aws_db_instance.simple",
+    "title": "RDS RPO feasibility against the declared workload requirement",
+    "dimensions": {
+      "trigger": "primary database failure with an infeasible replication mode for the declared RPO",
+      "affected_components": [
+        "aws_db_instance.simple"
+      ],
+      "detection": "modeled",
+      "impact": {
+        "state": "not_assessable",
+        "reason": "impact dimension not evaluated by this compliance check",
+        "provenance": {
+          "kind": "derived",
+          "source": "core/analyse:rpo-feasibility:aws_db_instance.simple"
+        }
+      },
+      "likelihood": {
+        "state": "not_assessable",
+        "reason": "likelihood is not assessable from structural analysis alone — no frequency/probability data exists to assume from; an assumed guess here would be exactly the fabrication CLAUDE.md §10 warns against",
+        "provenance": {
+          "kind": "derived",
+          "source": "core/analyse:rpo-feasibility:aws_db_instance.simple"
+        }
+      },
+      "detectability": {
+        "state": "assessed",
+        "value": "high — this simulator models the failure directly",
+        "provenance": {
+          "kind": "derived",
+          "source": "core/analyse:rpo-feasibility:aws_db_instance.simple"
+        }
+      },
+      "recoverability": {
+        "failover_path_exists": {
+          "state": "not_assessable",
+          "reason": "see this finding's own Outcome for this same underlying check",
+          "provenance": {
+            "kind": "derived",
+            "source": "core/analyse:rpo-feasibility:aws_db_instance.simple"
+          }
+        },
+        "rpo_feasible": {
+          "state": "not_assessable",
+          "reason": "no rpo_seconds requirement declared in workload.yaml",
+          "provenance": {
+            "kind": "derived",
+            "source": "core/analyse:rpo-feasibility:aws_db_instance.simple"
+          }
+        }
+      }
+    },
+    "evidence": [
+      {
+        "node_id": "aws_db_instance.simple",
+        "description": "no rpo_seconds requirement declared in workload.yaml"
+      }
+    ],
+    "outcome": {
+      "state": "not_assessable",
+      "reason": "no rpo_seconds requirement declared in workload.yaml",
+      "provenance": {
+        "kind": "derived",
+        "source": "core/analyse:rpo-feasibility:aws_db_instance.simple"
+      }
+    }
+  },
+  {
+    "id": "finding.compliance.iam-least-privilege-wildcard-admin.aws_iam_role.simple_app",
+    "title": "IAM role aws_iam_role.simple_app: least-privilege check for wildcard administrative access",
+    "dimensions": {
+      "trigger": "a compromised or misused credential for this role has unrestricted access to every resource",
+      "affected_components": [
+        "aws_iam_role.simple_app"
+      ],
+      "detection": "modeled",
+      "impact": {
+        "state": "not_assessable",
+        "reason": "impact dimension not evaluated by this compliance check",
+        "provenance": {
+          "kind": "derived",
+          "source": "core/iam_evaluate:least-privilege-wildcard-admin:aws_iam_role.simple_app"
+        }
+      },
+      "likelihood": {
+        "state": "not_assessable",
+        "reason": "likelihood is not assessable from structural analysis alone — no frequency/probability data exists to assume from; an assumed guess here would be exactly the fabrication CLAUDE.md §10 warns against",
+        "provenance": {
+          "kind": "derived",
+          "source": "core/iam_evaluate:least-privilege-wildcard-admin:aws_iam_role.simple_app"
+        }
+      },
+      "detectability": {
+        "state": "assessed",
+        "value": "high — this simulator models the failure directly",
+        "provenance": {
+          "kind": "derived",
+          "source": "core/iam_evaluate:least-privilege-wildcard-admin:aws_iam_role.simple_app"
+        }
+      },
+      "recoverability": {
+        "failover_path_exists": {
+          "state": "not_assessable",
+          "reason": "recoverability not evaluated by this compliance check",
+          "provenance": {
+            "kind": "derived",
+            "source": "core/iam_evaluate:least-privilege-wildcard-admin:aws_iam_role.simple_app"
+          }
+        },
+        "rpo_feasible": {
+          "state": "not_assessable",
+          "reason": "recoverability not evaluated by this compliance check",
+          "provenance": {
+            "kind": "derived",
+            "source": "core/iam_evaluate:least-privilege-wildcard-admin:aws_iam_role.simple_app"
+          }
+        }
+      }
+    },
+    "evidence": [
+      {
+        "node_id": "aws_iam_role.simple_app",
+        "description": "no identity policy statement grants every action (\"*\") on every resource (\"*\")",
+        "attribute": "iam_identity_policies"
+      }
+    ],
+    "outcome": {
+      "state": "assessed",
+      "value": "satisfied",
+      "provenance": {
+        "kind": "derived",
+        "source": "core/iam_evaluate:least-privilege-wildcard-admin:aws_iam_role.simple_app"
+      }
+    }
+  },
+  {
+    "id": "finding.compliance.iam-least-privilege-assumable-by-any-principal.aws_iam_role.simple_app",
+    "title": "IAM role aws_iam_role.simple_app: least-privilege check for an overly broad trust policy",
+    "dimensions": {
+      "trigger": "any AWS principal, not just the intended one, can assume this role",
+      "affected_components": [
+        "aws_iam_role.simple_app"
+      ],
+      "detection": "modeled",
+      "impact": {
+        "state": "not_assessable",
+        "reason": "impact dimension not evaluated by this compliance check",
+        "provenance": {
+          "kind": "derived",
+          "source": "core/iam_evaluate:least-privilege-assumable-by-any-principal:aws_iam_role.simple_app"
+        }
+      },
+      "likelihood": {
+        "state": "not_assessable",
+        "reason": "likelihood is not assessable from structural analysis alone — no frequency/probability data exists to assume from; an assumed guess here would be exactly the fabrication CLAUDE.md §10 warns against",
+        "provenance": {
+          "kind": "derived",
+          "source": "core/iam_evaluate:least-privilege-assumable-by-any-principal:aws_iam_role.simple_app"
+        }
+      },
+      "detectability": {
+        "state": "assessed",
+        "value": "high — this simulator models the failure directly",
+        "provenance": {
+          "kind": "derived",
+          "source": "core/iam_evaluate:least-privilege-assumable-by-any-principal:aws_iam_role.simple_app"
+        }
+      },
+      "recoverability": {
+        "failover_path_exists": {
+          "state": "not_assessable",
+          "reason": "recoverability not evaluated by this compliance check",
+          "provenance": {
+            "kind": "derived",
+            "source": "core/iam_evaluate:least-privilege-assumable-by-any-principal:aws_iam_role.simple_app"
+          }
+        },
+        "rpo_feasible": {
+          "state": "not_assessable",
+          "reason": "recoverability not evaluated by this compliance check",
+          "provenance": {
+            "kind": "derived",
+            "source": "core/iam_evaluate:least-privilege-assumable-by-any-principal:aws_iam_role.simple_app"
+          }
+        }
+      }
+    },
+    "evidence": [
+      {
+        "node_id": "aws_iam_role.simple_app",
+        "description": "role \"aws_iam_role.simple_app\" has no trust policy captured in this IR",
+        "attribute": "iam_trust_policy"
+      }
+    ],
+    "outcome": {
+      "state": "not_assessable",
+      "reason": "role \"aws_iam_role.simple_app\" has no trust policy captured in this IR",
+      "provenance": {
+        "kind": "derived",
+        "source": "core/iam_evaluate:least-privilege-assumable-by-any-principal:aws_iam_role.simple_app"
+      }
+    }
+  },
+  {
+    "id": "finding.resilience.configuration-blast-surface.simple_request",
+    "title": "Journey \"Full application request\": configuration blast surface (single rule changes that would break it)",
+    "dimensions": {
+      "trigger": "a single security-group or NACL rule is tightened, removed, or misconfigured — infrastructure intact, a rule changed",
+      "affected_components": [
+        "internet",
+        "aws_lb.simple",
+        "aws_instance.simple",
+        "aws_db_instance.simple"
+      ],
+      "detection": "unknown",
+      "impact": {
+        "state": "not_assessable",
+        "reason": "impact dimension not evaluated by this check",
+        "provenance": {
+          "kind": "derived",
+          "source": "core/config_blast_surface:simple_request"
+        }
+      },
+      "likelihood": {
+        "state": "not_assessable",
+        "reason": "likelihood is not assessable from structural analysis alone — no frequency/probability data exists to assume from; an assumed guess here would be exactly the fabrication CLAUDE.md §10 warns against",
+        "provenance": {
+          "kind": "derived",
+          "source": "core/config_blast_surface:simple_request"
+        }
+      },
+      "detectability": {
+        "state": "not_assessable",
+        "reason": "no detection mechanism is known or declared for this failure",
+        "provenance": {
+          "kind": "derived",
+          "source": "core/config_blast_surface:simple_request"
+        }
+      },
+      "recoverability": {
+        "failover_path_exists": {
+          "state": "not_assessable",
+          "reason": "recoverability not evaluated by this check",
+          "provenance": {
+            "kind": "derived",
+            "source": "core/config_blast_surface:simple_request"
+          }
+        },
+        "rpo_feasible": {
+          "state": "not_assessable",
+          "reason": "recoverability not evaluated by this check",
+          "provenance": {
+            "kind": "derived",
+            "source": "core/config_blast_surface:simple_request"
+          }
+        }
+      }
+    },
+    "evidence": [
+      {
+        "description": "journey \"simple_request\" does not structurally flow today (Blocked at aws_instance.simple (capability_check): service aws_instance.simple (capability_level \u003cnil\u003e) does not reach REQUEST_SIMULATION) — a configuration blast surface is not meaningful without a working baseline"
+      }
+    ],
+    "outcome": {
+      "state": "not_assessable",
+      "reason": "journey \"simple_request\" does not structurally flow today (Blocked at aws_instance.simple (capability_check): service aws_instance.simple (capability_level \u003cnil\u003e) does not reach REQUEST_SIMULATION) — a configuration blast surface is not meaningful without a working baseline",
+      "provenance": {
+        "kind": "derived",
+        "source": "core/config_blast_surface:simple_request"
+      }
+    }
+  },
+  {
+    "id": "finding.resilience.configuration-blast-surface.simple_web",
+    "title": "Journey \"Internet to HTTPS entry\": configuration blast surface (single rule changes that would break it)",
+    "dimensions": {
+      "trigger": "a single security-group or NACL rule is tightened, removed, or misconfigured — infrastructure intact, a rule changed",
+      "affected_components": [
+        "internet",
+        "aws_lb.simple"
+      ],
+      "detection": "unknown",
+      "impact": {
+        "state": "not_assessable",
+        "reason": "impact dimension not evaluated by this check",
+        "provenance": {
+          "kind": "derived",
+          "source": "core/config_blast_surface:simple_web"
+        }
+      },
+      "likelihood": {
+        "state": "not_assessable",
+        "reason": "likelihood is not assessable from structural analysis alone — no frequency/probability data exists to assume from; an assumed guess here would be exactly the fabrication CLAUDE.md §10 warns against",
+        "provenance": {
+          "kind": "derived",
+          "source": "core/config_blast_surface:simple_web"
+        }
+      },
+      "detectability": {
+        "state": "not_assessable",
+        "reason": "no detection mechanism is known or declared for this failure",
+        "provenance": {
+          "kind": "derived",
+          "source": "core/config_blast_surface:simple_web"
+        }
+      },
+      "recoverability": {
+        "failover_path_exists": {
+          "state": "not_assessable",
+          "reason": "recoverability not evaluated by this check",
+          "provenance": {
+            "kind": "derived",
+            "source": "core/config_blast_surface:simple_web"
+          }
+        },
+        "rpo_feasible": {
+          "state": "not_assessable",
+          "reason": "recoverability not evaluated by this check",
+          "provenance": {
+            "kind": "derived",
+            "source": "core/config_blast_surface:simple_web"
+          }
+        }
+      }
+    },
+    "evidence": [
+      {
+        "description": "3 of 4 rules on the security groups and NACLs along this journey's path (every rule on those groups), if removed alone, would break it"
+      },
+      {
+        "node_id": "aws_security_group.simple_entry",
+        "description": "removing this rule (ingress tcp) alone breaks the journey",
+        "attribute": "security_group_rules"
+      },
+      {
+        "node_id": "aws_network_acl.simple_baseline",
+        "description": "removing this rule (ingress -1) alone breaks the journey",
+        "attribute": "nacl_rules"
+      },
+      {
+        "node_id": "aws_network_acl.simple_baseline",
+        "description": "removing this rule (egress -1) alone breaks the journey",
+        "attribute": "nacl_rules"
+      }
+    ],
+    "outcome": {
+      "state": "assessed",
+      "value": "3 of 4 rules on the security groups and NACLs along this journey's path (every rule on those groups, not only the ones this journey uses) would break it if changed alone",
+      "provenance": {
+        "kind": "derived",
+        "source": "core/config_blast_surface:simple_web"
+      }
+    }
+  },
+  {
+    "id": "finding.resilience.configuration-blast-surface.simple_app",
+    "title": "Journey \"Entry to private application\": configuration blast surface (single rule changes that would break it)",
+    "dimensions": {
+      "trigger": "a single security-group or NACL rule is tightened, removed, or misconfigured — infrastructure intact, a rule changed",
+      "affected_components": [
+        "aws_lb.simple",
+        "aws_instance.simple"
+      ],
+      "detection": "unknown",
+      "impact": {
+        "state": "not_assessable",
+        "reason": "impact dimension not evaluated by this check",
+        "provenance": {
+          "kind": "derived",
+          "source": "core/config_blast_surface:simple_app"
+        }
+      },
+      "likelihood": {
+        "state": "not_assessable",
+        "reason": "likelihood is not assessable from structural analysis alone — no frequency/probability data exists to assume from; an assumed guess here would be exactly the fabrication CLAUDE.md §10 warns against",
+        "provenance": {
+          "kind": "derived",
+          "source": "core/config_blast_surface:simple_app"
+        }
+      },
+      "detectability": {
+        "state": "not_assessable",
+        "reason": "no detection mechanism is known or declared for this failure",
+        "provenance": {
+          "kind": "derived",
+          "source": "core/config_blast_surface:simple_app"
+        }
+      },
+      "recoverability": {
+        "failover_path_exists": {
+          "state": "not_assessable",
+          "reason": "recoverability not evaluated by this check",
+          "provenance": {
+            "kind": "derived",
+            "source": "core/config_blast_surface:simple_app"
+          }
+        },
+        "rpo_feasible": {
+          "state": "not_assessable",
+          "reason": "recoverability not evaluated by this check",
+          "provenance": {
+            "kind": "derived",
+            "source": "core/config_blast_surface:simple_app"
+          }
+        }
+      }
+    },
+    "evidence": [
+      {
+        "description": "journey \"simple_app\" does not structurally flow today (Blocked at aws_instance.simple (capability_check): service aws_instance.simple (capability_level \u003cnil\u003e) does not reach REQUEST_SIMULATION) — a configuration blast surface is not meaningful without a working baseline"
+      }
+    ],
+    "outcome": {
+      "state": "not_assessable",
+      "reason": "journey \"simple_app\" does not structurally flow today (Blocked at aws_instance.simple (capability_check): service aws_instance.simple (capability_level \u003cnil\u003e) does not reach REQUEST_SIMULATION) — a configuration blast surface is not meaningful without a working baseline",
+      "provenance": {
+        "kind": "derived",
+        "source": "core/config_blast_surface:simple_app"
+      }
+    }
+  },
+  {
+    "id": "finding.resilience.configuration-blast-surface.simple_data",
+    "title": "Journey \"Application to private database\": configuration blast surface (single rule changes that would break it)",
+    "dimensions": {
+      "trigger": "a single security-group or NACL rule is tightened, removed, or misconfigured — infrastructure intact, a rule changed",
+      "affected_components": [
+        "aws_instance.simple",
+        "aws_db_instance.simple"
+      ],
+      "detection": "unknown",
+      "impact": {
+        "state": "not_assessable",
+        "reason": "impact dimension not evaluated by this check",
+        "provenance": {
+          "kind": "derived",
+          "source": "core/config_blast_surface:simple_data"
+        }
+      },
+      "likelihood": {
+        "state": "not_assessable",
+        "reason": "likelihood is not assessable from structural analysis alone — no frequency/probability data exists to assume from; an assumed guess here would be exactly the fabrication CLAUDE.md §10 warns against",
+        "provenance": {
+          "kind": "derived",
+          "source": "core/config_blast_surface:simple_data"
+        }
+      },
+      "detectability": {
+        "state": "not_assessable",
+        "reason": "no detection mechanism is known or declared for this failure",
+        "provenance": {
+          "kind": "derived",
+          "source": "core/config_blast_surface:simple_data"
+        }
+      },
+      "recoverability": {
+        "failover_path_exists": {
+          "state": "not_assessable",
+          "reason": "recoverability not evaluated by this check",
+          "provenance": {
+            "kind": "derived",
+            "source": "core/config_blast_surface:simple_data"
+          }
+        },
+        "rpo_feasible": {
+          "state": "not_assessable",
+          "reason": "recoverability not evaluated by this check",
+          "provenance": {
+            "kind": "derived",
+            "source": "core/config_blast_surface:simple_data"
+          }
+        }
+      }
+    },
+    "evidence": [
+      {
+        "description": "journey \"simple_data\" does not structurally flow today (Blocked at aws_instance.simple (capability_check): service aws_instance.simple (capability_level \u003cnil\u003e) does not reach REQUEST_SIMULATION) — a configuration blast surface is not meaningful without a working baseline"
+      }
+    ],
+    "outcome": {
+      "state": "not_assessable",
+      "reason": "journey \"simple_data\" does not structurally flow today (Blocked at aws_instance.simple (capability_check): service aws_instance.simple (capability_level \u003cnil\u003e) does not reach REQUEST_SIMULATION) — a configuration blast surface is not meaningful without a working baseline",
+      "provenance": {
+        "kind": "derived",
+        "source": "core/config_blast_surface:simple_data"
+      }
+    }
+  }
+]

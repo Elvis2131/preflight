@@ -1,0 +1,117 @@
+:root {
+  color-scheme: light;
+  --workspace-bg: #f9fafb;
+  --canvas-bg: #ffffff;
+  --ink-secondary: #535d70;
+  --strong-surface: #2d3039;
+  --on-accent: #ffffff;
+  --line-strong: #cbd5e1;
+  --accent-line: #c8dcff;
+  --danger-ink: #b91c1c;
+  --danger-soft: #fef2f2;
+  --danger-line: #f2c7c7;
+  --warning-ink: #b45309;
+  --warning-soft: #fff7ed;
+  --success-ink: #15803d;
+  --success-soft: #f0fdf4;
+  --purple-ink: #7c3aed;
+  --purple-soft: #faf5ff;
+  --purple-line: #c4b5fd;
+  --cyan-ink: #0369a1;
+  --surface-overlay: #ffffffed;
+}
+
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --ink: #e4e9f2;
+  --ink-secondary: #c1cada;
+  --muted: #a3afc2;
+  --subtle: #8793a8;
+  --line: #2c3546;
+  --line-strong: #49566b;
+  --surface: #191f2b;
+  --surface-soft: #222a39;
+  --workspace-bg: #10151f;
+  --canvas-bg: #131a26;
+  --surface-overlay: #191f2bed;
+  --accent: #87afff;
+  --accent-soft: #253754;
+  --accent-line: #456595;
+  --strong-surface: #dce5f4;
+  --on-accent: #172030;
+  --danger-ink: #ff9297;
+  --danger-soft: #39262e;
+  --danger-line: #75424c;
+  --warning-ink: #efbe76;
+  --warning-soft: #362e22;
+  --success-ink: #85d8a8;
+  --success-soft: #1c342d;
+  --purple-ink: #bc9bff;
+  --purple-soft: #302643;
+  --purple-line: #665082;
+  --cyan-ink: #8bd4ee;
+  --shadow-soft: 0 2px 8px #00000020;
+}
+
+body { background: var(--workspace-bg); color: var(--ink); }
+.workspace-main { background: var(--workspace-bg); }
+.canvas-stage, .react-flow__background { background: var(--canvas-bg); }
+.brand-mark, .navigation-tooltip, .primary-action, .traffic-node-step { color: var(--on-accent); }
+.primary-action:hover:not(:disabled) { background: var(--accent); border-color: var(--accent); }
+.toolbar-main-row .toolbar-test-action:hover { background: var(--strong-surface); border-color: var(--strong-surface); }
+.react-flow { --xy-edge-label-background-color: var(--canvas-bg); --xy-edge-label-color: var(--muted); --xy-minimap-background-color: var(--surface); --xy-minimap-mask-background-color: #00000015; }
+.react-flow__edge-textbg { fill: var(--canvas-bg); }
+.react-flow__edge-text { fill: var(--muted); }
+.react-flow__controls-button { color: var(--ink); fill: currentColor; }
+.react-flow__minimap { background: var(--surface); }
+.theme-toggle { display: grid; place-items: center; width: 36px; height: 36px; margin: 0 auto 15px; background: transparent; border: 0; border-radius: 9px; color: var(--muted); }
+.theme-toggle:hover { background: var(--surface-soft); box-shadow: none; }
+.rail-avatar { margin: 0 auto; }
+.template-load-error { margin: -8px 0 18px; padding: 10px; border: 1px solid var(--danger-line); border-radius: 8px; background: var(--danger-soft); color: var(--danger-ink); font-size: 11px; line-height: 1.6; }
+.template-load-error p { margin: 0 0 8px; }
+.template-load-error button { padding: 5px 8px; color: var(--ink); font-size: 10px; }
+pre { color: var(--ink-secondary); }
+.canvas-stage > pre { background: #0f172a !important; color: #e2e8f0 !important; }
+
+/* Theme neutral diagram colours without changing backend SVG markup or exports. */
+.evidence-view svg, .report-view svg { background: var(--surface); }
+:root[data-theme="dark"] :is(.evidence-view, .report-view) svg [fill="white"] { fill: var(--surface); }
+:root[data-theme="dark"] :is(.evidence-view, .report-view) svg [fill="black"] { fill: var(--ink-secondary); }
+:root[data-theme="dark"] :is(.evidence-view, .report-view) svg [stroke="black"] { stroke: var(--ink-secondary); }
+:root[data-theme="dark"] :is(.evidence-view, .report-view) svg :is(text:not([fill]), text[fill="black"]) { fill: var(--ink); }
+
+:root[data-theme="dark"] .guide-card { background: var(--surface-soft); color: var(--muted); }
+:root[data-theme="dark"] .react-flow__attribution { background: var(--surface-overlay); }
+:root[data-theme="dark"] .react-flow__attribution a { color: var(--subtle); }
+
+.connection-picker { position: fixed; box-sizing: border-box; margin: 0; padding: 0; max-width: calc(100vw - 24px); max-height: calc(100dvh - 24px); overflow-y: auto; border: 1px solid var(--line); border-radius: 14px; background: var(--surface); color: var(--ink); box-shadow: 0 12px 45px #00000028; }
+.connection-picker::backdrop { background: #00000008; }
+.connection-picker-heading { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 20px 18px 12px; }
+.connection-picker h2 { font-size: 15px; font-weight: 500; margin: 7px 0 0; letter-spacing: -.025em; }
+.connection-picker-close { background: transparent; color: var(--muted); border: 0; font-size: 22px; padding: 0 4px; }
+.connection-endpoints { display: flex; align-items: center; gap: 9px; margin: 0 18px; padding: 10px; border: 1px solid var(--line); background: var(--surface-soft); border-radius: 7px; font-size: 11px; }
+.connection-endpoints span:not([aria-hidden]) { flex: 1; min-width: 0; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+.connection-endpoints span[aria-hidden] { color: var(--subtle); }
+.connection-picker-help { margin: 12px 18px 6px; font-size: 11px; line-height: 1.5; color: var(--muted); }
+.connection-options { display: grid; gap: 4px; padding: 4px 10px 12px; }
+.connection-option { display: flex; align-items: center; gap: 10px; border: 1px solid transparent; border-radius: 8px; padding: 9px 8px; text-align: left; background: transparent; }
+.connection-option:hover:not(:disabled), .connection-option[aria-pressed="true"] { border-color: var(--accent-line); background: var(--accent-soft); box-shadow: none; }
+.connection-option strong { display: block; font-size: 12px; font-weight: 500; color: var(--ink); }
+.connection-option small { display: block; margin-top: 3px; color: var(--muted); font-size: 10px; line-height: 1.5; }
+.connection-option-icon { display: grid; place-items: center; flex: 0 0 29px; height: 29px; background: var(--surface-soft); border: 1px solid var(--line); border-radius: 7px; color: var(--ink-secondary); font-size: 17px; }
+.connection-current { margin-left: auto; color: var(--accent); }
+.connection-picker-footer { padding: 12px 18px; border-top: 1px solid var(--line); color: var(--subtle); font-size: 10px; line-height: 1.5; }
+.service-node > .react-flow__handle { width: 10px; height: 10px; border: 2px solid var(--surface); background: var(--line-strong); }
+.service-node:hover > .react-flow__handle { background: var(--accent); }
+.service-node > .react-flow__handle:hover, .service-node > .react-flow__handle.connectingfrom, .service-node > .react-flow__handle.connectingto { background: var(--accent); box-shadow: 0 0 0 4px var(--accent-soft); }
+.canvas-stage[data-editable="true"] .react-flow__edge { cursor: pointer; }
+.canvas-stage[data-editable="true"] .react-flow__edge-textwrapper { pointer-events: all; cursor: pointer; }
+.canvas-stage[data-editable="true"] .react-flow__edge:hover .react-flow__edge-path { stroke-width: 2.5; }
+.react-flow__connection-path { stroke: var(--accent); stroke-width: 2; stroke-dasharray: 5 4; }
+
+.template-confirmation { box-sizing: border-box; width: 430px; max-width: calc(100vw - 32px); max-height: calc(100dvh - 32px); overflow: auto; padding: 24px; border: 1px solid var(--line); border-radius: 14px; background: var(--surface); color: var(--ink); box-shadow: 0 16px 60px #00000030; }
+.template-confirmation::backdrop { background: #00000045; }
+.template-confirmation h2 { margin: 10px 0 12px; font-size: 20px; font-weight: 500; letter-spacing: -.025em; }
+.template-confirmation p { color: var(--muted); font-size: 13px; line-height: 1.7; }
+.template-confirmation p strong { color: var(--ink); font-weight: 500; }
+.template-confirmation-actions { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 8px; margin-top: 24px; }

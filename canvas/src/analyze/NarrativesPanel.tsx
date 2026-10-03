@@ -7,8 +7,8 @@ import { fromStored, getStoredNarratives, initialNarrativeState, LLM_NOTICE, nar
 // nothing: a degraded narrative layer is a banner, never an error, and the findings above are
 // complete either way.
 
-const box: React.CSSProperties = { border: "1px dashed #7c3aed", borderRadius: 6, padding: 12, background: "#faf5ff", marginTop: 24 };
-const badge: React.CSSProperties = { fontSize: 10, fontWeight: 700, color: "#6d28d9", border: "1px solid #7c3aed", borderRadius: 3, padding: "1px 5px", marginRight: 6 };
+const box: React.CSSProperties = { border: "1px dashed var(--purple-ink)", borderRadius: 6, padding: 12, background: "var(--purple-soft)", marginTop: 24 };
+const badge: React.CSSProperties = { fontSize: 10, fontWeight: 700, color: "var(--purple-ink)", border: "1px solid var(--purple-ink)", borderRadius: 3, padding: "1px 5px", marginRight: 6 };
 
 export function NarrativesPanel({ sessionID, version }: { sessionID: string; version: number }) {
   const [state, dispatch] = useReducer(narrativeReducer, initialNarrativeState);
@@ -48,17 +48,17 @@ function PanelBody({ state, loaded, onGenerate, version }: { state: NarrativeSta
       <h2 style={{ fontSize: 14, margin: "0 0 4px" }}>
         <span style={badge}>LLM-WRITTEN</span>Narratives for V{version}
       </h2>
-      <p style={{ fontSize: 11, color: "#5b21b6", margin: "0 0 10px" }} data-testid="narratives-notice">
+      <p style={{ fontSize: 11, color: "var(--purple-ink)", margin: "0 0 10px" }} data-testid="narratives-notice">
         {LLM_NOTICE}
       </p>
 
       {state.phase === "degraded" && (
-        <div style={{ padding: 8, background: "#fff7ed", border: "1px solid #fdba74", fontSize: 12, marginBottom: 8 }} data-testid="narratives-degraded">
+        <div style={{ padding: 8, background: "var(--warning-soft)", border: "1px solid var(--warning-ink)", fontSize: 12, marginBottom: 8 }} data-testid="narratives-degraded">
           Narratives {has ? "are incomplete" : "are unavailable"}: {state.degradedReason ?? "the narrative layer could not contribute"}. The findings and the timeline above are unaffected.
         </div>
       )}
       {state.phase === "streaming" && (
-        <div style={{ fontSize: 12, color: "#5b21b6", marginBottom: 8 }} data-testid="narratives-streaming">
+        <div style={{ fontSize: 12, color: "var(--purple-ink)", marginBottom: 8 }} data-testid="narratives-streaming">
           Writing narratives… {state.annotations.length} so far
         </div>
       )}
@@ -72,10 +72,10 @@ function PanelBody({ state, loaded, onGenerate, version }: { state: NarrativeSta
       {has && (
         <ul style={{ listStyle: "none", padding: 0, margin: 0 }} data-testid="narratives-list">
           {state.annotations.map((a) => (
-            <li key={a.finding_id} style={{ padding: "8px 0", borderTop: "1px solid #e9d5ff" }} data-testid="narrative">
-              <div style={{ fontSize: 11, fontFamily: "monospace", color: "#334155" }}>{a.finding_id}</div>
+            <li key={a.finding_id} style={{ padding: "8px 0", borderTop: "1px solid var(--purple-line)" }} data-testid="narrative">
+              <div style={{ fontSize: 11, fontFamily: "monospace", color: "var(--ink)" }}>{a.finding_id}</div>
               <div style={{ fontSize: 13, margin: "2px 0" }}>{a.narrative}</div>
-              <div style={{ fontSize: 10, color: "#64748b" }}>
+              <div style={{ fontSize: 10, color: "var(--muted)" }}>
                 cites: {a.cited_evidence.join(", ")} · provenance: {a.provenance.kind}
               </div>
             </li>

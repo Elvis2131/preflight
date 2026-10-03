@@ -18,8 +18,8 @@ import { FAULT_KINDS, targetsFor, registeredTargets, buildFault, describeFault, 
 // computes none of it. Saved scenarios are definitions only; every result shown here was
 // just computed by the server against the current design, never stored or replayed.
 
-const box: React.CSSProperties = { border: "1px solid #e2e8f0", borderRadius: 6, padding: 8, marginBottom: 10 };
-const small: React.CSSProperties = { fontSize: 11, color: "#64748b" };
+const box: React.CSSProperties = { border: "1px solid var(--line)", borderRadius: 6, padding: 8, marginBottom: 10 };
+const small: React.CSSProperties = { fontSize: 11, color: "var(--muted)" };
 
 export function FailureLab({
   sessionID,
@@ -109,7 +109,7 @@ export function FailureLab({
           ))}
         </select>
         {targets.length === 0 ? (
-          <div style={{ ...small, color: "#b45309" }}>Nothing in this design a "{kind}" fault could apply to.</div>
+          <div style={{ ...small, color: "var(--warning-ink)" }}>Nothing in this design a "{kind}" fault could apply to.</div>
         ) : (
           <select value={target} onChange={(e) => setTarget(e.target.value)} data-testid="fault-target" style={{ width: "100%", marginBottom: 6 }}>
             {targets.map((t) => (
@@ -155,7 +155,7 @@ export function FailureLab({
             </li>
           ))}
         </ul>
-        <button onClick={() => onRun(faults)} disabled={busy || faults.length === 0} data-testid="run-scenario" style={{ background: "#fee2e2", border: "1px solid #dc2626" }}>
+        <button onClick={() => onRun(faults)} disabled={busy || faults.length === 0} data-testid="run-scenario" style={{ background: "var(--danger-soft)", border: "1px solid var(--danger-ink)" }}>
           {busy ? "Running…" : "Run scenario"}
         </button>
         <div style={{ display: "flex", gap: 4, marginTop: 6 }}>
@@ -164,7 +164,7 @@ export function FailureLab({
             Save
           </button>
         </div>
-        {error && <div style={{ color: "#dc2626", fontSize: 11, marginTop: 4 }}>{error}</div>}
+        {error && <div style={{ color: "var(--danger-ink)", fontSize: 11, marginTop: 4 }}>{error}</div>}
       </div>
 
       <div className="lab-card" style={box}>
@@ -172,7 +172,7 @@ export function FailureLab({
         {saved.length === 0 && <div style={small}>None saved for this session.</div>}
         <ul style={{ paddingLeft: 0, listStyle: "none", margin: "4px 0" }} data-testid="saved-scenarios">
           {saved.map((sc) => (
-            <li key={sc.name} style={{ borderTop: "1px solid #f1f5f9", padding: "4px 0" }}>
+            <li key={sc.name} style={{ borderTop: "1px solid var(--surface-soft)", padding: "4px 0" }}>
               <div style={{ fontWeight: 600 }}>{sc.name}</div>
               <div style={small}>{sc.faults.map(describeFault).join(" + ")}</div>
               <button style={{ fontSize: 10 }} onClick={() => setFaults(sc.faults)}>
@@ -204,13 +204,13 @@ export function FailureLab({
           <div style={small}>Computed by the server just now, from the saved definitions.</div>
           <ul style={{ listStyle: "none", padding: 0, margin: "4px 0 0" }}>
             {results.map((r) => (
-              <li key={r.name} style={{ borderTop: "1px solid #e2e8f0", padding: "6px 0", overflowWrap: "anywhere" }}>
+              <li key={r.name} style={{ borderTop: "1px solid var(--line)", padding: "6px 0", overflowWrap: "anywhere" }}>
                 <div style={{ fontWeight: 600 }}>{r.name}</div>
-                <div style={{ color: r.verdict.state === "assessed" ? "#0f172a" : "#94a3b8" }}>
+                <div style={{ color: r.verdict.state === "assessed" ? "var(--ink)" : "var(--subtle)" }}>
                   {r.verdict.state === "assessed" ? `verdict: ${String(r.verdict.value)}` : `not assessable: ${r.verdict.reason}`}
                 </div>
-                {r.failed_journeys.length > 0 && <div style={{ color: "#b91c1c" }}>failed journeys: {r.failed_journeys.join(", ")}</div>}
-                {r.degraded_journeys.length > 0 && <div style={{ color: "#d97706" }}>degraded journeys: {r.degraded_journeys.join(", ")}</div>}
+                {r.failed_journeys.length > 0 && <div style={{ color: "var(--danger-ink)" }}>failed journeys: {r.failed_journeys.join(", ")}</div>}
+                {r.degraded_journeys.length > 0 && <div style={{ color: "var(--warning-ink)" }}>degraded journeys: {r.degraded_journeys.join(", ")}</div>}
               </li>
             ))}
           </ul>

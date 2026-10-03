@@ -1,0 +1,1876 @@
+{
+  "nodes": [
+    {
+      "id": "aws_vpc.prod",
+      "type": "network_boundary",
+      "label": "Production VPC",
+      "capability": {
+        "enable_dns_support": "true",
+        "enable_dns_hostnames": "true",
+        "design_account_role": "prod",
+        "design_transit_attachment": "{\"transit_gateway_id\":\"aws_ec2_transit_gateway.hub\",\"subnet_ids\":[\"aws_subnet.prod_transit_a\",\"aws_subnet.prod_transit_b\"],\"route_table\":\"production\"}",
+        "design_flow_log_destination": "aws_s3_bucket.network_logs",
+        "design_flow_log_traffic_type": "ALL"
+      },
+      "service_id": "aws_vpc",
+      "cidr_block": "10.40.0.0/16"
+    },
+    {
+      "id": "aws_subnet.prod_public_a",
+      "type": "network_boundary",
+      "label": "Production VPC · public A",
+      "capability": {
+        "map_public_ip_on_launch": "false"
+      },
+      "service_id": "aws_subnet",
+      "availability_zone": "eu-west-1a",
+      "cidr_block": "10.40.0.0/24"
+    },
+    {
+      "id": "aws_subnet.prod_public_b",
+      "type": "network_boundary",
+      "label": "Production VPC · public B",
+      "capability": {
+        "map_public_ip_on_launch": "false"
+      },
+      "service_id": "aws_subnet",
+      "availability_zone": "eu-west-1b",
+      "cidr_block": "10.40.1.0/24"
+    },
+    {
+      "id": "aws_subnet.prod_app_a",
+      "type": "network_boundary",
+      "label": "Production VPC · app A",
+      "capability": {
+        "map_public_ip_on_launch": "false"
+      },
+      "service_id": "aws_subnet",
+      "availability_zone": "eu-west-1a",
+      "cidr_block": "10.40.10.0/24"
+    },
+    {
+      "id": "aws_subnet.prod_app_b",
+      "type": "network_boundary",
+      "label": "Production VPC · app B",
+      "capability": {
+        "map_public_ip_on_launch": "false"
+      },
+      "service_id": "aws_subnet",
+      "availability_zone": "eu-west-1b",
+      "cidr_block": "10.40.11.0/24"
+    },
+    {
+      "id": "aws_subnet.prod_data_a",
+      "type": "network_boundary",
+      "label": "Production VPC · data A",
+      "capability": {
+        "map_public_ip_on_launch": "false"
+      },
+      "service_id": "aws_subnet",
+      "availability_zone": "eu-west-1a",
+      "cidr_block": "10.40.20.0/24"
+    },
+    {
+      "id": "aws_subnet.prod_data_b",
+      "type": "network_boundary",
+      "label": "Production VPC · data B",
+      "capability": {
+        "map_public_ip_on_launch": "false"
+      },
+      "service_id": "aws_subnet",
+      "availability_zone": "eu-west-1b",
+      "cidr_block": "10.40.21.0/24"
+    },
+    {
+      "id": "aws_subnet.prod_transit_a",
+      "type": "network_boundary",
+      "label": "Production VPC · transit A",
+      "capability": {
+        "map_public_ip_on_launch": "false"
+      },
+      "service_id": "aws_subnet",
+      "availability_zone": "eu-west-1a",
+      "cidr_block": "10.40.250.0/24"
+    },
+    {
+      "id": "aws_subnet.prod_transit_b",
+      "type": "network_boundary",
+      "label": "Production VPC · transit B",
+      "capability": {
+        "map_public_ip_on_launch": "false"
+      },
+      "service_id": "aws_subnet",
+      "availability_zone": "eu-west-1b",
+      "cidr_block": "10.40.251.0/24"
+    },
+    {
+      "id": "aws_vpc.nonprod",
+      "type": "network_boundary",
+      "label": "Non-production VPC",
+      "capability": {
+        "enable_dns_support": "true",
+        "enable_dns_hostnames": "true",
+        "design_account_role": "nonprod",
+        "design_transit_attachment": "{\"transit_gateway_id\":\"aws_ec2_transit_gateway.hub\",\"subnet_ids\":[\"aws_subnet.nonprod_transit_a\",\"aws_subnet.nonprod_transit_b\"],\"route_table\":\"nonproduction\"}",
+        "design_flow_log_destination": "aws_s3_bucket.network_logs",
+        "design_flow_log_traffic_type": "ALL"
+      },
+      "service_id": "aws_vpc",
+      "cidr_block": "10.50.0.0/16"
+    },
+    {
+      "id": "aws_subnet.nonprod_public_a",
+      "type": "network_boundary",
+      "label": "Non-production VPC · public A",
+      "capability": {
+        "map_public_ip_on_launch": "false"
+      },
+      "service_id": "aws_subnet",
+      "availability_zone": "eu-west-1a",
+      "cidr_block": "10.50.0.0/24"
+    },
+    {
+      "id": "aws_subnet.nonprod_public_b",
+      "type": "network_boundary",
+      "label": "Non-production VPC · public B",
+      "capability": {
+        "map_public_ip_on_launch": "false"
+      },
+      "service_id": "aws_subnet",
+      "availability_zone": "eu-west-1b",
+      "cidr_block": "10.50.1.0/24"
+    },
+    {
+      "id": "aws_subnet.nonprod_app_a",
+      "type": "network_boundary",
+      "label": "Non-production VPC · app A",
+      "capability": {
+        "map_public_ip_on_launch": "false"
+      },
+      "service_id": "aws_subnet",
+      "availability_zone": "eu-west-1a",
+      "cidr_block": "10.50.10.0/24"
+    },
+    {
+      "id": "aws_subnet.nonprod_app_b",
+      "type": "network_boundary",
+      "label": "Non-production VPC · app B",
+      "capability": {
+        "map_public_ip_on_launch": "false"
+      },
+      "service_id": "aws_subnet",
+      "availability_zone": "eu-west-1b",
+      "cidr_block": "10.50.11.0/24"
+    },
+    {
+      "id": "aws_subnet.nonprod_transit_a",
+      "type": "network_boundary",
+      "label": "Non-production VPC · transit A",
+      "capability": {
+        "map_public_ip_on_launch": "false"
+      },
+      "service_id": "aws_subnet",
+      "availability_zone": "eu-west-1a",
+      "cidr_block": "10.50.250.0/24"
+    },
+    {
+      "id": "aws_subnet.nonprod_transit_b",
+      "type": "network_boundary",
+      "label": "Non-production VPC · transit B",
+      "capability": {
+        "map_public_ip_on_launch": "false"
+      },
+      "service_id": "aws_subnet",
+      "availability_zone": "eu-west-1b",
+      "cidr_block": "10.50.251.0/24"
+    },
+    {
+      "id": "aws_vpc.shared",
+      "type": "network_boundary",
+      "label": "Shared-services VPC",
+      "capability": {
+        "enable_dns_support": "true",
+        "enable_dns_hostnames": "true",
+        "design_account_role": "network-and-shared-services",
+        "design_transit_attachment": "{\"transit_gateway_id\":\"aws_ec2_transit_gateway.hub\",\"subnet_ids\":[\"aws_subnet.shared_transit_a\",\"aws_subnet.shared_transit_b\"],\"route_table\":\"shared\"}",
+        "design_flow_log_destination": "aws_s3_bucket.network_logs",
+        "design_flow_log_traffic_type": "ALL"
+      },
+      "service_id": "aws_vpc",
+      "cidr_block": "10.60.0.0/16"
+    },
+    {
+      "id": "aws_subnet.shared_services_a",
+      "type": "network_boundary",
+      "label": "Shared-services VPC · services A",
+      "capability": {
+        "map_public_ip_on_launch": "false"
+      },
+      "service_id": "aws_subnet",
+      "availability_zone": "eu-west-1a",
+      "cidr_block": "10.60.10.0/24"
+    },
+    {
+      "id": "aws_subnet.shared_services_b",
+      "type": "network_boundary",
+      "label": "Shared-services VPC · services B",
+      "capability": {
+        "map_public_ip_on_launch": "false"
+      },
+      "service_id": "aws_subnet",
+      "availability_zone": "eu-west-1b",
+      "cidr_block": "10.60.11.0/24"
+    },
+    {
+      "id": "aws_subnet.shared_transit_a",
+      "type": "network_boundary",
+      "label": "Shared-services VPC · transit A",
+      "capability": {
+        "map_public_ip_on_launch": "false"
+      },
+      "service_id": "aws_subnet",
+      "availability_zone": "eu-west-1a",
+      "cidr_block": "10.60.250.0/24"
+    },
+    {
+      "id": "aws_subnet.shared_transit_b",
+      "type": "network_boundary",
+      "label": "Shared-services VPC · transit B",
+      "capability": {
+        "map_public_ip_on_launch": "false"
+      },
+      "service_id": "aws_subnet",
+      "availability_zone": "eu-west-1b",
+      "cidr_block": "10.60.251.0/24"
+    },
+    {
+      "id": "aws_ec2_transit_gateway.hub",
+      "type": "network_boundary",
+      "label": "Transit Gateway · segmented hub",
+      "capability": {
+        "amazon_side_asn": "64512",
+        "default_route_table_association": "disable",
+        "default_route_table_propagation": "disable",
+        "dns_support": "enable",
+        "design_route_tables": "{\"production\":{\"associated_attachments\":[\"prod\"],\"routes\":[{\"cidr\":\"10.60.0.0/16\",\"attachment\":\"shared\"},{\"cidr\":\"10.50.0.0/16\",\"blackhole\":true}],\"propagate_from\":[\"vpn_a\",\"vpn_b\"]},\"nonproduction\":{\"associated_attachments\":[\"nonprod\"],\"routes\":[{\"cidr\":\"10.60.0.0/16\",\"attachment\":\"shared\"},{\"cidr\":\"10.40.0.0/16\",\"blackhole\":true}]},\"shared\":{\"associated_attachments\":[\"shared\"],\"routes\":[{\"cidr\":\"10.40.0.0/16\",\"attachment\":\"prod\"},{\"cidr\":\"10.50.0.0/16\",\"attachment\":\"nonprod\"}],\"propagate_from\":[\"vpn_a\",\"vpn_b\"]},\"hybrid\":{\"associated_attachments\":[\"vpn_a\",\"vpn_b\"],\"routes\":[{\"cidr\":\"10.40.0.0/16\",\"attachment\":\"prod\"},{\"cidr\":\"10.60.0.0/16\",\"attachment\":\"shared\"},{\"cidr\":\"10.50.0.0/16\",\"blackhole\":true}]}}",
+        "design_note": "Attachment and route-table configurations are blueprint data. This backend does not evaluate Transit Gateway routing or segmentation."
+      },
+      "service_id": "aws_ec2_transit_gateway"
+    },
+    {
+      "id": "aws_route_table.prod_transit",
+      "type": "network_boundary",
+      "label": "TGW attachment · local return routes",
+      "capability": {
+        "design_local_route": "10.40.0.0/16 -> local (AWS-created)"
+      },
+      "service_id": "aws_route_table"
+    },
+    {
+      "id": "aws_route_table.nonprod_transit",
+      "type": "network_boundary",
+      "label": "TGW attachment · local return routes",
+      "capability": {
+        "design_local_route": "10.50.0.0/16 -> local (AWS-created)"
+      },
+      "service_id": "aws_route_table"
+    },
+    {
+      "id": "aws_route_table.shared_transit",
+      "type": "network_boundary",
+      "label": "TGW attachment · local return routes",
+      "capability": {
+        "design_local_route": "10.60.0.0/16 -> local (AWS-created)"
+      },
+      "service_id": "aws_route_table"
+    },
+    {
+      "id": "aws_internet_gateway.prod",
+      "type": "network_boundary",
+      "label": "prod internet gateway",
+      "capability": {},
+      "service_id": "aws_internet_gateway"
+    },
+    {
+      "id": "aws_route_table.prod_public",
+      "type": "network_boundary",
+      "label": "Public · internet access",
+      "capability": {
+        "design_local_route": "10.40.0.0/16 -> local (AWS-created)"
+      },
+      "service_id": "aws_route_table",
+      "routes": [
+        {
+          "destination_cidr": "0.0.0.0/0",
+          "target": "aws_internet_gateway.prod"
+        }
+      ]
+    },
+    {
+      "id": "aws_nat_gateway.prod_a",
+      "type": "network_boundary",
+      "label": "prod NAT A",
+      "capability": {
+        "connectivity_type": "public",
+        "design_elastic_ip": "Allocate an Elastic IP at deployment"
+      },
+      "service_id": "aws_nat_gateway"
+    },
+    {
+      "id": "aws_nat_gateway.prod_b",
+      "type": "network_boundary",
+      "label": "prod NAT B",
+      "capability": {
+        "connectivity_type": "public",
+        "design_elastic_ip": "Allocate an Elastic IP at deployment"
+      },
+      "service_id": "aws_nat_gateway"
+    },
+    {
+      "id": "aws_route_table.prod_app_a",
+      "type": "network_boundary",
+      "label": "Private app A · same-AZ NAT",
+      "capability": {
+        "design_local_route": "10.40.0.0/16 -> local (AWS-created)",
+        "design_transit_routes": "[{\"cidr\":\"10.60.0.0/16\",\"target\":\"aws_ec2_transit_gateway.hub\"},{\"cidr\":\"192.168.0.0/16\",\"target\":\"aws_ec2_transit_gateway.hub\"}]"
+      },
+      "service_id": "aws_route_table",
+      "routes": [
+        {
+          "destination_cidr": "0.0.0.0/0",
+          "target": "aws_nat_gateway.prod_a"
+        }
+      ]
+    },
+    {
+      "id": "aws_route_table.prod_app_b",
+      "type": "network_boundary",
+      "label": "Private app B · same-AZ NAT",
+      "capability": {
+        "design_local_route": "10.40.0.0/16 -> local (AWS-created)",
+        "design_transit_routes": "[{\"cidr\":\"10.60.0.0/16\",\"target\":\"aws_ec2_transit_gateway.hub\"},{\"cidr\":\"192.168.0.0/16\",\"target\":\"aws_ec2_transit_gateway.hub\"}]"
+      },
+      "service_id": "aws_route_table",
+      "routes": [
+        {
+          "destination_cidr": "0.0.0.0/0",
+          "target": "aws_nat_gateway.prod_b"
+        }
+      ]
+    },
+    {
+      "id": "aws_internet_gateway.nonprod",
+      "type": "network_boundary",
+      "label": "nonprod internet gateway",
+      "capability": {},
+      "service_id": "aws_internet_gateway"
+    },
+    {
+      "id": "aws_route_table.nonprod_public",
+      "type": "network_boundary",
+      "label": "Public · internet access",
+      "capability": {
+        "design_local_route": "10.50.0.0/16 -> local (AWS-created)"
+      },
+      "service_id": "aws_route_table",
+      "routes": [
+        {
+          "destination_cidr": "0.0.0.0/0",
+          "target": "aws_internet_gateway.nonprod"
+        }
+      ]
+    },
+    {
+      "id": "aws_nat_gateway.nonprod_a",
+      "type": "network_boundary",
+      "label": "nonprod NAT A",
+      "capability": {
+        "connectivity_type": "public",
+        "design_elastic_ip": "Allocate an Elastic IP at deployment"
+      },
+      "service_id": "aws_nat_gateway"
+    },
+    {
+      "id": "aws_nat_gateway.nonprod_b",
+      "type": "network_boundary",
+      "label": "nonprod NAT B",
+      "capability": {
+        "connectivity_type": "public",
+        "design_elastic_ip": "Allocate an Elastic IP at deployment"
+      },
+      "service_id": "aws_nat_gateway"
+    },
+    {
+      "id": "aws_route_table.nonprod_app_a",
+      "type": "network_boundary",
+      "label": "Private app A · same-AZ NAT",
+      "capability": {
+        "design_local_route": "10.50.0.0/16 -> local (AWS-created)",
+        "design_transit_routes": "[{\"cidr\":\"10.60.0.0/16\",\"target\":\"aws_ec2_transit_gateway.hub\"}]"
+      },
+      "service_id": "aws_route_table",
+      "routes": [
+        {
+          "destination_cidr": "0.0.0.0/0",
+          "target": "aws_nat_gateway.nonprod_a"
+        }
+      ]
+    },
+    {
+      "id": "aws_route_table.nonprod_app_b",
+      "type": "network_boundary",
+      "label": "Private app B · same-AZ NAT",
+      "capability": {
+        "design_local_route": "10.50.0.0/16 -> local (AWS-created)",
+        "design_transit_routes": "[{\"cidr\":\"10.60.0.0/16\",\"target\":\"aws_ec2_transit_gateway.hub\"}]"
+      },
+      "service_id": "aws_route_table",
+      "routes": [
+        {
+          "destination_cidr": "0.0.0.0/0",
+          "target": "aws_nat_gateway.nonprod_b"
+        }
+      ]
+    },
+    {
+      "id": "aws_route_table.prod_data",
+      "type": "network_boundary",
+      "label": "Database · local routes only",
+      "capability": {
+        "design_local_route": "10.40.0.0/16 -> local (AWS-created)"
+      },
+      "service_id": "aws_route_table"
+    },
+    {
+      "id": "aws_route_table.shared_services",
+      "type": "network_boundary",
+      "label": "Shared services · private transit routes",
+      "capability": {
+        "design_local_route": "10.60.0.0/16 -> local (AWS-created)",
+        "design_transit_routes": "[{\"cidr\":\"10.40.0.0/16\",\"target\":\"aws_ec2_transit_gateway.hub\"},{\"cidr\":\"10.50.0.0/16\",\"target\":\"aws_ec2_transit_gateway.hub\"},{\"cidr\":\"192.168.0.0/16\",\"target\":\"aws_ec2_transit_gateway.hub\"}]"
+      },
+      "service_id": "aws_route_table"
+    },
+    {
+      "id": "external.corporate_network",
+      "type": "external_dependency",
+      "label": "Corporate network · 192.168.0.0/16",
+      "capability": {
+        "design_cidr": "192.168.0.0/16",
+        "design_dns_servers": "192.168.10.10,192.168.10.11",
+        "design_gateway_devices": "Two independent customer routers with distinct public IPs and BGP sessions; supply device addresses at deployment."
+      }
+    },
+    {
+      "id": "aws_vpn_connection.hybrid_a",
+      "type": "network_boundary",
+      "label": "Hybrid VPN A · router 1",
+      "capability": {
+        "type": "ipsec.1",
+        "static_routes_only": "false",
+        "transit_gateway_id": "aws_ec2_transit_gateway.hub",
+        "design_customer_gateway": "Distinct customer router 1; configure both AWS tunnels",
+        "design_advertised_prefix": "192.168.0.0/16",
+        "design_route_table": "hybrid"
+      },
+      "service_id": "aws_vpn_connection"
+    },
+    {
+      "id": "aws_vpn_connection.hybrid_b",
+      "type": "network_boundary",
+      "label": "Hybrid VPN B · router 2",
+      "capability": {
+        "type": "ipsec.1",
+        "static_routes_only": "false",
+        "transit_gateway_id": "aws_ec2_transit_gateway.hub",
+        "design_customer_gateway": "Distinct customer router 2; configure both AWS tunnels",
+        "design_advertised_prefix": "192.168.0.0/16",
+        "design_route_table": "hybrid"
+      },
+      "service_id": "aws_vpn_connection"
+    },
+    {
+      "id": "aws_route53_resolver_endpoint.inbound",
+      "type": "dns",
+      "label": "Hybrid DNS · inbound",
+      "capability": {
+        "direction": "INBOUND",
+        "design_ip_addresses": "10.60.10.10,10.60.11.10",
+        "design_dns_suffix": "aws.example.internal"
+      },
+      "service_id": "aws_route53_resolver_endpoint"
+    },
+    {
+      "id": "aws_route53_resolver_endpoint.outbound",
+      "type": "dns",
+      "label": "Hybrid DNS · outbound",
+      "capability": {
+        "direction": "OUTBOUND",
+        "design_ip_addresses": "10.60.10.11,10.60.11.11",
+        "design_forward_rules": "{\"domain\":\"corp.example.internal\",\"target_ips\":[\"192.168.10.10\",\"192.168.10.11\"],\"associate_vpcs\":[\"aws_vpc.prod\",\"aws_vpc.nonprod\",\"aws_vpc.shared\"]}"
+      },
+      "service_id": "aws_route53_resolver_endpoint"
+    },
+    {
+      "id": "aws_route53_zone.private",
+      "type": "dns",
+      "label": "Private AWS DNS zone",
+      "capability": {
+        "name": "aws.example.internal",
+        "design_vpc_associations": "[\"aws_vpc.prod\",\"aws_vpc.nonprod\",\"aws_vpc.shared\"]",
+        "design_records": "Create private records for approved internal services; do not publish private addresses in the public zone."
+      },
+      "service_id": "aws_route53_zone"
+    },
+    {
+      "id": "aws_security_group.shared_dns_in",
+      "type": "network_boundary",
+      "label": "Inbound DNS · corporate resolvers",
+      "capability": {},
+      "service_id": "aws_security_group",
+      "security_group_rules": [
+        {
+          "direction": "ingress",
+          "protocol": "tcp",
+          "from_port": 53,
+          "to_port": 53,
+          "cidr_blocks": [
+            "192.168.10.10/32"
+          ]
+        },
+        {
+          "direction": "ingress",
+          "protocol": "tcp",
+          "from_port": 53,
+          "to_port": 53,
+          "cidr_blocks": [
+            "192.168.10.11/32"
+          ]
+        },
+        {
+          "direction": "ingress",
+          "protocol": "udp",
+          "from_port": 53,
+          "to_port": 53,
+          "cidr_blocks": [
+            "192.168.10.10/32"
+          ]
+        },
+        {
+          "direction": "ingress",
+          "protocol": "udp",
+          "from_port": 53,
+          "to_port": 53,
+          "cidr_blocks": [
+            "192.168.10.11/32"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "aws_security_group.shared_dns_out",
+      "type": "network_boundary",
+      "label": "Outbound DNS · corporate resolvers",
+      "capability": {},
+      "service_id": "aws_security_group",
+      "security_group_rules": [
+        {
+          "direction": "egress",
+          "protocol": "tcp",
+          "from_port": 53,
+          "to_port": 53,
+          "cidr_blocks": [
+            "192.168.10.10/32"
+          ]
+        },
+        {
+          "direction": "egress",
+          "protocol": "tcp",
+          "from_port": 53,
+          "to_port": 53,
+          "cidr_blocks": [
+            "192.168.10.11/32"
+          ]
+        },
+        {
+          "direction": "egress",
+          "protocol": "udp",
+          "from_port": 53,
+          "to_port": 53,
+          "cidr_blocks": [
+            "192.168.10.10/32"
+          ]
+        },
+        {
+          "direction": "egress",
+          "protocol": "udp",
+          "from_port": 53,
+          "to_port": 53,
+          "cidr_blocks": [
+            "192.168.10.11/32"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "aws_route53_record.production",
+      "type": "dns",
+      "label": "Production public DNS",
+      "capability": {
+        "name": "app.example.com",
+        "type": "A",
+        "design_alias": "aws_lb.production",
+        "design_dns_client": "internet"
+      },
+      "service_id": "aws_route53_record"
+    },
+    {
+      "id": "aws_lb.production",
+      "type": "load_balancer",
+      "label": "Production HTTPS entry",
+      "capability": {
+        "internal": "false",
+        "deletion_protection": "true",
+        "design_listener": "HTTPS 443 with HTTPS targets on 8443; attach certificates and set TLS policy at deployment"
+      },
+      "service_id": "aws_lb",
+      "sizing": {
+        "load_balancer_type": "application",
+        "region": "eu-west-1"
+      }
+    },
+    {
+      "id": "aws_eks_cluster.production",
+      "type": "container_workload",
+      "label": "Production private application",
+      "capability": {
+        "control_plane_public_access": "false",
+        "control_plane_private_access": "true",
+        "design_compute": "Deploy worker capacity in both app subnets; the single cluster node is an aggregate, not a failover proof."
+      },
+      "service_id": "aws_eks_cluster",
+      "sizing": {
+        "region": "eu-west-1"
+      }
+    },
+    {
+      "id": "aws_eks_cluster.nonproduction",
+      "type": "container_workload",
+      "label": "Non-production private application",
+      "capability": {
+        "control_plane_public_access": "false",
+        "control_plane_private_access": "true"
+      },
+      "service_id": "aws_eks_cluster",
+      "sizing": {
+        "region": "eu-west-1"
+      }
+    },
+    {
+      "id": "aws_db_subnet_group.production",
+      "type": "network_boundary",
+      "label": "Production isolated DB subnets",
+      "capability": {},
+      "service_id": "aws_db_subnet_group"
+    },
+    {
+      "id": "aws_db_instance.production",
+      "type": "managed_database",
+      "label": "Production PostgreSQL · Multi-AZ",
+      "capability": {
+        "storage_encrypted": "true",
+        "multi_az": "true",
+        "publicly_accessible": "false",
+        "deletion_protection": "true",
+        "backup_retention_period_days": "35",
+        "design_engine": "PostgreSQL; port 5432; primary and synchronous standby in distinct AZs"
+      },
+      "service_id": "aws_db_instance",
+      "sizing": {
+        "region": "eu-west-1"
+      }
+    },
+    {
+      "id": "aws_security_group.prod_entry",
+      "type": "network_boundary",
+      "label": "Production entry · HTTPS",
+      "capability": {},
+      "service_id": "aws_security_group",
+      "security_group_rules": [
+        {
+          "direction": "ingress",
+          "protocol": "tcp",
+          "from_port": 443,
+          "to_port": 443,
+          "cidr_blocks": [
+            "0.0.0.0/0"
+          ]
+        },
+        {
+          "direction": "egress",
+          "protocol": "tcp",
+          "from_port": 8443,
+          "to_port": 8443,
+          "cidr_blocks": [
+            "10.40.10.0/23"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "aws_security_group.prod_app",
+      "type": "network_boundary",
+      "label": "Production app · only from entry",
+      "capability": {},
+      "service_id": "aws_security_group",
+      "security_group_rules": [
+        {
+          "direction": "ingress",
+          "protocol": "tcp",
+          "from_port": 8443,
+          "to_port": 8443,
+          "source_security_group": "aws_security_group.prod_entry"
+        },
+        {
+          "direction": "egress",
+          "protocol": "tcp",
+          "from_port": 5432,
+          "to_port": 5432,
+          "cidr_blocks": [
+            "10.40.20.0/23"
+          ]
+        },
+        {
+          "direction": "egress",
+          "protocol": "tcp",
+          "from_port": 443,
+          "to_port": 443,
+          "cidr_blocks": [
+            "0.0.0.0/0"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "aws_security_group.prod_data",
+      "type": "network_boundary",
+      "label": "Production DB · only from app",
+      "capability": {},
+      "service_id": "aws_security_group",
+      "security_group_rules": [
+        {
+          "direction": "ingress",
+          "protocol": "tcp",
+          "from_port": 5432,
+          "to_port": 5432,
+          "source_security_group": "aws_security_group.prod_app"
+        }
+      ]
+    },
+    {
+      "id": "aws_security_group.nonprod_app",
+      "type": "network_boundary",
+      "label": "Non-production app · HTTPS egress",
+      "capability": {},
+      "service_id": "aws_security_group",
+      "security_group_rules": [
+        {
+          "direction": "egress",
+          "protocol": "tcp",
+          "from_port": 443,
+          "to_port": 443,
+          "cidr_blocks": [
+            "0.0.0.0/0"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "aws_iam_role.production_cluster",
+      "type": "identity",
+      "label": "production cluster role",
+      "capability": {
+        "assume_role_policy": "{\"Version\":\"2012-10-17\",\"Statement\":[{\"Effect\":\"Allow\",\"Principal\":{\"Service\":\"eks.amazonaws.com\"},\"Action\":\"sts:AssumeRole\"}]}",
+        "design_permissions": "Attach only the workload-specific permissions required at deployment; no wildcard policy supplied."
+      },
+      "service_id": "aws_iam_role"
+    },
+    {
+      "id": "aws_iam_role.nonproduction_cluster",
+      "type": "identity",
+      "label": "nonproduction cluster role",
+      "capability": {
+        "assume_role_policy": "{\"Version\":\"2012-10-17\",\"Statement\":[{\"Effect\":\"Allow\",\"Principal\":{\"Service\":\"eks.amazonaws.com\"},\"Action\":\"sts:AssumeRole\"}]}",
+        "design_permissions": "Attach only the workload-specific permissions required at deployment; no wildcard policy supplied."
+      },
+      "service_id": "aws_iam_role"
+    },
+    {
+      "id": "aws_network_acl.prod_public",
+      "type": "network_boundary",
+      "label": "prod public subnet rules",
+      "capability": {},
+      "service_id": "aws_network_acl",
+      "nacl_rules": [
+        {
+          "number": 100,
+          "direction": "ingress",
+          "protocol": "tcp",
+          "from_port": 443,
+          "to_port": 443,
+          "cidr_block": "0.0.0.0/0",
+          "action": "allow"
+        },
+        {
+          "number": 110,
+          "direction": "ingress",
+          "protocol": "tcp",
+          "from_port": 1024,
+          "to_port": 65535,
+          "cidr_block": "0.0.0.0/0",
+          "action": "allow"
+        },
+        {
+          "number": 100,
+          "direction": "egress",
+          "protocol": "tcp",
+          "from_port": 443,
+          "to_port": 443,
+          "cidr_block": "0.0.0.0/0",
+          "action": "allow"
+        },
+        {
+          "number": 110,
+          "direction": "egress",
+          "protocol": "tcp",
+          "from_port": 8443,
+          "to_port": 8443,
+          "cidr_block": "10.40.10.0/23",
+          "action": "allow"
+        },
+        {
+          "number": 120,
+          "direction": "egress",
+          "protocol": "tcp",
+          "from_port": 1024,
+          "to_port": 65535,
+          "cidr_block": "0.0.0.0/0",
+          "action": "allow"
+        }
+      ]
+    },
+    {
+      "id": "aws_network_acl.prod_app",
+      "type": "network_boundary",
+      "label": "prod app subnet rules",
+      "capability": {},
+      "service_id": "aws_network_acl",
+      "nacl_rules": [
+        {
+          "number": 100,
+          "direction": "ingress",
+          "protocol": "tcp",
+          "from_port": 8443,
+          "to_port": 8443,
+          "cidr_block": "10.40.0.0/23",
+          "action": "allow"
+        },
+        {
+          "number": 110,
+          "direction": "ingress",
+          "protocol": "tcp",
+          "from_port": 1024,
+          "to_port": 65535,
+          "cidr_block": "0.0.0.0/0",
+          "action": "allow"
+        },
+        {
+          "number": 100,
+          "direction": "egress",
+          "protocol": "tcp",
+          "from_port": 443,
+          "to_port": 443,
+          "cidr_block": "0.0.0.0/0",
+          "action": "allow"
+        },
+        {
+          "number": 110,
+          "direction": "egress",
+          "protocol": "tcp",
+          "from_port": 5432,
+          "to_port": 5432,
+          "cidr_block": "10.40.20.0/23",
+          "action": "allow"
+        },
+        {
+          "number": 120,
+          "direction": "egress",
+          "protocol": "tcp",
+          "from_port": 1024,
+          "to_port": 65535,
+          "cidr_block": "10.40.0.0/23",
+          "action": "allow"
+        }
+      ]
+    },
+    {
+      "id": "aws_network_acl.prod_data",
+      "type": "network_boundary",
+      "label": "prod data subnet rules",
+      "capability": {},
+      "service_id": "aws_network_acl",
+      "nacl_rules": [
+        {
+          "number": 100,
+          "direction": "ingress",
+          "protocol": "tcp",
+          "from_port": 5432,
+          "to_port": 5432,
+          "cidr_block": "10.40.10.0/23",
+          "action": "allow"
+        },
+        {
+          "number": 100,
+          "direction": "egress",
+          "protocol": "tcp",
+          "from_port": 1024,
+          "to_port": 65535,
+          "cidr_block": "10.40.10.0/23",
+          "action": "allow"
+        }
+      ]
+    },
+    {
+      "id": "aws_network_acl.nonprod_baseline",
+      "type": "network_boundary",
+      "label": "nonprod baseline subnet rules",
+      "capability": {},
+      "service_id": "aws_network_acl",
+      "nacl_rules": [
+        {
+          "number": 100,
+          "direction": "ingress",
+          "protocol": "-1",
+          "from_port": 0,
+          "to_port": 0,
+          "cidr_block": "10.50.0.0/16",
+          "action": "allow"
+        },
+        {
+          "number": 110,
+          "direction": "ingress",
+          "protocol": "tcp",
+          "from_port": 1024,
+          "to_port": 65535,
+          "cidr_block": "0.0.0.0/0",
+          "action": "allow"
+        },
+        {
+          "number": 100,
+          "direction": "egress",
+          "protocol": "tcp",
+          "from_port": 443,
+          "to_port": 443,
+          "cidr_block": "0.0.0.0/0",
+          "action": "allow"
+        },
+        {
+          "number": 110,
+          "direction": "egress",
+          "protocol": "-1",
+          "from_port": 0,
+          "to_port": 0,
+          "cidr_block": "10.50.0.0/16",
+          "action": "allow"
+        }
+      ]
+    },
+    {
+      "id": "aws_network_acl.shared_dns",
+      "type": "network_boundary",
+      "label": "shared dns subnet rules",
+      "capability": {},
+      "service_id": "aws_network_acl",
+      "nacl_rules": [
+        {
+          "number": 100,
+          "direction": "ingress",
+          "protocol": "tcp",
+          "from_port": 53,
+          "to_port": 53,
+          "cidr_block": "192.168.10.0/24",
+          "action": "allow"
+        },
+        {
+          "number": 110,
+          "direction": "ingress",
+          "protocol": "udp",
+          "from_port": 53,
+          "to_port": 53,
+          "cidr_block": "192.168.10.0/24",
+          "action": "allow"
+        },
+        {
+          "number": 120,
+          "direction": "ingress",
+          "protocol": "tcp",
+          "from_port": 1024,
+          "to_port": 65535,
+          "cidr_block": "192.168.10.0/24",
+          "action": "allow"
+        },
+        {
+          "number": 130,
+          "direction": "ingress",
+          "protocol": "udp",
+          "from_port": 1024,
+          "to_port": 65535,
+          "cidr_block": "192.168.10.0/24",
+          "action": "allow"
+        },
+        {
+          "number": 100,
+          "direction": "egress",
+          "protocol": "tcp",
+          "from_port": 53,
+          "to_port": 53,
+          "cidr_block": "192.168.10.0/24",
+          "action": "allow"
+        },
+        {
+          "number": 110,
+          "direction": "egress",
+          "protocol": "udp",
+          "from_port": 53,
+          "to_port": 53,
+          "cidr_block": "192.168.10.0/24",
+          "action": "allow"
+        },
+        {
+          "number": 120,
+          "direction": "egress",
+          "protocol": "tcp",
+          "from_port": 1024,
+          "to_port": 65535,
+          "cidr_block": "192.168.10.0/24",
+          "action": "allow"
+        },
+        {
+          "number": 130,
+          "direction": "egress",
+          "protocol": "udp",
+          "from_port": 1024,
+          "to_port": 65535,
+          "cidr_block": "192.168.10.0/24",
+          "action": "allow"
+        }
+      ]
+    },
+    {
+      "id": "aws_network_acl.prod_transit",
+      "type": "network_boundary",
+      "label": "prod transit subnet rules",
+      "capability": {},
+      "service_id": "aws_network_acl",
+      "nacl_rules": [
+        {
+          "number": 100,
+          "direction": "ingress",
+          "protocol": "-1",
+          "from_port": 0,
+          "to_port": 0,
+          "cidr_block": "0.0.0.0/0",
+          "action": "allow"
+        },
+        {
+          "number": 100,
+          "direction": "egress",
+          "protocol": "-1",
+          "from_port": 0,
+          "to_port": 0,
+          "cidr_block": "0.0.0.0/0",
+          "action": "allow"
+        }
+      ]
+    },
+    {
+      "id": "aws_network_acl.shared_transit",
+      "type": "network_boundary",
+      "label": "shared transit subnet rules",
+      "capability": {},
+      "service_id": "aws_network_acl",
+      "nacl_rules": [
+        {
+          "number": 100,
+          "direction": "ingress",
+          "protocol": "-1",
+          "from_port": 0,
+          "to_port": 0,
+          "cidr_block": "0.0.0.0/0",
+          "action": "allow"
+        },
+        {
+          "number": 100,
+          "direction": "egress",
+          "protocol": "-1",
+          "from_port": 0,
+          "to_port": 0,
+          "cidr_block": "0.0.0.0/0",
+          "action": "allow"
+        }
+      ]
+    },
+    {
+      "id": "aws_s3_bucket.network_logs",
+      "type": "object_store",
+      "label": "Central network log archive",
+      "capability": {
+        "server_side_encryption": "true",
+        "design_public_access_block": "Block all public access",
+        "design_log_retention": "90 days hot, archive through lifecycle; choose retention to match policy",
+        "design_bucket_policy": "Restrict delivery and readers to approved accounts; configure log delivery policies at deployment"
+      },
+      "service_id": "aws_s3_bucket"
+    }
+  ],
+  "edges": [
+    {
+      "id": "contained_in:aws_subnet.prod_public_a:aws_vpc.prod",
+      "type": "contained_in",
+      "from": "aws_subnet.prod_public_a",
+      "to": "aws_vpc.prod"
+    },
+    {
+      "id": "contained_in:aws_subnet.prod_public_b:aws_vpc.prod",
+      "type": "contained_in",
+      "from": "aws_subnet.prod_public_b",
+      "to": "aws_vpc.prod"
+    },
+    {
+      "id": "contained_in:aws_subnet.prod_app_a:aws_vpc.prod",
+      "type": "contained_in",
+      "from": "aws_subnet.prod_app_a",
+      "to": "aws_vpc.prod"
+    },
+    {
+      "id": "contained_in:aws_subnet.prod_app_b:aws_vpc.prod",
+      "type": "contained_in",
+      "from": "aws_subnet.prod_app_b",
+      "to": "aws_vpc.prod"
+    },
+    {
+      "id": "contained_in:aws_subnet.prod_data_a:aws_vpc.prod",
+      "type": "contained_in",
+      "from": "aws_subnet.prod_data_a",
+      "to": "aws_vpc.prod"
+    },
+    {
+      "id": "contained_in:aws_subnet.prod_data_b:aws_vpc.prod",
+      "type": "contained_in",
+      "from": "aws_subnet.prod_data_b",
+      "to": "aws_vpc.prod"
+    },
+    {
+      "id": "contained_in:aws_subnet.prod_transit_a:aws_vpc.prod",
+      "type": "contained_in",
+      "from": "aws_subnet.prod_transit_a",
+      "to": "aws_vpc.prod"
+    },
+    {
+      "id": "contained_in:aws_subnet.prod_transit_b:aws_vpc.prod",
+      "type": "contained_in",
+      "from": "aws_subnet.prod_transit_b",
+      "to": "aws_vpc.prod"
+    },
+    {
+      "id": "contained_in:aws_subnet.nonprod_public_a:aws_vpc.nonprod",
+      "type": "contained_in",
+      "from": "aws_subnet.nonprod_public_a",
+      "to": "aws_vpc.nonprod"
+    },
+    {
+      "id": "contained_in:aws_subnet.nonprod_public_b:aws_vpc.nonprod",
+      "type": "contained_in",
+      "from": "aws_subnet.nonprod_public_b",
+      "to": "aws_vpc.nonprod"
+    },
+    {
+      "id": "contained_in:aws_subnet.nonprod_app_a:aws_vpc.nonprod",
+      "type": "contained_in",
+      "from": "aws_subnet.nonprod_app_a",
+      "to": "aws_vpc.nonprod"
+    },
+    {
+      "id": "contained_in:aws_subnet.nonprod_app_b:aws_vpc.nonprod",
+      "type": "contained_in",
+      "from": "aws_subnet.nonprod_app_b",
+      "to": "aws_vpc.nonprod"
+    },
+    {
+      "id": "contained_in:aws_subnet.nonprod_transit_a:aws_vpc.nonprod",
+      "type": "contained_in",
+      "from": "aws_subnet.nonprod_transit_a",
+      "to": "aws_vpc.nonprod"
+    },
+    {
+      "id": "contained_in:aws_subnet.nonprod_transit_b:aws_vpc.nonprod",
+      "type": "contained_in",
+      "from": "aws_subnet.nonprod_transit_b",
+      "to": "aws_vpc.nonprod"
+    },
+    {
+      "id": "contained_in:aws_subnet.shared_services_a:aws_vpc.shared",
+      "type": "contained_in",
+      "from": "aws_subnet.shared_services_a",
+      "to": "aws_vpc.shared"
+    },
+    {
+      "id": "contained_in:aws_subnet.shared_services_b:aws_vpc.shared",
+      "type": "contained_in",
+      "from": "aws_subnet.shared_services_b",
+      "to": "aws_vpc.shared"
+    },
+    {
+      "id": "contained_in:aws_subnet.shared_transit_a:aws_vpc.shared",
+      "type": "contained_in",
+      "from": "aws_subnet.shared_transit_a",
+      "to": "aws_vpc.shared"
+    },
+    {
+      "id": "contained_in:aws_subnet.shared_transit_b:aws_vpc.shared",
+      "type": "contained_in",
+      "from": "aws_subnet.shared_transit_b",
+      "to": "aws_vpc.shared"
+    },
+    {
+      "id": "routes_to:aws_vpc.prod:aws_ec2_transit_gateway.hub",
+      "type": "routes_to",
+      "from": "aws_vpc.prod",
+      "to": "aws_ec2_transit_gateway.hub"
+    },
+    {
+      "id": "contained_in:aws_route_table.prod_transit:aws_vpc.prod",
+      "type": "contained_in",
+      "from": "aws_route_table.prod_transit",
+      "to": "aws_vpc.prod"
+    },
+    {
+      "id": "depends_on:aws_subnet.prod_transit_a:aws_route_table.prod_transit",
+      "type": "depends_on",
+      "from": "aws_subnet.prod_transit_a",
+      "to": "aws_route_table.prod_transit"
+    },
+    {
+      "id": "depends_on:aws_subnet.prod_transit_b:aws_route_table.prod_transit",
+      "type": "depends_on",
+      "from": "aws_subnet.prod_transit_b",
+      "to": "aws_route_table.prod_transit"
+    },
+    {
+      "id": "routes_to:aws_vpc.nonprod:aws_ec2_transit_gateway.hub",
+      "type": "routes_to",
+      "from": "aws_vpc.nonprod",
+      "to": "aws_ec2_transit_gateway.hub"
+    },
+    {
+      "id": "contained_in:aws_route_table.nonprod_transit:aws_vpc.nonprod",
+      "type": "contained_in",
+      "from": "aws_route_table.nonprod_transit",
+      "to": "aws_vpc.nonprod"
+    },
+    {
+      "id": "depends_on:aws_subnet.nonprod_transit_a:aws_route_table.nonprod_transit",
+      "type": "depends_on",
+      "from": "aws_subnet.nonprod_transit_a",
+      "to": "aws_route_table.nonprod_transit"
+    },
+    {
+      "id": "depends_on:aws_subnet.nonprod_transit_b:aws_route_table.nonprod_transit",
+      "type": "depends_on",
+      "from": "aws_subnet.nonprod_transit_b",
+      "to": "aws_route_table.nonprod_transit"
+    },
+    {
+      "id": "routes_to:aws_vpc.shared:aws_ec2_transit_gateway.hub",
+      "type": "routes_to",
+      "from": "aws_vpc.shared",
+      "to": "aws_ec2_transit_gateway.hub"
+    },
+    {
+      "id": "contained_in:aws_route_table.shared_transit:aws_vpc.shared",
+      "type": "contained_in",
+      "from": "aws_route_table.shared_transit",
+      "to": "aws_vpc.shared"
+    },
+    {
+      "id": "depends_on:aws_subnet.shared_transit_a:aws_route_table.shared_transit",
+      "type": "depends_on",
+      "from": "aws_subnet.shared_transit_a",
+      "to": "aws_route_table.shared_transit"
+    },
+    {
+      "id": "depends_on:aws_subnet.shared_transit_b:aws_route_table.shared_transit",
+      "type": "depends_on",
+      "from": "aws_subnet.shared_transit_b",
+      "to": "aws_route_table.shared_transit"
+    },
+    {
+      "id": "contained_in:aws_internet_gateway.prod:aws_vpc.prod",
+      "type": "contained_in",
+      "from": "aws_internet_gateway.prod",
+      "to": "aws_vpc.prod"
+    },
+    {
+      "id": "contained_in:aws_route_table.prod_public:aws_vpc.prod",
+      "type": "contained_in",
+      "from": "aws_route_table.prod_public",
+      "to": "aws_vpc.prod"
+    },
+    {
+      "id": "depends_on:aws_subnet.prod_public_a:aws_route_table.prod_public",
+      "type": "depends_on",
+      "from": "aws_subnet.prod_public_a",
+      "to": "aws_route_table.prod_public"
+    },
+    {
+      "id": "depends_on:aws_subnet.prod_public_b:aws_route_table.prod_public",
+      "type": "depends_on",
+      "from": "aws_subnet.prod_public_b",
+      "to": "aws_route_table.prod_public"
+    },
+    {
+      "id": "contained_in:aws_nat_gateway.prod_a:aws_subnet.prod_public_a",
+      "type": "contained_in",
+      "from": "aws_nat_gateway.prod_a",
+      "to": "aws_subnet.prod_public_a"
+    },
+    {
+      "id": "contained_in:aws_nat_gateway.prod_b:aws_subnet.prod_public_b",
+      "type": "contained_in",
+      "from": "aws_nat_gateway.prod_b",
+      "to": "aws_subnet.prod_public_b"
+    },
+    {
+      "id": "contained_in:aws_route_table.prod_app_a:aws_vpc.prod",
+      "type": "contained_in",
+      "from": "aws_route_table.prod_app_a",
+      "to": "aws_vpc.prod"
+    },
+    {
+      "id": "depends_on:aws_subnet.prod_app_a:aws_route_table.prod_app_a",
+      "type": "depends_on",
+      "from": "aws_subnet.prod_app_a",
+      "to": "aws_route_table.prod_app_a"
+    },
+    {
+      "id": "contained_in:aws_route_table.prod_app_b:aws_vpc.prod",
+      "type": "contained_in",
+      "from": "aws_route_table.prod_app_b",
+      "to": "aws_vpc.prod"
+    },
+    {
+      "id": "depends_on:aws_subnet.prod_app_b:aws_route_table.prod_app_b",
+      "type": "depends_on",
+      "from": "aws_subnet.prod_app_b",
+      "to": "aws_route_table.prod_app_b"
+    },
+    {
+      "id": "contained_in:aws_internet_gateway.nonprod:aws_vpc.nonprod",
+      "type": "contained_in",
+      "from": "aws_internet_gateway.nonprod",
+      "to": "aws_vpc.nonprod"
+    },
+    {
+      "id": "contained_in:aws_route_table.nonprod_public:aws_vpc.nonprod",
+      "type": "contained_in",
+      "from": "aws_route_table.nonprod_public",
+      "to": "aws_vpc.nonprod"
+    },
+    {
+      "id": "depends_on:aws_subnet.nonprod_public_a:aws_route_table.nonprod_public",
+      "type": "depends_on",
+      "from": "aws_subnet.nonprod_public_a",
+      "to": "aws_route_table.nonprod_public"
+    },
+    {
+      "id": "depends_on:aws_subnet.nonprod_public_b:aws_route_table.nonprod_public",
+      "type": "depends_on",
+      "from": "aws_subnet.nonprod_public_b",
+      "to": "aws_route_table.nonprod_public"
+    },
+    {
+      "id": "contained_in:aws_nat_gateway.nonprod_a:aws_subnet.nonprod_public_a",
+      "type": "contained_in",
+      "from": "aws_nat_gateway.nonprod_a",
+      "to": "aws_subnet.nonprod_public_a"
+    },
+    {
+      "id": "contained_in:aws_nat_gateway.nonprod_b:aws_subnet.nonprod_public_b",
+      "type": "contained_in",
+      "from": "aws_nat_gateway.nonprod_b",
+      "to": "aws_subnet.nonprod_public_b"
+    },
+    {
+      "id": "contained_in:aws_route_table.nonprod_app_a:aws_vpc.nonprod",
+      "type": "contained_in",
+      "from": "aws_route_table.nonprod_app_a",
+      "to": "aws_vpc.nonprod"
+    },
+    {
+      "id": "depends_on:aws_subnet.nonprod_app_a:aws_route_table.nonprod_app_a",
+      "type": "depends_on",
+      "from": "aws_subnet.nonprod_app_a",
+      "to": "aws_route_table.nonprod_app_a"
+    },
+    {
+      "id": "contained_in:aws_route_table.nonprod_app_b:aws_vpc.nonprod",
+      "type": "contained_in",
+      "from": "aws_route_table.nonprod_app_b",
+      "to": "aws_vpc.nonprod"
+    },
+    {
+      "id": "depends_on:aws_subnet.nonprod_app_b:aws_route_table.nonprod_app_b",
+      "type": "depends_on",
+      "from": "aws_subnet.nonprod_app_b",
+      "to": "aws_route_table.nonprod_app_b"
+    },
+    {
+      "id": "contained_in:aws_route_table.prod_data:aws_vpc.prod",
+      "type": "contained_in",
+      "from": "aws_route_table.prod_data",
+      "to": "aws_vpc.prod"
+    },
+    {
+      "id": "depends_on:aws_subnet.prod_data_a:aws_route_table.prod_data",
+      "type": "depends_on",
+      "from": "aws_subnet.prod_data_a",
+      "to": "aws_route_table.prod_data"
+    },
+    {
+      "id": "depends_on:aws_subnet.prod_data_b:aws_route_table.prod_data",
+      "type": "depends_on",
+      "from": "aws_subnet.prod_data_b",
+      "to": "aws_route_table.prod_data"
+    },
+    {
+      "id": "contained_in:aws_route_table.shared_services:aws_vpc.shared",
+      "type": "contained_in",
+      "from": "aws_route_table.shared_services",
+      "to": "aws_vpc.shared"
+    },
+    {
+      "id": "depends_on:aws_subnet.shared_services_a:aws_route_table.shared_services",
+      "type": "depends_on",
+      "from": "aws_subnet.shared_services_a",
+      "to": "aws_route_table.shared_services"
+    },
+    {
+      "id": "depends_on:aws_subnet.shared_services_b:aws_route_table.shared_services",
+      "type": "depends_on",
+      "from": "aws_subnet.shared_services_b",
+      "to": "aws_route_table.shared_services"
+    },
+    {
+      "id": "routes_to:external.corporate_network:aws_vpn_connection.hybrid_a",
+      "type": "routes_to",
+      "from": "external.corporate_network",
+      "to": "aws_vpn_connection.hybrid_a"
+    },
+    {
+      "id": "routes_to:aws_vpn_connection.hybrid_a:aws_ec2_transit_gateway.hub",
+      "type": "routes_to",
+      "from": "aws_vpn_connection.hybrid_a",
+      "to": "aws_ec2_transit_gateway.hub"
+    },
+    {
+      "id": "routes_to:external.corporate_network:aws_vpn_connection.hybrid_b",
+      "type": "routes_to",
+      "from": "external.corporate_network",
+      "to": "aws_vpn_connection.hybrid_b"
+    },
+    {
+      "id": "routes_to:aws_vpn_connection.hybrid_b:aws_ec2_transit_gateway.hub",
+      "type": "routes_to",
+      "from": "aws_vpn_connection.hybrid_b",
+      "to": "aws_ec2_transit_gateway.hub"
+    },
+    {
+      "id": "contained_in:aws_route53_resolver_endpoint.inbound:aws_subnet.shared_services_a",
+      "type": "contained_in",
+      "from": "aws_route53_resolver_endpoint.inbound",
+      "to": "aws_subnet.shared_services_a"
+    },
+    {
+      "id": "contained_in:aws_route53_resolver_endpoint.inbound:aws_subnet.shared_services_b",
+      "type": "contained_in",
+      "from": "aws_route53_resolver_endpoint.inbound",
+      "to": "aws_subnet.shared_services_b"
+    },
+    {
+      "id": "contained_in:aws_route53_resolver_endpoint.outbound:aws_subnet.shared_services_a",
+      "type": "contained_in",
+      "from": "aws_route53_resolver_endpoint.outbound",
+      "to": "aws_subnet.shared_services_a"
+    },
+    {
+      "id": "contained_in:aws_route53_resolver_endpoint.outbound:aws_subnet.shared_services_b",
+      "type": "contained_in",
+      "from": "aws_route53_resolver_endpoint.outbound",
+      "to": "aws_subnet.shared_services_b"
+    },
+    {
+      "id": "routes_to:aws_route53_resolver_endpoint.inbound:aws_route53_zone.private",
+      "type": "routes_to",
+      "from": "aws_route53_resolver_endpoint.inbound",
+      "to": "aws_route53_zone.private"
+    },
+    {
+      "id": "routes_to:aws_ec2_transit_gateway.hub:aws_route53_resolver_endpoint.inbound",
+      "type": "routes_to",
+      "from": "aws_ec2_transit_gateway.hub",
+      "to": "aws_route53_resolver_endpoint.inbound"
+    },
+    {
+      "id": "routes_to:aws_route53_resolver_endpoint.outbound:aws_ec2_transit_gateway.hub",
+      "type": "routes_to",
+      "from": "aws_route53_resolver_endpoint.outbound",
+      "to": "aws_ec2_transit_gateway.hub"
+    },
+    {
+      "id": "contained_in:aws_security_group.shared_dns_in:aws_vpc.shared",
+      "type": "contained_in",
+      "from": "aws_security_group.shared_dns_in",
+      "to": "aws_vpc.shared"
+    },
+    {
+      "id": "contained_in:aws_security_group.shared_dns_out:aws_vpc.shared",
+      "type": "contained_in",
+      "from": "aws_security_group.shared_dns_out",
+      "to": "aws_vpc.shared"
+    },
+    {
+      "id": "depends_on:aws_route53_resolver_endpoint.inbound:aws_security_group.shared_dns_in",
+      "type": "depends_on",
+      "from": "aws_route53_resolver_endpoint.inbound",
+      "to": "aws_security_group.shared_dns_in"
+    },
+    {
+      "id": "depends_on:aws_route53_resolver_endpoint.outbound:aws_security_group.shared_dns_out",
+      "type": "depends_on",
+      "from": "aws_route53_resolver_endpoint.outbound",
+      "to": "aws_security_group.shared_dns_out"
+    },
+    {
+      "id": "contained_in:aws_lb.production:aws_subnet.prod_public_a",
+      "type": "contained_in",
+      "from": "aws_lb.production",
+      "to": "aws_subnet.prod_public_a"
+    },
+    {
+      "id": "contained_in:aws_lb.production:aws_subnet.prod_public_b",
+      "type": "contained_in",
+      "from": "aws_lb.production",
+      "to": "aws_subnet.prod_public_b"
+    },
+    {
+      "id": "contained_in:aws_eks_cluster.production:aws_subnet.prod_app_a",
+      "type": "contained_in",
+      "from": "aws_eks_cluster.production",
+      "to": "aws_subnet.prod_app_a"
+    },
+    {
+      "id": "contained_in:aws_eks_cluster.production:aws_subnet.prod_app_b",
+      "type": "contained_in",
+      "from": "aws_eks_cluster.production",
+      "to": "aws_subnet.prod_app_b"
+    },
+    {
+      "id": "contained_in:aws_eks_cluster.nonproduction:aws_subnet.nonprod_app_a",
+      "type": "contained_in",
+      "from": "aws_eks_cluster.nonproduction",
+      "to": "aws_subnet.nonprod_app_a"
+    },
+    {
+      "id": "contained_in:aws_eks_cluster.nonproduction:aws_subnet.nonprod_app_b",
+      "type": "contained_in",
+      "from": "aws_eks_cluster.nonproduction",
+      "to": "aws_subnet.nonprod_app_b"
+    },
+    {
+      "id": "contained_in:aws_db_subnet_group.production:aws_subnet.prod_data_a",
+      "type": "contained_in",
+      "from": "aws_db_subnet_group.production",
+      "to": "aws_subnet.prod_data_a"
+    },
+    {
+      "id": "contained_in:aws_db_subnet_group.production:aws_subnet.prod_data_b",
+      "type": "contained_in",
+      "from": "aws_db_subnet_group.production",
+      "to": "aws_subnet.prod_data_b"
+    },
+    {
+      "id": "contained_in:aws_db_instance.production:aws_db_subnet_group.production",
+      "type": "contained_in",
+      "from": "aws_db_instance.production",
+      "to": "aws_db_subnet_group.production"
+    },
+    {
+      "id": "contained_in:aws_security_group.prod_entry:aws_vpc.prod",
+      "type": "contained_in",
+      "from": "aws_security_group.prod_entry",
+      "to": "aws_vpc.prod"
+    },
+    {
+      "id": "contained_in:aws_security_group.prod_app:aws_vpc.prod",
+      "type": "contained_in",
+      "from": "aws_security_group.prod_app",
+      "to": "aws_vpc.prod"
+    },
+    {
+      "id": "contained_in:aws_security_group.prod_data:aws_vpc.prod",
+      "type": "contained_in",
+      "from": "aws_security_group.prod_data",
+      "to": "aws_vpc.prod"
+    },
+    {
+      "id": "depends_on:aws_lb.production:aws_security_group.prod_entry",
+      "type": "depends_on",
+      "from": "aws_lb.production",
+      "to": "aws_security_group.prod_entry"
+    },
+    {
+      "id": "depends_on:aws_eks_cluster.production:aws_security_group.prod_app",
+      "type": "depends_on",
+      "from": "aws_eks_cluster.production",
+      "to": "aws_security_group.prod_app"
+    },
+    {
+      "id": "depends_on:aws_db_instance.production:aws_security_group.prod_data",
+      "type": "depends_on",
+      "from": "aws_db_instance.production",
+      "to": "aws_security_group.prod_data"
+    },
+    {
+      "id": "contained_in:aws_security_group.nonprod_app:aws_vpc.nonprod",
+      "type": "contained_in",
+      "from": "aws_security_group.nonprod_app",
+      "to": "aws_vpc.nonprod"
+    },
+    {
+      "id": "depends_on:aws_eks_cluster.nonproduction:aws_security_group.nonprod_app",
+      "type": "depends_on",
+      "from": "aws_eks_cluster.nonproduction",
+      "to": "aws_security_group.nonprod_app"
+    },
+    {
+      "id": "authenticates_via:aws_eks_cluster.production:aws_iam_role.production_cluster",
+      "type": "authenticates_via",
+      "from": "aws_eks_cluster.production",
+      "to": "aws_iam_role.production_cluster"
+    },
+    {
+      "id": "authenticates_via:aws_eks_cluster.nonproduction:aws_iam_role.nonproduction_cluster",
+      "type": "authenticates_via",
+      "from": "aws_eks_cluster.nonproduction",
+      "to": "aws_iam_role.nonproduction_cluster"
+    },
+    {
+      "id": "contained_in:aws_network_acl.prod_public:aws_vpc.prod",
+      "type": "contained_in",
+      "from": "aws_network_acl.prod_public",
+      "to": "aws_vpc.prod"
+    },
+    {
+      "id": "depends_on:aws_subnet.prod_public_a:aws_network_acl.prod_public",
+      "type": "depends_on",
+      "from": "aws_subnet.prod_public_a",
+      "to": "aws_network_acl.prod_public"
+    },
+    {
+      "id": "depends_on:aws_subnet.prod_public_b:aws_network_acl.prod_public",
+      "type": "depends_on",
+      "from": "aws_subnet.prod_public_b",
+      "to": "aws_network_acl.prod_public"
+    },
+    {
+      "id": "contained_in:aws_network_acl.prod_app:aws_vpc.prod",
+      "type": "contained_in",
+      "from": "aws_network_acl.prod_app",
+      "to": "aws_vpc.prod"
+    },
+    {
+      "id": "depends_on:aws_subnet.prod_app_a:aws_network_acl.prod_app",
+      "type": "depends_on",
+      "from": "aws_subnet.prod_app_a",
+      "to": "aws_network_acl.prod_app"
+    },
+    {
+      "id": "depends_on:aws_subnet.prod_app_b:aws_network_acl.prod_app",
+      "type": "depends_on",
+      "from": "aws_subnet.prod_app_b",
+      "to": "aws_network_acl.prod_app"
+    },
+    {
+      "id": "contained_in:aws_network_acl.prod_data:aws_vpc.prod",
+      "type": "contained_in",
+      "from": "aws_network_acl.prod_data",
+      "to": "aws_vpc.prod"
+    },
+    {
+      "id": "depends_on:aws_subnet.prod_data_a:aws_network_acl.prod_data",
+      "type": "depends_on",
+      "from": "aws_subnet.prod_data_a",
+      "to": "aws_network_acl.prod_data"
+    },
+    {
+      "id": "depends_on:aws_subnet.prod_data_b:aws_network_acl.prod_data",
+      "type": "depends_on",
+      "from": "aws_subnet.prod_data_b",
+      "to": "aws_network_acl.prod_data"
+    },
+    {
+      "id": "contained_in:aws_network_acl.nonprod_baseline:aws_vpc.nonprod",
+      "type": "contained_in",
+      "from": "aws_network_acl.nonprod_baseline",
+      "to": "aws_vpc.nonprod"
+    },
+    {
+      "id": "depends_on:aws_subnet.nonprod_public_a:aws_network_acl.nonprod_baseline",
+      "type": "depends_on",
+      "from": "aws_subnet.nonprod_public_a",
+      "to": "aws_network_acl.nonprod_baseline"
+    },
+    {
+      "id": "depends_on:aws_subnet.nonprod_public_b:aws_network_acl.nonprod_baseline",
+      "type": "depends_on",
+      "from": "aws_subnet.nonprod_public_b",
+      "to": "aws_network_acl.nonprod_baseline"
+    },
+    {
+      "id": "depends_on:aws_subnet.nonprod_app_a:aws_network_acl.nonprod_baseline",
+      "type": "depends_on",
+      "from": "aws_subnet.nonprod_app_a",
+      "to": "aws_network_acl.nonprod_baseline"
+    },
+    {
+      "id": "depends_on:aws_subnet.nonprod_app_b:aws_network_acl.nonprod_baseline",
+      "type": "depends_on",
+      "from": "aws_subnet.nonprod_app_b",
+      "to": "aws_network_acl.nonprod_baseline"
+    },
+    {
+      "id": "depends_on:aws_subnet.nonprod_transit_a:aws_network_acl.nonprod_baseline",
+      "type": "depends_on",
+      "from": "aws_subnet.nonprod_transit_a",
+      "to": "aws_network_acl.nonprod_baseline"
+    },
+    {
+      "id": "depends_on:aws_subnet.nonprod_transit_b:aws_network_acl.nonprod_baseline",
+      "type": "depends_on",
+      "from": "aws_subnet.nonprod_transit_b",
+      "to": "aws_network_acl.nonprod_baseline"
+    },
+    {
+      "id": "contained_in:aws_network_acl.shared_dns:aws_vpc.shared",
+      "type": "contained_in",
+      "from": "aws_network_acl.shared_dns",
+      "to": "aws_vpc.shared"
+    },
+    {
+      "id": "depends_on:aws_subnet.shared_services_a:aws_network_acl.shared_dns",
+      "type": "depends_on",
+      "from": "aws_subnet.shared_services_a",
+      "to": "aws_network_acl.shared_dns"
+    },
+    {
+      "id": "depends_on:aws_subnet.shared_services_b:aws_network_acl.shared_dns",
+      "type": "depends_on",
+      "from": "aws_subnet.shared_services_b",
+      "to": "aws_network_acl.shared_dns"
+    },
+    {
+      "id": "contained_in:aws_network_acl.prod_transit:aws_vpc.prod",
+      "type": "contained_in",
+      "from": "aws_network_acl.prod_transit",
+      "to": "aws_vpc.prod"
+    },
+    {
+      "id": "depends_on:aws_subnet.prod_transit_a:aws_network_acl.prod_transit",
+      "type": "depends_on",
+      "from": "aws_subnet.prod_transit_a",
+      "to": "aws_network_acl.prod_transit"
+    },
+    {
+      "id": "depends_on:aws_subnet.prod_transit_b:aws_network_acl.prod_transit",
+      "type": "depends_on",
+      "from": "aws_subnet.prod_transit_b",
+      "to": "aws_network_acl.prod_transit"
+    },
+    {
+      "id": "contained_in:aws_network_acl.shared_transit:aws_vpc.shared",
+      "type": "contained_in",
+      "from": "aws_network_acl.shared_transit",
+      "to": "aws_vpc.shared"
+    },
+    {
+      "id": "depends_on:aws_subnet.shared_transit_a:aws_network_acl.shared_transit",
+      "type": "depends_on",
+      "from": "aws_subnet.shared_transit_a",
+      "to": "aws_network_acl.shared_transit"
+    },
+    {
+      "id": "depends_on:aws_subnet.shared_transit_b:aws_network_acl.shared_transit",
+      "type": "depends_on",
+      "from": "aws_subnet.shared_transit_b",
+      "to": "aws_network_acl.shared_transit"
+    },
+    {
+      "id": "depends_on:aws_vpc.prod:aws_s3_bucket.network_logs",
+      "type": "depends_on",
+      "from": "aws_vpc.prod",
+      "to": "aws_s3_bucket.network_logs"
+    },
+    {
+      "id": "depends_on:aws_vpc.nonprod:aws_s3_bucket.network_logs",
+      "type": "depends_on",
+      "from": "aws_vpc.nonprod",
+      "to": "aws_s3_bucket.network_logs"
+    },
+    {
+      "id": "depends_on:aws_vpc.shared:aws_s3_bucket.network_logs",
+      "type": "depends_on",
+      "from": "aws_vpc.shared",
+      "to": "aws_s3_bucket.network_logs"
+    },
+    {
+      "id": "routes_to:aws_route53_record.production:aws_lb.production",
+      "type": "routes_to",
+      "from": "aws_route53_record.production",
+      "to": "aws_lb.production"
+    },
+    {
+      "id": "routes_to:aws_lb.production:aws_eks_cluster.production",
+      "type": "routes_to",
+      "from": "aws_lb.production",
+      "to": "aws_eks_cluster.production"
+    },
+    {
+      "id": "reads/writes:aws_eks_cluster.production:aws_db_instance.production",
+      "type": "reads/writes",
+      "from": "aws_eks_cluster.production",
+      "to": "aws_db_instance.production"
+    },
+    {
+      "id": "depends_on:aws_eks_cluster.production:aws_ec2_transit_gateway.hub",
+      "type": "depends_on",
+      "from": "aws_eks_cluster.production",
+      "to": "aws_ec2_transit_gateway.hub"
+    },
+    {
+      "id": "depends_on:aws_eks_cluster.nonproduction:aws_ec2_transit_gateway.hub",
+      "type": "depends_on",
+      "from": "aws_eks_cluster.nonproduction",
+      "to": "aws_ec2_transit_gateway.hub"
+    }
+  ]
+}

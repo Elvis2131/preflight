@@ -453,12 +453,14 @@ export interface Template {
   canvas: CanvasDocument;
   workload: Workload;
   // UI-only node placement — never part of the frozen canvas contract.
-  layout: Record<string, { x: number; y: number; width?: number; height?: number }>;
+  layout: Record<string, { x: number; y: number; width?: number; height?: number; service_x?: number; service_y?: number }>;
 }
 
 export async function listTemplates(): Promise<TemplateMeta[]> {
   const res = await fetch(`${ASSESSD_BASE_URL}/templates`);
-  if (!res.ok) throw new Error(`listTemplates: HTTP ${res.status}`);
+  if (!res.ok) throw new Error(res.status === 404
+    ? "This server does not support templates. Connect to an updated backend and retry."
+    : `Could not load templates (HTTP ${res.status}). Please retry.`);
   return res.json();
 }
 

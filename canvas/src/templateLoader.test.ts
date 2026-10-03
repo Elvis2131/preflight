@@ -61,6 +61,17 @@ describe("templateToCanvasState (PC-108)", () => {
     for (const k of ["position", "style", "zIndex", "layout"]) expect(Object.keys(out)).not.toContain(k);
   });
 
+  it("keeps zero-valued service positions separate from the infrastructure layout and API document", () => {
+    const template = { ...t, layout: { ...t.layout, lb: { ...t.layout.lb, service_x: 0, service_y: 190 } } };
+    const loaded = templateToCanvasState(template);
+    const lb = loaded.nodes.find((n) => n.id === "lb")!;
+    expect(lb.position).toEqual({ x: 60, y: 90 });
+    expect(lb.data.servicePosition).toEqual({ x: 0, y: 190 });
+    const serialized = serialize(loaded.nodes, loaded.edges).nodes.find((n) => n.id === "lb")!;
+    expect(serialized).not.toHaveProperty("servicePosition");
+    expect(serialized).not.toHaveProperty("service_x");
+  });
+
   it("only an edge geometry owns gets the auto id; a two-parent node and a non-container parent keep theirs", () => {
     const ids = edges.map((e) => e.id);
     expect(ids).toContain(AUTO_EDGE_PREFIX + "sa");

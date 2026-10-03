@@ -1,0 +1,338 @@
+{
+  "aws_vpc.prod": {
+    "x": 0,
+    "y": 0,
+    "width": 780,
+    "height": 1030
+  },
+  "aws_subnet.prod_public_a": {
+    "x": 30,
+    "y": 65,
+    "width": 350,
+    "height": 195
+  },
+  "aws_subnet.prod_public_b": {
+    "x": 410,
+    "y": 65,
+    "width": 350,
+    "height": 195
+  },
+  "aws_subnet.prod_app_a": {
+    "x": 30,
+    "y": 285,
+    "width": 350,
+    "height": 195
+  },
+  "aws_subnet.prod_app_b": {
+    "x": 410,
+    "y": 285,
+    "width": 350,
+    "height": 195
+  },
+  "aws_subnet.prod_data_a": {
+    "x": 30,
+    "y": 505,
+    "width": 350,
+    "height": 195
+  },
+  "aws_subnet.prod_data_b": {
+    "x": 410,
+    "y": 505,
+    "width": 350,
+    "height": 195
+  },
+  "aws_subnet.prod_transit_a": {
+    "x": 30,
+    "y": 725,
+    "width": 350,
+    "height": 195
+  },
+  "aws_subnet.prod_transit_b": {
+    "x": 410,
+    "y": 725,
+    "width": 350,
+    "height": 195
+  },
+  "aws_vpc.nonprod": {
+    "x": 1200,
+    "y": 0,
+    "width": 780,
+    "height": 810
+  },
+  "aws_subnet.nonprod_public_a": {
+    "x": 1230,
+    "y": 65,
+    "width": 350,
+    "height": 195
+  },
+  "aws_subnet.nonprod_public_b": {
+    "x": 1610,
+    "y": 65,
+    "width": 350,
+    "height": 195
+  },
+  "aws_subnet.nonprod_app_a": {
+    "x": 1230,
+    "y": 285,
+    "width": 350,
+    "height": 195
+  },
+  "aws_subnet.nonprod_app_b": {
+    "x": 1610,
+    "y": 285,
+    "width": 350,
+    "height": 195
+  },
+  "aws_subnet.nonprod_transit_a": {
+    "x": 1230,
+    "y": 505,
+    "width": 350,
+    "height": 195
+  },
+  "aws_subnet.nonprod_transit_b": {
+    "x": 1610,
+    "y": 505,
+    "width": 350,
+    "height": 195
+  },
+  "aws_vpc.shared": {
+    "x": 2400,
+    "y": 0,
+    "width": 780,
+    "height": 590
+  },
+  "aws_subnet.shared_services_a": {
+    "x": 2430,
+    "y": 65,
+    "width": 350,
+    "height": 195
+  },
+  "aws_subnet.shared_services_b": {
+    "x": 2810,
+    "y": 65,
+    "width": 350,
+    "height": 195
+  },
+  "aws_subnet.shared_transit_a": {
+    "x": 2430,
+    "y": 285,
+    "width": 350,
+    "height": 195
+  },
+  "aws_subnet.shared_transit_b": {
+    "x": 2810,
+    "y": 285,
+    "width": 350,
+    "height": 195
+  },
+  "aws_ec2_transit_gateway.hub": {
+    "x": 1120,
+    "y": -270,
+    "service_x": 700,
+    "service_y": 380
+  },
+  "aws_route_table.prod_transit": {
+    "x": 820,
+    "y": 80
+  },
+  "aws_route_table.nonprod_transit": {
+    "x": 2020,
+    "y": 80
+  },
+  "aws_route_table.shared_transit": {
+    "x": 3220,
+    "y": 80
+  },
+  "aws_internet_gateway.prod": {
+    "x": 0,
+    "y": -100
+  },
+  "aws_route_table.prod_public": {
+    "x": 820,
+    "y": 185
+  },
+  "aws_nat_gateway.prod_a": {
+    "x": 45,
+    "y": 175
+  },
+  "aws_nat_gateway.prod_b": {
+    "x": 425,
+    "y": 175
+  },
+  "aws_route_table.prod_app_a": {
+    "x": 820,
+    "y": 290
+  },
+  "aws_route_table.prod_app_b": {
+    "x": 820,
+    "y": 395
+  },
+  "aws_internet_gateway.nonprod": {
+    "x": 1200,
+    "y": -100
+  },
+  "aws_route_table.nonprod_public": {
+    "x": 2020,
+    "y": 185
+  },
+  "aws_nat_gateway.nonprod_a": {
+    "x": 1245,
+    "y": 175
+  },
+  "aws_nat_gateway.nonprod_b": {
+    "x": 1625,
+    "y": 175
+  },
+  "aws_route_table.nonprod_app_a": {
+    "x": 2020,
+    "y": 290
+  },
+  "aws_route_table.nonprod_app_b": {
+    "x": 2020,
+    "y": 395
+  },
+  "aws_route_table.prod_data": {
+    "x": 820,
+    "y": 500
+  },
+  "aws_route_table.shared_services": {
+    "x": 3220,
+    "y": 185
+  },
+  "external.corporate_network": {
+    "x": 1120,
+    "y": -700,
+    "service_x": 700,
+    "service_y": 0
+  },
+  "aws_vpn_connection.hybrid_a": {
+    "x": 950,
+    "y": -490,
+    "service_x": 480,
+    "service_y": 190
+  },
+  "aws_vpn_connection.hybrid_b": {
+    "x": 1280,
+    "y": -490,
+    "service_x": 920,
+    "service_y": 190
+  },
+  "aws_route53_resolver_endpoint.inbound": {
+    "x": 2445,
+    "y": 100,
+    "service_x": 480,
+    "service_y": 570
+  },
+  "aws_route53_resolver_endpoint.outbound": {
+    "x": 2825,
+    "y": 100,
+    "service_x": 920,
+    "service_y": 570
+  },
+  "aws_route53_zone.private": {
+    "x": 2445,
+    "y": 600,
+    "service_x": 480,
+    "service_y": 760
+  },
+  "aws_security_group.shared_dns_in": {
+    "x": 2135,
+    "y": 300
+  },
+  "aws_security_group.shared_dns_out": {
+    "x": 2135,
+    "y": 410
+  },
+  "aws_route53_record.production": {
+    "x": -260,
+    "y": -150,
+    "service_x": 0,
+    "service_y": 80
+  },
+  "aws_lb.production": {
+    "x": 45,
+    "y": 95,
+    "service_x": 0,
+    "service_y": 190
+  },
+  "aws_eks_cluster.production": {
+    "x": 45,
+    "y": 335,
+    "service_x": 0,
+    "service_y": 380
+  },
+  "aws_eks_cluster.nonproduction": {
+    "x": 1245,
+    "y": 335,
+    "service_x": 0,
+    "service_y": 760
+  },
+  "aws_db_subnet_group.production": {
+    "x": 425,
+    "y": 630
+  },
+  "aws_db_instance.production": {
+    "x": 45,
+    "y": 565,
+    "service_x": 0,
+    "service_y": 570
+  },
+  "aws_security_group.prod_entry": {
+    "x": -265,
+    "y": 300
+  },
+  "aws_security_group.prod_app": {
+    "x": -265,
+    "y": 410
+  },
+  "aws_security_group.prod_data": {
+    "x": -265,
+    "y": 520
+  },
+  "aws_security_group.nonprod_app": {
+    "x": 935,
+    "y": 300
+  },
+  "aws_iam_role.production_cluster": {
+    "x": -260,
+    "y": 930
+  },
+  "aws_iam_role.nonproduction_cluster": {
+    "x": 950,
+    "y": 930
+  },
+  "aws_network_acl.prod_public": {
+    "x": -265,
+    "y": 680
+  },
+  "aws_network_acl.prod_app": {
+    "x": -265,
+    "y": 785
+  },
+  "aws_network_acl.prod_data": {
+    "x": -265,
+    "y": 890
+  },
+  "aws_network_acl.nonprod_baseline": {
+    "x": 935,
+    "y": 680
+  },
+  "aws_network_acl.shared_dns": {
+    "x": 2135,
+    "y": 680
+  },
+  "aws_network_acl.prod_transit": {
+    "x": -265,
+    "y": 995
+  },
+  "aws_network_acl.shared_transit": {
+    "x": 2135,
+    "y": 785
+  },
+  "aws_s3_bucket.network_logs": {
+    "x": 2670,
+    "y": 720,
+    "service_x": 920,
+    "service_y": 760
+  }
+}

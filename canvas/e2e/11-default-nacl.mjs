@@ -17,19 +17,13 @@ check("the icon loads as an SVG from the app", iconOk);
 await page.getByRole("textbox", { name: "Search AWS services" }).fill("");
 
 await loadTemplate(page, "three-tier-vpc");
-// Newer workspaces hide infrastructure (VPC, subnets) behind a toggle; older ones have none.
-const infra = page.getByTestId("infrastructure-toggle");
-if ((await infra.count()) && (await infra.getAttribute("aria-pressed")) === "false") {
-  await infra.click();
-  await page.waitForTimeout(400);
-}
-const vpc = await page.locator('.react-flow__node[data-id="aws_vpc.main"]').boundingBox();
+const stageBox = await page.locator(".canvas-stage").boundingBox();
 await page.locator(".canvas-stage").evaluate((stage, at) => {
   const dataTransfer = new DataTransfer();
   dataTransfer.setData("application/preflight-node-type", "network_boundary");
   dataTransfer.setData("application/preflight-service-id", "aws_default_network_acl");
   stage.dispatchEvent(new DragEvent("drop", { bubbles: true, cancelable: true, dataTransfer, clientX: at.x, clientY: at.y }));
-}, { x: vpc.x + 40, y: vpc.y + 40 });
+}, { x: stageBox.x + 100, y: stageBox.y + 100 });
 await page.waitForTimeout(500);
 
 const readDoc = async () => {
@@ -41,7 +35,7 @@ const readDoc = async () => {
 let doc = await readDoc();
 const dflt = doc.nodes.find((n) => n.service_id === "aws_default_network_acl");
 check("the default NACL is on the canvas with its provider identity", Boolean(dflt));
-check("dropped inside the VPC it is tied to it by a contained_in edge", doc.edges.some((e) => e.type === "contained_in" && e.from === dflt?.id && e.to === "aws_vpc.main"));
+check("hidden VPCs cannot receive accidental geometric assignments", !doc.edges.some((e) => e.type === "contained_in" && e.from === dflt?.id));
 check("no rules are carried until some are authored", !dflt?.nacl_rules);
 
 await page.locator(`.react-flow__node[data-id="${dflt.id}"]`).dispatchEvent("click");
@@ -56,6 +50,8 @@ check("once a rule is authored it says the rules replace AWS's defaults", (await
 doc = await readDoc();
 check("the rule is carried on the node", (doc.nodes.find((n) => n.id === dflt.id)?.nacl_rules ?? []).length === 1);
 
+await page.getByTestId("configuration-vpc").locator(".configuration-actions select").selectOption("aws_vpc.main");
+check("the default ACL can be assigned to its VPC through settings", (await readDoc()).edges.some((e) => e.type === "contained_in" && e.from === dflt.id && e.to === "aws_vpc.main"));
 await mode(page, "simulate");
 await baseline(page);
 check("the design still assesses, and a journey through explicitly associated subnets still flows", (await flowOf(page, "web")) === "Flows end-to-end");
