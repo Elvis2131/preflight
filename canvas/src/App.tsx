@@ -1080,7 +1080,7 @@ function CanvasInner() {
       </Palette>}
       <div className="canvas-column">
         {simError ? <div className="status-strip mode-error" role="alert">Simulation could not run: {simError}</div>
-          : currentSimulation && <SimulationStatus result={currentSimulation} runKind={simRunKind} labelForNode={labelForNode} animationStep={animStep}
+          : currentSimulation && <SimulationStatus result={currentSimulation} runKind={simRunKind} labelForNode={labelForNode} animationStep={animStep} journeyLabel={(id) => journeys.find((j) => j.id === id)?.name || id}
             onSetCapacity={() => { traffic.pause(); setMode("design"); setSelectedNodeID(null); setShowWorkloadForm(true); }} />}
         <div className="canvas-stage" data-editable={caps.canEditDesign}
           onKeyDownCapture={(event) => {

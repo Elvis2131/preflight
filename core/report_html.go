@@ -108,8 +108,8 @@ code{background:#f1f5f9;padding:0 .2rem}
 {{range .Narratives.Annotations}}<tr><td>{{.FindingID}}</td><td>{{.Narrative}}</td><td class="reason">{{range .CitedEvidence}}{{.}} {{end}}</td></tr>{{end}}</table>{{end}}
 {{end}}{{if .Scenarios}}<h2>Saved failure scenarios</h2>
 <p class="reason">Each scenario is re-run against this version; results are never carried over from an earlier one.</p>
-<table><tr><th>scenario</th><th>verdict</th><th>failed journeys</th><th>degraded journeys</th><th>severed paths</th></tr>
-{{range .Scenarios}}<tr><td>{{.Name}}</td><td>{{if eq .Verdict.State "assessed"}}{{.Verdict.Value}}{{else}}not assessable: {{.Verdict.Reason}}{{end}}</td><td>{{range .FailedJourneys}}{{.}} {{end}}</td><td>{{range .DegradedJourneys}}{{.}} {{end}}</td><td>{{range .SeveredPaths}}{{.}} {{end}}</td></tr>{{end}}</table>
+<table><tr><th>scenario</th><th>verdict</th><th>failed by the fault</th><th>degraded</th><th>already blocked before the fault</th><th>not checked</th><th>severed paths</th></tr>
+{{range .Scenarios}}<tr><td>{{.Name}}</td><td>{{if eq .Verdict.State "assessed"}}{{.Verdict.Value}}{{else}}not assessable: {{.Verdict.Reason}}{{end}}</td><td>{{range .FailedJourneys}}{{.}} {{end}}</td><td>{{range .DegradedJourneys}}{{.}} {{end}}</td><td>{{range .AlreadyBlockedJourneys}}{{.}} {{end}}</td><td>{{range .UncheckedJourneys}}{{.}} {{end}}</td><td>{{range .SeveredPaths}}{{.}} {{end}}</td></tr>{{end}}</table>
 {{end}}<h2>Traffic and capacity</h2>
 {{if .Traffic.Available}}
 <table><tr><th>Journey</th><th>Flows</th><th>Blocked at</th><th>Reason</th></tr>

@@ -209,8 +209,10 @@ export function FailureLab({
                 <div style={{ color: r.verdict.state === "assessed" ? "var(--ink)" : "var(--subtle)" }}>
                   {r.verdict.state === "assessed" ? `verdict: ${String(r.verdict.value)}` : `not assessable: ${r.verdict.reason}`}
                 </div>
-                {r.failed_journeys.length > 0 && <div style={{ color: "var(--danger-ink)" }}>failed journeys: {r.failed_journeys.join(", ")}</div>}
+                {r.failed_journeys.length > 0 && <div style={{ color: "var(--danger-ink)" }}>broken by the fault: {r.failed_journeys.join(", ")}</div>}
                 {r.degraded_journeys.length > 0 && <div style={{ color: "var(--warning-ink)" }}>degraded journeys: {r.degraded_journeys.join(", ")}</div>}
+                {(r.already_blocked_journeys?.length ?? 0) > 0 && <div style={{ color: "var(--warning-ink)" }} data-testid="scenario-already-blocked">already blocked before the fault (not a result of it): {r.already_blocked_journeys!.join(", ")}</div>}
+                {(r.unchecked_journeys?.length ?? 0) > 0 && <div style={{ color: "var(--subtle)" }}>could not be checked before the fault: {r.unchecked_journeys!.join(", ")}</div>}
               </li>
             ))}
           </ul>

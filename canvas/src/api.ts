@@ -95,6 +95,31 @@ export interface SimulateResponse {
   // statement + the declared inputs it was computed from) or not_assessable naming
   // what is missing. Shown verbatim — never recomputed here.
   latency?: JourneyLatency[];
+  // baseline (PC-161): did traffic flow BEFORE the fault, per declared journey. Shown verbatim, never
+  // recomputed here. Optional so an older server's response still parses.
+  baseline?: BaselineValidity;
+}
+
+export type JourneyBaselineStatus =
+  | "flows_before_and_after"
+  | "already_blocked"
+  | "broken_by_fault"
+  | "degraded_by_fault"
+  | "not_assessable";
+
+export interface JourneyBaseline {
+  journey_id: string;
+  status: JourneyBaselineStatus;
+  baseline_blocked_at?: string;
+  baseline_reason?: string;
+  after_fault_blocked_at?: string;
+  after_fault_reason?: string;
+  degraded_via?: string;
+}
+
+export interface BaselineValidity {
+  summary: AssessmentEnvelope;
+  journeys: JourneyBaseline[];
 }
 
 export interface JourneyLatencyEstimate {
@@ -501,6 +526,10 @@ export interface ScenarioResult extends SavedScenario {
   cascade: string[];
   failed_journeys: string[];
   degraded_journeys: string[];
+  // PC-161: journeys that did not flow BEFORE the fault (never counted as failed by it) and those whose
+  // pre-fault flow could not be decided. Optional so an older server's response still parses.
+  already_blocked_journeys?: string[];
+  unchecked_journeys?: string[];
 }
 
 export function simulateFaults(

@@ -146,8 +146,10 @@ function ReportSummary({ report, onRepriced }: { report: Report; onRepriced?: ()
               <tr>
                 <th style={thtdStyle}>Scenario</th>
                 <th style={thtdStyle}>Verdict</th>
-                <th style={thtdStyle}>Failed journeys</th>
+                <th style={thtdStyle}>Broken by the fault</th>
                 <th style={thtdStyle}>Degraded journeys</th>
+                <th style={thtdStyle}>Already blocked before the fault</th>
+                <th style={thtdStyle}>Not checked</th>
               </tr>
             </thead>
             <tbody>
@@ -159,6 +161,8 @@ function ReportSummary({ report, onRepriced }: { report: Report; onRepriced?: ()
                   </td>
                   <td style={thtdStyle}>{sc.failed_journeys.join(", ")}</td>
                   <td style={thtdStyle}>{sc.degraded_journeys.join(", ")}</td>
+                  <td style={thtdStyle}>{(sc.already_blocked_journeys ?? []).join(", ")}</td>
+                  <td style={thtdStyle}>{(sc.unchecked_journeys ?? []).join(", ")}</td>
                 </tr>
               ))}
             </tbody>

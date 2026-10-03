@@ -170,6 +170,15 @@ Existing single-hop checks remain individually selectable.
 **Ports along this journey** in Workload preserves the template's per-hop ports and
 lets you edit them, with a blank field using the journey's declared default port.
 
+**Baseline first (PC-161).** A simulation result opens with "Does traffic flow before the fault?", the
+server's own answer for each declared journey: flowed before and after, never carried traffic even
+before the fault (with the hop and the reason), broken by the fault, running on a fallback, or could not
+be checked. A journey that was already blocked is never reported as having survived, and the headline
+reads "No survival verdict: the design was already broken before the fault". With no journey declared the
+panel says traffic flow was not checked. In the Failure Lab and the report, a scenario lists such journeys
+separately from the ones the fault broke. "Could not be checked" (an unreadable or unmodelled input) is
+different from "blocked" (a real deny); the canvas shows what the server says and decides neither.
+
 Simulation status uses plain-language labels for the engine's structural verdict,
 disconnected destinations and failure cascade. An unaffected structural result does
 not mean every traffic or capacity check passed. Missing capacity is shown as unset,

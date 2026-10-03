@@ -511,6 +511,9 @@
         },
         "DegradedVia": {
           "type": "string"
+        },
+        "NotAssessable": {
+          "type": "boolean"
         }
       },
       "additionalProperties": false,
@@ -540,6 +543,9 @@
         },
         "GroupIndex": {
           "type": "integer"
+        },
+        "NotAssessable": {
+          "type": "boolean"
         }
       },
       "additionalProperties": false,
@@ -1064,6 +1070,18 @@
             "type": "string"
           },
           "type": "array"
+        },
+        "already_blocked_journeys": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "unchecked_journeys": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
         }
       },
       "additionalProperties": false,
@@ -1075,7 +1093,9 @@
         "severed_paths",
         "cascade",
         "failed_journeys",
-        "degraded_journeys"
+        "degraded_journeys",
+        "already_blocked_journeys",
+        "unchecked_journeys"
       ]
     },
     "UsageBasedCostEntry": {
@@ -1218,5 +1238,5 @@
     "provenance"
   ],
   "x-changelog": "contracts/CHANGELOG.md",
-  "x-schema-version": "1.8.0"
+  "x-schema-version": "1.9.0"
 }

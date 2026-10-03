@@ -10,6 +10,25 @@ Each generated `contracts/*.schema.json` carries its own version in `x-schema-ve
 stamped by `cmd/gen-contracts` — check that field against this file, not the other way
 around, since a schema file is regenerated output, not hand-edited.
 
+## report.schema.json 1.9.0 — 2026-10-03 (PC-161: scenario results gain already_blocked_journeys and unchecked_journeys)
+
+**Additive change to `report.schema.json` only.** Each saved-scenario result in the report's `scenarios`
+section gains `already_blocked_journeys` (declared journeys that did not flow BEFORE the fault) and
+`unchecked_journeys` (journeys whose pre-fault flow the engine could not decide). Both are required arrays,
+empty when no journeys are declared. Behaviour change worth knowing: `failed_journeys` now lists only
+journeys that flowed before the fault and not after, and `degraded_journeys` only those that flowed before and
+now run on a declared fallback. Before, any journey that did not flow was listed as failed, including one that
+never worked, so a design that was already broken read as having been broken by the scenario. A scenario's
+`verdict` is `not_assessable` (with the reason) when a declared journey was already blocked. A caller holding a
+report written against 1.8.0 needs to treat a missing array as empty; the old documents validate against the
+old schema unchanged.
+
+Also in this version (found when the schema was regenerated; the engine change that caused it, PC-161's
+first commit, had not regenerated the contract): the journey flow results in the report's traffic section gain
+an optional `NotAssessable` boolean on both the hop and the journey. It is true when the hop the journey stopped at
+could not be DECIDED (an unreadable or unmodelled input) rather than denied; before, the two read identically
+("Blocked at ..."). Absent means false, so a 1.8.0 document validates unchanged.
+
 ## report.schema.json 1.8.0 — 2026-10-02 (PC-154: Report.narratives added)
 
 **Additive change to `report.schema.json` only.** `Report` gains optional `narratives`: the

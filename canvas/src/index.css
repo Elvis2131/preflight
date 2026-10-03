@@ -473,6 +473,19 @@ summary:focus-visible {
 .simulation-status-heading strong { color: var(--ink); font-size: 13px; }
 .simulation-status-heading span, .simulation-status-note { color: var(--muted); }
 .simulation-impact { margin-top: 6px; }
+/* PC-161: baseline validity comes first in the result: did traffic flow BEFORE the fault. */
+.simulation-baseline { display: grid; gap: 4px; margin-bottom: 10px; padding: 8px 10px; border: 1px solid var(--line); border-left-width: 4px; border-radius: var(--radius-sm); background: var(--surface-soft); }
+.simulation-baseline strong { color: var(--ink); font-size: 13px; }
+.simulation-baseline > span { color: var(--ink-secondary); }
+.simulation-baseline ul { margin: 2px 0 0; padding-left: 18px; }
+.simulation-baseline li { margin: 2px 0; overflow-wrap: anywhere; }
+.simulation-baseline[data-tone="ok"] { border-left-color: var(--success-ink); }
+.simulation-baseline[data-tone="warn"] { border-left-color: var(--warning-ink); background: var(--warning-soft); }
+.simulation-baseline[data-tone="unknown"] { border-left-color: var(--subtle); }
+.simulation-baseline li[data-tone="ok"] { color: var(--success-ink); }
+.simulation-baseline li[data-tone="warn"] { color: var(--warning-ink); }
+.simulation-baseline li[data-tone="bad"] { color: var(--danger-ink); }
+.simulation-baseline li[data-tone="unknown"] { color: var(--subtle); }
 .simulation-capacity { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin: 8px 0 0; color: var(--warning-ink); }
 .simulation-capacity button { padding: 3px 8px; font-size: 11px; }
 .simulation-status-note { margin: 6px 0; font-size: 11px; }

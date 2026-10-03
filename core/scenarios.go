@@ -27,6 +27,11 @@ type ScenarioResult struct {
 	// (JourneyFlowResult.Degraded). Both empty when the workload declares no journeys.
 	FailedJourneys   []string `json:"failed_journeys"`
 	DegradedJourneys []string `json:"degraded_journeys"`
+	// AlreadyBlockedJourneys (PC-161) are declared journeys that did not flow BEFORE the fault: they
+	// are never counted as failed or survived by the scenario. UncheckedJourneys are those whose
+	// baseline the engine could not decide. Both are empty when the workload declares no journeys.
+	AlreadyBlockedJourneys []string `json:"already_blocked_journeys"`
+	UncheckedJourneys      []string `json:"unchecked_journeys"`
 }
 
 // EvaluateScenarios runs every saved scenario against ir/workload, in the order given
@@ -39,14 +44,20 @@ func EvaluateScenarios(ir *IR, workload Workload, saved []SavedScenario, prov Pr
 			Name: sc.Name, Faults: sc.Faults, Verdict: sim.Verdict,
 			SeveredPaths: nonNil(sim.SeveredPaths), Cascade: nonNil(sim.Cascade),
 			FailedJourneys: []string{}, DegradedJourneys: []string{},
+			AlreadyBlockedJourneys: []string{}, UncheckedJourneys: []string{},
 		}
-		for _, f := range sim.FlowDetail {
-			switch {
-			case f.Flows:
-			case f.Degraded:
-				res.DegradedJourneys = append(res.DegradedJourneys, f.JourneyID)
-			default:
-				res.FailedJourneys = append(res.FailedJourneys, f.JourneyID)
+		// PC-161: classify from the baseline, which compares each journey before and after the fault,
+		// so a journey that never flowed is not reported as having failed under this scenario.
+		for _, b := range sim.Baseline.Journeys {
+			switch b.Status {
+			case BaselineBrokenByFault:
+				res.FailedJourneys = append(res.FailedJourneys, b.JourneyID)
+			case BaselineDegradedByFault:
+				res.DegradedJourneys = append(res.DegradedJourneys, b.JourneyID)
+			case BaselineAlreadyBlocked:
+				res.AlreadyBlockedJourneys = append(res.AlreadyBlockedJourneys, b.JourneyID)
+			case BaselineNotAssessable:
+				res.UncheckedJourneys = append(res.UncheckedJourneys, b.JourneyID)
 			}
 		}
 		out = append(out, res)
