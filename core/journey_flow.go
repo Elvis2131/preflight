@@ -88,6 +88,11 @@ type JourneyHopFlow struct {
 	Allowed    bool
 	Reason     string
 	GroupIndex int
+
+	// NotAssessable (PC-161) marks a hop that is not allowed because the engine could not DECIDE
+	// (an unreadable or unmodelled input), as opposed to a real deny. Allowed is false either way;
+	// before this field the two read identically ("Blocked at ...").
+	NotAssessable bool `json:",omitempty"`
 }
 
 // JourneyFlowResult is one journey's full structural flow outcome. ReachedByGroup
@@ -113,6 +118,21 @@ type JourneyFlowResult struct {
 	// journey's fallback path carries no modelled load — a stated limit, not a claim.
 	Degraded    bool   `json:",omitempty"`
 	DegradedVia string `json:",omitempty"`
+
+	// NotAssessable (PC-161): the hop this journey stopped at was undecidable, not denied. A journey
+	// that stopped there is "could not be checked", never "blocked".
+	NotAssessable bool `json:",omitempty"`
+}
+
+// traceUndecidable reports whether the first step that did not allow the request was
+// not_assessable rather than a deny.
+func traceUndecidable(t Trace) bool {
+	for _, st := range t.Steps {
+		if st.Decision != TraceAllow {
+			return st.Decision == TraceNotAssessable
+		}
+	}
+	return false
 }
 
 // ComputeJourneyFlow walks j's declared Path hop group by hop group. killed may be
@@ -177,6 +197,7 @@ func computeJourneyPathFlow(ir *IR, j DeclaredJourney, killed map[string]bool) J
 
 		var nextReached []string
 		reasonFor := map[string]string{}
+		naFor := map[string]bool{}
 
 		hopPort := j.PortForHop(j.Path[i+1])
 		for _, d := range sortedStrings(groups[i+1]) {
@@ -199,6 +220,7 @@ func computeJourneyPathFlow(ir *IR, j DeclaredJourney, killed map[string]bool) J
 
 			networkAllowed := false
 			var lastSource, lastReason string
+			var lastNA bool
 			for _, s := range sources {
 				var trace Trace
 				if d == JourneyInternetSentinel {
@@ -209,14 +231,16 @@ func computeJourneyPathFlow(ir *IR, j DeclaredJourney, killed map[string]bool) J
 				} else {
 					trace = BuildTrace(ir, s, d, "", j.Protocol, hopPort)
 				}
-				result.Hops = append(result.Hops, JourneyHopFlow{From: s, To: d, Allowed: trace.Allowed, Reason: trace.Concise, GroupIndex: i + 1})
-				lastSource, lastReason = s, trace.Concise
+				na := !trace.Allowed && traceUndecidable(trace)
+				result.Hops = append(result.Hops, JourneyHopFlow{From: s, To: d, Allowed: trace.Allowed, Reason: trace.Concise, GroupIndex: i + 1, NotAssessable: na})
+				lastSource, lastReason, lastNA = s, trace.Concise, na
 				if trace.Allowed {
 					networkAllowed = true
 				}
 			}
 			if !networkAllowed {
 				reasonFor[d] = lastReason
+				naFor[d] = lastNA
 				continue
 			}
 
@@ -230,8 +254,10 @@ func computeJourneyPathFlow(ir *IR, j DeclaredJourney, killed map[string]bool) J
 			if isFinalTransition && j.IAMCheck != nil {
 				iamTrace := BuildTraceWithIAM(ir, lastSource, d, j.IAMCheck.PrincipalID, j.IAMCheck.Action, j.IAMCheck.ResourceARN, "", j.Protocol, hopPort)
 				if !iamTrace.Allowed {
-					result.Hops = append(result.Hops, JourneyHopFlow{From: lastSource, To: d, Allowed: false, Reason: iamTrace.Concise, GroupIndex: i + 1})
+					iamNA := traceUndecidable(iamTrace)
+					result.Hops = append(result.Hops, JourneyHopFlow{From: lastSource, To: d, Allowed: false, Reason: iamTrace.Concise, GroupIndex: i + 1, NotAssessable: iamNA})
 					reasonFor[d] = iamTrace.Concise
+					naFor[d] = iamNA
 					continue
 				}
 			}
@@ -243,6 +269,7 @@ func computeJourneyPathFlow(ir *IR, j DeclaredJourney, killed map[string]bool) J
 		if len(nextReached) == 0 {
 			rep := sortedStrings(groups[i+1])[0]
 			result.Flows, result.BlockedAt, result.BlockedReason = false, rep, reasonFor[rep]
+			result.NotAssessable = naFor[rep]
 			return result
 		}
 		reached = nextReached

@@ -149,5 +149,31 @@
         }
       }
     }
-  ]
+  ],
+  "baseline": {
+    "summary": {
+      "state": "assessed",
+      "value": "all_declared_journeys_flow",
+      "provenance": {
+        "kind": "derived",
+        "source": "template-fixture"
+      }
+    },
+    "journeys": [
+      {
+        "journey_id": "web",
+        "status": "flows_before_and_after"
+      },
+      {
+        "journey_id": "api",
+        "status": "flows_before_and_after"
+      },
+      {
+        "journey_id": "data",
+        "status": "broken_by_fault",
+        "after_fault_blocked_at": "aws_db_instance.db",
+        "after_fault_reason": "component aws_db_instance.db is unreachable under the declared fault"
+      }
+    ]
+  }
 }

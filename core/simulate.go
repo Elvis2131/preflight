@@ -84,6 +84,13 @@ type SimulateResponse struct {
 	// journey: assessed (conditional on the listed declared inputs) or not_assessable
 	// naming what is missing. Empty (never nil) when the workload declares no journeys.
 	Latency []JourneyLatency `json:"latency"`
+
+	// Baseline (PC-161) is whether the design carried the declared traffic BEFORE the fault, kept
+	// separate from the result after it, so a journey that was already broken is never reported as
+	// having survived. Verdict is graph reachability only; when a declared journey was already
+	// blocked, Verdict is not_assessable and says why. With no journeys declared there is nothing to
+	// validate and Baseline.Summary says so.
+	Baseline BaselineValidity `json:"baseline"`
 }
 
 // Simulate applies a declared fault set against an IR + Workload, reusing PC-14's
@@ -140,10 +147,12 @@ type SimulateResponse struct {
 // not_assessable with a stated reason rather than guessing — never a fabricated
 // partial result.
 func Simulate(ir *IR, workload Workload, faults []Fault, prov Provenance) SimulateResponse {
+	baselineIR := ir // the design as drawn, before any fault (resolveFaults may return a mutated copy)
 	mutatedIR, killed, ok, reason := resolveFaults(ir, workload, faults)
 	if !ok {
 		na := NotAssessable[any](reason, prov).ToEnvelope()
-		return SimulateResponse{Journeys: make([]Journey, 0), SeveredPaths: make([]string, 0), Cascade: make([]string, 0), FlowDetail: make([]JourneyFlowResult, 0), Load: make([]ComponentLoad, 0), Latency: make([]JourneyLatency, 0), Capacity: na, Verdict: na}
+		return SimulateResponse{Journeys: make([]Journey, 0), SeveredPaths: make([]string, 0), Cascade: make([]string, 0), FlowDetail: make([]JourneyFlowResult, 0), Load: make([]ComponentLoad, 0), Latency: make([]JourneyLatency, 0), Capacity: na, Verdict: na,
+			Baseline: BaselineValidity{Summary: na, Journeys: make([]JourneyBaseline, 0)}}
 	}
 	ir = mutatedIR
 
@@ -237,6 +246,12 @@ func Simulate(ir *IR, workload Workload, faults []Fault, prov Provenance) Simula
 		latency = ComputeDegradedLatency(ir, workload, killed, prov)
 	}
 
+	// PC-161: validate the baseline first. The same flow engine, on the design as drawn and with no fault.
+	baseline := ComputeBaselineValidity(workload, ComputeAllJourneyFlows(baselineIR, workload, nil), flowDetail, prov)
+	if sum, ok := baseline.Summary.Value.(string); ok && sum == BaselineSomeDeclaredJourneysBlocked {
+		verdict = NotAssessable[any](baselineBlockedReason(baseline), prov).ToEnvelope()
+	}
+
 	return SimulateResponse{
 		Journeys:     journeys,
 		Capacity:     capacity,
@@ -246,6 +261,7 @@ func Simulate(ir *IR, workload Workload, faults []Fault, prov Provenance) Simula
 		FlowDetail:   flowDetail,
 		Load:         load,
 		Latency:      latency,
+		Baseline:     baseline,
 	}
 }
 

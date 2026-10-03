@@ -33,5 +33,16 @@
   },
   "flow_detail": [],
   "load": [],
-  "latency": []
+  "latency": [],
+  "baseline": {
+    "summary": {
+      "state": "not_assessable",
+      "reason": "no journey is declared, so whether traffic flows through this design was not checked; the verdict reports graph reachability only and says nothing about ports, security groups, network ACLs or routes",
+      "provenance": {
+        "kind": "derived",
+        "source": "template-fixture"
+      }
+    },
+    "journeys": []
+  }
 }

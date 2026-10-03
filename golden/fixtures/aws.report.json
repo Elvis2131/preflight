@@ -2584,7 +2584,8 @@
             "To": "aws_sqs_queue.settlement",
             "Allowed": false,
             "Reason": "Blocked at aws_sqs_queue.settlement (route_selection): destination has no resolvable effective route table",
-            "GroupIndex": 1
+            "GroupIndex": 1,
+            "NotAssessable": true
           }
         ],
         "ReachedByGroup": [
@@ -2594,7 +2595,8 @@
           []
         ],
         "BlockedAt": "aws_sqs_queue.settlement",
-        "BlockedReason": "Blocked at aws_sqs_queue.settlement (route_selection): destination has no resolvable effective route table"
+        "BlockedReason": "Blocked at aws_sqs_queue.settlement (route_selection): destination has no resolvable effective route table",
+        "NotAssessable": true
       },
       {
         "JourneyID": "payment-rail",
