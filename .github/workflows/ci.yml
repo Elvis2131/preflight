@@ -113,6 +113,18 @@ jobs:
         with:
           version: v2.13.2
 
+      # PC-6: the canvas was never type-checked, built or unit-tested by CI. `tsc --noEmit` is NOT the
+      # check (canvas/tsconfig.json has "files": [], so it checks nothing); `npm run build` runs
+      # `tsc -b && vite build`, which is. This is what would have caught a syntax error that sat in
+      # App.tsx on main and made every browser spec time out.
+      - name: canvas typecheck and build
+        working-directory: canvas
+        run: npm run build
+
+      - name: canvas unit tests
+        working-directory: canvas
+        run: npm test
+
       # canvas/e2e: the re-runnable evidence behind every "verified live in a browser" claim —
       # real headless Chromium against a real assessd on throwaway state, with assertions (a
       # failed check exits non-zero). Uses the Chromium installed above.

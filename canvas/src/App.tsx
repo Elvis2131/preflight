@@ -898,6 +898,7 @@ function CanvasInner() {
             pickingPathForRow={pickingJourneyRowIndex}
             onStartPickPath={startPickPath}
             onStopPickPath={stopPickPath}
+            nodeLabels={Object.fromEntries(nodes.map((n) => [n.id, n.data.label]))}
           />
         </div>
       )}
@@ -1032,4 +1033,3 @@ export default function App() {
     </ReactFlowProvider>
   );
 }
-            nodeLabels={Object.fromEntries(nodes.map((n) => [n.id, n.data.label]))}
